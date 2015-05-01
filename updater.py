@@ -16,9 +16,6 @@ from convert import makeFileStreamable, reencodeFilesInDirectory
 from log import LogFile
 log = LogFile().getLogger()
 
-homeDir = os.getenv('HOME')
-relocatedDir = 'relocatedFiles'
-
 FIND_FAIL_STRING = 'No such file or directory'
 
 class Client(object):
