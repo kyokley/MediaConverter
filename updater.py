@@ -10,6 +10,8 @@ from settings import (LOCAL_PATH,
                       MEDIAVIEWER_PATHFILES_URL,
                       MEDIAVIEWER_CERT,
                       SERVER_NAME,
+                      MEDIAVIEWER_MOVIE_URL,
+                      LOCAL_MOVIE_PATH,
                       )
 from convert import makeFileStreamable, reencodeFilesInDirectory
 
@@ -21,6 +23,44 @@ FIND_FAIL_STRING = 'No such file or directory'
 class Client(object):
     def __init__(self):
         self.paths = dict()
+
+        log.debug("Initializing Client Obj")
+        self.movies = set()
+
+    def loadMovies(self):
+        log.info("Loading movie paths")
+        data = {'next': MEDIAVIEWER_MOVIE_URL}
+        while data['next']:
+            try:
+                log.debug("Making API call with data: %s" % (data,))
+                request = requests.get(data['next'])
+                data = request.json()
+
+                if data['results']:
+                    for result in data['results']:
+                        self.movies.add(result['filename'])
+            except Exception, e:
+                log.error("An error has occurred")
+                log.error(e)
+
+    def postMovies(self):
+        res = commands.getoutput("ls '%s'" % (LOCAL_MOVIE_PATH,))
+        tokens = res.split('\n')
+
+        for token in tokens:
+            if token not in self.movies:
+                print "Found %s" % token
+                print "Attempting to re-encode media files"
+                log.info("Found %s. Starting re-encoding..." % token)
+                try:
+                    reencodeFilesInDirectory(token)
+                except Exception, e:
+                    print "Error processing %s" % token
+                    log.error("Error processing %s" % token)
+                    log.error(e)
+                print "Posting %s" % (token,)
+                log.info("Posting %s" % (token,))
+                self.post(token)
 
     def loadPaths(self):
         self.paths = Path.getAllPaths()
