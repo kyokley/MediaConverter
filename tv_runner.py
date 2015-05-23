@@ -17,11 +17,11 @@ class TvRunner(object):
         self.paths = Path.getAllPaths()
 
     @staticmethod
-    def getOrCreatePathForKey(key):
-        print 'Get or create path for %s' % key
-        newPath = Path(key, key)
+    def getOrCreateRemotePath(localPath):
+        print 'Get or create path for %s' % localPath
+        newPath = Path(localPath, localPath)
         newPath.post()
-        data = Path.getPathByLocalPathAndRemotePath(key, key)
+        data = Path.getPathByLocalPathAndRemotePath(localPath, localPath)
         pathid = data['results'][0]['pk']
         print 'Got path'
 
@@ -40,16 +40,16 @@ class TvRunner(object):
 
         return fileSet
 
-    def updateFileRecords(self, key, tokens, fileSet):
+    def updateFileRecords(self, path, localFileSet, remoteFileSet):
         pathid = None
-        for token in tokens:
-            if token not in fileSet:
+        for localFile in localFileSet:
+            if localFile not in remoteFileSet:
                 try:
                     if not pathid:
-                        pathid = self.getOrCreatePathForKey(key)
+                        pathid = self.getOrCreateRemotePath(path)
 
-                    print "Attempting to add %s" % (token,)
-                    fullPath = os.path.join(key, token)
+                    print "Attempting to add %s" % (localFile,)
+                    fullPath = os.path.join(path, localFile)
                     try:
                         fullPath = makeFileStreamable(fullPath,
                                                       appendSuffix=True,
@@ -75,18 +75,18 @@ class TvRunner(object):
         print 'Attempting to get paths'
         self.loadPaths()
         print 'Got paths'
-        for key, vals in self.paths.items():
-            res = commands.getoutput("find '%s' -maxdepth 1 -not -type d" % key)
-            if MOVIE_PATH_ID in vals or FIND_FAIL_STRING in res:
+        for path, pathIDs in self.paths.items():
+            local_files = commands.getoutput("find '%s' -maxdepth 1 -not -type d" % path)
+            if MOVIE_PATH_ID in pathIDs or FIND_FAIL_STRING in local_files:
                 continue
 
-            tokens = res.split('\n')
-            tokens = [os.path.basename(x) for x in tokens]
-            print tokens
+            localFileSet = set(local_files.split('\n'))
+            localFileSet = [os.path.basename(x) for x in localFileSet]
+            print localFileSet
 
-            print 'Attempting to get files for %s' % key
-            fileSet = self.buildRemoteFileSetForPathIDs(vals)
+            print 'Attempting to get files for %s' % path
+            remoteFileSet = self.buildRemoteFileSetForPathIDs(pathIDs)
 
-            self.updateFileRecords(key, tokens, fileSet)
+            self.updateFileRecords(path, localFileSet, remoteFileSet)
 
         print 'Done'
