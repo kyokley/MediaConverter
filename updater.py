@@ -21,6 +21,30 @@ class TvRunner(object):
     def loadPaths(self):
         self.paths = Path.getAllPaths()
 
+    @staticmethod
+    def getOrCreatePathForKey(key):
+        print 'Get or create path for %s' % key
+        newPath = Path(key, key)
+        newPath.post()
+        data = Path.getPathByLocalPathAndRemotePath(key, key)
+        pathid = data['results'][0]['pk']
+        print 'Got path'
+
+        return pathid
+
+    @staticmethod
+    def buildRemoteFileSetForPathIDs(pathIDs):
+        fileSet = set()
+        for pathid in pathIDs:
+            # Skip local paths
+            if pathid == -1:
+                continue
+            remoteFilenames = File.getFileSet(pathid)
+            fileSet.update(remoteFilenames)
+        print 'Built fileSet'
+
+        return fileSet
+
     def run(self):
         print 'Attempting to get paths'
         self.loadPaths()
@@ -31,30 +55,18 @@ class TvRunner(object):
                 continue
 
             tokens = res.split('\n')
-            tokens = map(os.path.basename, tokens)
+            tokens = [os.path.basename(x) for x in tokens]
             print tokens
 
             print 'Attempting to get files for %s' % key
-            fileSet = set()
-            for pathid in vals:
-                # Skip local paths
-                if pathid == -1:
-                    continue
-                remoteFilenames = File.getFileSet(pathid)
-                fileSet.update(remoteFilenames)
-            print 'Built fileSet'
+            fileSet = self.buildRemoteFileSetForPathIDs(vals)
 
             pathid = None
             for token in tokens:
                 if token and token not in fileSet:
                     try:
                         if not pathid:
-                            print 'Get or create path for %s' % key
-                            newPath = Path(key, key)
-                            newPath.post()
-                            data = Path.getPathByLocalPathAndRemotePath(key, key)
-                            pathid = data['results'][0]['pk']
-                            print 'Got path'
+                            pathid = self.getOrCreatePathForKey(key)
 
                         print "Attempting to add %s" % (token,)
                         fullPath = os.path.join(key, token)
