@@ -19,7 +19,7 @@ log = LogFile().getLogger()
 
 FIND_FAIL_STRING = 'No such file or directory'
 
-class Client(object):
+class TvRunner(object):
     def __init__(self):
         self.paths = dict()
 
@@ -93,11 +93,13 @@ def postData(values, url):
     except Exception, e:
         log.error(e)
 
-class MoviePath(object):
+class MovieRunner(object):
     def __init__(self):
         self.movies = set()
 
     def loadMovies(self):
+        self.movies = set()
+
         log.info("Loading movie paths")
         data = {'next': MEDIAVIEWER_MOVIE_URL}
         while data['next']:
@@ -131,6 +133,10 @@ class MoviePath(object):
                 print "Posting %s" % (token,)
                 log.info("Posting %s" % (token,))
                 self._postMovie(token)
+
+    def run(self):
+        self.loadMovies()
+        self.postMovies()
 
     def _postMovie(self, name):
         values = {'pathid': MOVIE_PATH_ID,
@@ -231,5 +237,8 @@ class File(object):
         return fileSet
 
 if __name__ == '__main__':
-    client = Client()
-    client.run()
+    tvRunner = TvRunner()
+    tvRunner.run()
+
+    movieRunner = MovieRunner()
+    movieRunner.run()
