@@ -1,5 +1,5 @@
 import requests, commands, os
-from settings import (LOCAL_PATH,
+from settings import (LOCAL_TV_SHOWS_PATH,
                       SERVER_NAME,
                       MEDIAVIEWER_PATH_URL,
                       )
@@ -35,9 +35,9 @@ class Path(object):
 
     @classmethod
     def getLocalPaths(cls):
-        res = commands.getoutput("ls '%s'" % LOCAL_PATH)
+        res = commands.getoutput("ls '%s'" % LOCAL_TV_SHOWS_PATH)
         res = res.split('\n')
-        res = set([os.path.join(LOCAL_PATH, path) for path in res])
+        res = set([os.path.join(LOCAL_TV_SHOWS_PATH, path) for path in res])
         return res
 
     @classmethod

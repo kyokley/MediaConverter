@@ -2,6 +2,10 @@ import os
 
 CWD = os.getcwd()
 LOG_DIR = os.path.join(CWD, 'logs')
+try:
+    os.makedirs(LOG_DIR)
+except OSError:
+    pass
 LOG_FILE_NAME = os.path.join(LOG_DIR, 'converterLog')
 
 MOVIE_PATH_ID = 57
