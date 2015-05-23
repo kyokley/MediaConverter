@@ -6,7 +6,6 @@ from settings import (LOCAL_PATH,
                       WAITER_PASSWORD,
                       MEDIAVIEWER_PATH_URL,
                       MEDIAVIEWER_FILE_URL,
-                      MEDIAVIEWER_UNSTREAMABLE_FILE_URL,
                       MEDIAVIEWER_PATHFILES_URL,
                       MEDIAVIEWER_CERT,
                       SERVER_NAME,
@@ -23,44 +22,6 @@ FIND_FAIL_STRING = 'No such file or directory'
 class Client(object):
     def __init__(self):
         self.paths = dict()
-
-        log.debug("Initializing Client Obj")
-        self.movies = set()
-
-    def loadMovies(self):
-        log.info("Loading movie paths")
-        data = {'next': MEDIAVIEWER_MOVIE_URL}
-        while data['next']:
-            try:
-                log.debug("Making API call with data: %s" % (data,))
-                request = requests.get(data['next'])
-                data = request.json()
-
-                if data['results']:
-                    for result in data['results']:
-                        self.movies.add(result['filename'])
-            except Exception, e:
-                log.error("An error has occurred")
-                log.error(e)
-
-    def postMovies(self):
-        res = commands.getoutput("ls '%s'" % (LOCAL_MOVIE_PATH,))
-        tokens = res.split('\n')
-
-        for token in tokens:
-            if token not in self.movies:
-                print "Found %s" % token
-                print "Attempting to re-encode media files"
-                log.info("Found %s. Starting re-encoding..." % token)
-                try:
-                    reencodeFilesInDirectory(token)
-                except Exception, e:
-                    print "Error processing %s" % token
-                    log.error("Error processing %s" % token)
-                    log.error(e)
-                print "Posting %s" % (token,)
-                log.info("Posting %s" % (token,))
-                self.post(token)
 
     def loadPaths(self):
         self.paths = Path.getAllPaths()
@@ -124,66 +85,6 @@ class Client(object):
                         continue
         print 'Done'
 
-class LegacyFilesClient(object):
-    def putData(self, pk, newFilename):
-        data = {'filename': newFilename,
-                'streamable': True,
-                }
-        requests.put(MEDIAVIEWER_FILE_URL + '%s/' % pk,
-                     data=data,
-                     auth=(WAITER_USERNAME, WAITER_PASSWORD),
-                     verify=MEDIAVIEWER_CERT,
-                     )
-
-    def getUnstreamableFiles(self):
-        data = {'next': MEDIAVIEWER_UNSTREAMABLE_FILE_URL}
-        while data['next']:
-            request = requests.get(data['next'], verify=False)
-            data = request.json()
-
-            if data['results']:
-                yield data['results']
-        else:
-            raise StopIteration
-
-    def run(self, iterations=1, dryRun=False):
-        fileGen = self.getUnstreamableFiles()
-        for i in xrange(iterations):
-            try:
-                fileList = fileGen.next()
-            except StopIteration:
-                break
-
-            for file in fileList:
-                if file['ismovie']:
-                    errors = reencodeFilesInDirectory(file['filename'], dryRun=dryRun)
-                    if errors:
-                        log.error("Something bad happened. Attempting to continue")
-                        for error in errors:
-                            log.error(errors)
-                    else:
-                        if not dryRun:
-                            self.putData(file['pk'], file['filename'])
-                else:
-                    # Running update on a tv show
-                    fullPath = os.path.join(file['localpath'], file['filename'])
-                    try:
-                        fullPath = makeFileStreamable(fullPath,
-                                                      appendSuffix=True,
-                                                      removeOriginal=True,
-                                                      dryRun=dryRun)
-                    except Exception, e:
-                        print e
-                        log.error(e)
-                        log.error("Something bad happened. Attempting to continue")
-
-                    if os.path.exists(fullPath) and not dryRun:
-                        #TODO: Make call to update filename
-                        newFilename = os.path.basename(fullPath)
-                        if newFilename != file['filename']:
-                            self.putData(file['pk'], os.path.basename(fullPath))
-
-
 def postData(values, url):
     try:
         log.debug(values)
@@ -191,6 +92,55 @@ def postData(values, url):
         request.raise_for_status()
     except Exception, e:
         log.error(e)
+
+class MoviePath(object):
+    def __init__(self):
+        self.movies = set()
+
+    def loadMovies(self):
+        log.info("Loading movie paths")
+        data = {'next': MEDIAVIEWER_MOVIE_URL}
+        while data['next']:
+            try:
+                log.debug("Making API call with data: %s" % (data,))
+                request = requests.get(data['next'])
+                data = request.json()
+
+                if data['results']:
+                    for result in data['results']:
+                        self.movies.add(result['filename'])
+            except Exception, e:
+                log.error("An error has occurred")
+                log.error(e)
+
+    def postMovies(self):
+        res = commands.getoutput("ls '%s'" % (LOCAL_MOVIE_PATH,))
+        tokens = res.split('\n')
+
+        for token in tokens:
+            if token not in self.movies:
+                print "Found %s" % token
+                print "Attempting to re-encode media files"
+                log.info("Found %s. Starting re-encoding..." % token)
+                try:
+                    reencodeFilesInDirectory(token)
+                except Exception, e:
+                    print "Error processing %s" % token
+                    log.error("Error processing %s" % token)
+                    log.error(e)
+                print "Posting %s" % (token,)
+                log.info("Posting %s" % (token,))
+                self._postMovie(token)
+
+    def _postMovie(self, name):
+        values = {'pathid': MOVIE_PATH_ID,
+                  'filename': name,
+                  'skip': 1,
+                  'size': 0,
+                  'finished': 1,
+                  'streamable': True,
+                  }
+        postData(values, MEDIAVIEWER_MOVIE_URL)
 
 class Path(object):
     def __init__(self,
