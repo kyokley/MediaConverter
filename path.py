@@ -1,0 +1,61 @@
+import requests, commands, os
+from settings import (LOCAL_PATH,
+                      SERVER_NAME,
+                      MEDIAVIEWER_PATH_URL,
+                      )
+from utils import postData
+
+class Path(object):
+    def __init__(self,
+                 localpath,
+                 remotepath):
+        self.localpath = localpath
+        self.remotepath = remotepath
+
+    def post(self):
+        values = {'localpath': self.localpath,
+                  'remotepath': self.remotepath,
+                  'skip': 1,
+                  'server': SERVER_NAME,
+                  }
+        postData(values, MEDIAVIEWER_PATH_URL)
+
+    @classmethod
+    def getPaths(cls):
+        pathDict = dict()
+        data = {'next': MEDIAVIEWER_PATH_URL}
+        while data['next']:
+            request = requests.get(data['next'], verify=False)
+            data = request.json()
+
+            if data['results']:
+                for result in data['results']:
+                    pathDict.setdefault(result['localpath'], set()).add(result['pk'])
+        return pathDict
+
+    @classmethod
+    def getLocalPaths(cls):
+        res = commands.getoutput("ls '%s'" % LOCAL_PATH)
+        res = res.split('\n')
+        res = set([os.path.join(LOCAL_PATH, path) for path in res])
+        return res
+
+    @classmethod
+    def getAllPaths(cls):
+        allPaths = cls.getPaths()
+        localPaths = cls.getLocalPaths()
+
+        for path in localPaths:
+            allPaths.setdefault(path, set()).add(-1)
+        return allPaths
+
+    @classmethod
+    def getPathByLocalPathAndRemotePath(cls,
+                                        localpath,
+                                        remotepath,
+                                        ):
+        payload = {'localpath': localpath, 'remotepath': remotepath}
+        request = requests.get(MEDIAVIEWER_PATH_URL, params=payload, verify=False)
+        data = request.json()
+        return data
+

@@ -1,18 +1,13 @@
 import os
 import commands, requests
-from settings import (LOCAL_PATH,
-                      MOVIE_PATH_ID,
-                      WAITER_USERNAME,
-                      WAITER_PASSWORD,
-                      MEDIAVIEWER_PATH_URL,
-                      MEDIAVIEWER_FILE_URL,
-                      MEDIAVIEWER_PATHFILES_URL,
-                      MEDIAVIEWER_CERT,
-                      SERVER_NAME,
+from settings import (MOVIE_PATH_ID,
                       MEDIAVIEWER_MOVIE_URL,
                       LOCAL_MOVIE_PATH,
                       )
 from convert import makeFileStreamable, reencodeFilesInDirectory
+from file import File
+from path import Path
+from utils import postData
 
 from log import LogFile
 log = LogFile().getLogger()
@@ -85,14 +80,6 @@ class TvRunner(object):
                         continue
         print 'Done'
 
-def postData(values, url):
-    try:
-        log.debug(values)
-        request = requests.post(url, data=values, auth=(WAITER_USERNAME, WAITER_PASSWORD), verify=False)
-        request.raise_for_status()
-    except Exception, e:
-        log.error(e)
-
 class MovieRunner(object):
     def __init__(self):
         self.movies = set()
@@ -147,94 +134,6 @@ class MovieRunner(object):
                   'streamable': True,
                   }
         postData(values, MEDIAVIEWER_MOVIE_URL)
-
-class Path(object):
-    def __init__(self,
-                 localpath,
-                 remotepath):
-        self.localpath = localpath
-        self.remotepath = remotepath
-
-    def post(self):
-        values = {'localpath': self.localpath,
-                  'remotepath': self.remotepath,
-                  'skip': 1,
-                  'server': SERVER_NAME,
-                  }
-        postData(values, MEDIAVIEWER_PATH_URL)
-
-    @classmethod
-    def getPaths(cls):
-        pathDict = dict()
-        data = {'next': MEDIAVIEWER_PATH_URL}
-        while data['next']:
-            request = requests.get(data['next'], verify=False)
-            data = request.json()
-
-            if data['results']:
-                for result in data['results']:
-                    pathDict.setdefault(result['localpath'], set()).add(result['pk'])
-        return pathDict
-
-    @classmethod
-    def getLocalPaths(cls):
-        res = commands.getoutput("ls '%s'" % LOCAL_PATH)
-        res = res.split('\n')
-        res = set([os.path.join(LOCAL_PATH, path) for path in res])
-        return res
-
-    @classmethod
-    def getAllPaths(cls):
-        allPaths = cls.getPaths()
-        localPaths = cls.getLocalPaths()
-
-        for path in localPaths:
-            allPaths.setdefault(path, set()).add(-1)
-        return allPaths
-
-    @classmethod
-    def getPathByLocalPathAndRemotePath(cls,
-                                        localpath,
-                                        remotepath,
-                                        ):
-        payload = {'localpath': localpath, 'remotepath': remotepath}
-        request = requests.get(MEDIAVIEWER_PATH_URL, params=payload, verify=False)
-        data = request.json()
-        return data
-
-class File(object):
-    def __init__(self,
-                 filename,
-                 pathid,
-                 size,
-                 streamable):
-        self.filename = filename
-        self.pathid = pathid
-        self.size = size
-        self.streamable = streamable
-
-    def post(self):
-        values = {'pathid': self.pathid,
-                  'filename': self.filename,
-                  'skip': 1,
-                  'size': self.size,
-                  'finished': 1,
-                  'streamable': self.streamable,
-                  }
-        postData(values, MEDIAVIEWER_FILE_URL)
-
-    @classmethod
-    def getFileSet(cls, pathid):
-        fileSet = set()
-        data = {'next': MEDIAVIEWER_PATHFILES_URL % pathid}
-        while data['next']:
-            r = requests.get(data['next'], verify=MEDIAVIEWER_CERT)
-            data = r.json()
-
-            if data['results']:
-                for result in data['results']:
-                    fileSet.add(result['filename'])
-        return fileSet
 
 if __name__ == '__main__':
     tvRunner = TvRunner()
