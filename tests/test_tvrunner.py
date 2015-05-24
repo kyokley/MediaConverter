@@ -43,6 +43,35 @@ class TestTvRunner(unittest.TestCase):
                                                                 123])
         self.assertEquals(expectedSet, actualSet)
 
-    @mock.patch('tv_runner.File')
-    def test_updateFileRecords(self, mock_file):
+    @mock.patch('tv_runner.os.path.getsize')
+    @mock.patch('tv_runner.os.path.exists')
+    @mock.patch('tv_runner.TvRunner.getOrCreateRemotePath')
+    @mock.patch('tv_runner.makeFileStreamable')
+    @mock.patch('tv_runner.File', autospec=True)
+    def test_updateFileRecords(self,
+            mock_file,
+            mock_makeFileStreamable,
+            mock_getOrCreateRemotePath,
+            mock_os_path_exists,
+            mock_os_path_getsize):
+        mock_getOrCreateRemotePath.return_value = 1
+        mock_os_path_exists.return_value = True
+        mock_os_path_getsize.return_value = 1
+
+        test_path = '/a/local/path'
+        test_localFileSet = set(['file1',
+                                 'file2',
+                                 'file3',
+                                 'newfile',
+                                 ])
+        test_remoteFileSet = set(['file1',
+                                 'file2',
+                                 'file3',
+                                 ])
+
+        self.tvRunner.updateFileRecords(test_path, test_localFileSet, test_remoteFileSet)
+        mock_makeFileStreamable.assert_called_with('/a/local/path/newfile',
+                                                   appendSuffix=True,
+                                                   removeOriginal=True,
+                                                   dryRun=False)
         pass
