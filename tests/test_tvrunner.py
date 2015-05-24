@@ -43,3 +43,6 @@ class TestTvRunner(unittest.TestCase):
                                                                 123])
         self.assertEquals(expectedSet, actualSet)
 
+    @mock.patch('tv_runner.File')
+    def test_updateFileRecords(self, mock_file):
+        pass
