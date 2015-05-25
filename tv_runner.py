@@ -72,18 +72,28 @@ class TvRunner(object):
                     log.error(e)
                     continue
 
+    def buildLocalFileSet(self, path):
+        local_files = commands.getoutput("find '%s' -maxdepth 1 -not -type d" % path)
+        if FIND_FAIL_STRING in local_files:
+            raise Exception('Path not found: %s' % path)
+
+        localFileSet = local_files.split('\n')
+        localFileSet = set([os.path.basename(x) for x in localFileSet])
+        print localFileSet
+        return localFileSet
+
     def run(self):
         print 'Attempting to get paths'
         self.loadPaths()
         print 'Got paths'
         for path, pathIDs in self.paths.items():
-            local_files = commands.getoutput("find '%s' -maxdepth 1 -not -type d" % path)
-            if MOVIE_PATH_ID in pathIDs or FIND_FAIL_STRING in local_files:
+            if MOVIE_PATH_ID in pathIDs:
                 continue
 
-            localFileSet = set(local_files.split('\n'))
-            localFileSet = [os.path.basename(x) for x in localFileSet]
-            print localFileSet
+            try:
+                localFileSet = self.buildLocalFileSet(path)
+            except:
+                continue
 
             print 'Attempting to get files for %s' % path
             remoteFileSet = self.buildRemoteFileSetForPathIDs(pathIDs)
