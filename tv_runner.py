@@ -60,7 +60,6 @@ class TvRunner(object):
                         log.error(e)
                         log.error("Something bad happened. Attempting to continue")
 
-                    import pdb; pdb.set_trace()
                     if os.path.exists(fullPath):
                         newFile = File(os.path.basename(fullPath),
                                        pathid,
