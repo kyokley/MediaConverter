@@ -21,7 +21,7 @@ class MovieRunner(object):
         while data['next']:
             try:
                 log.debug("Making API call with data: %s" % (data,))
-                request = requests.get(data['next'])
+                request = requests.get(data['next'], verify=False)
                 data = request.json()
 
                 if data['results']:
