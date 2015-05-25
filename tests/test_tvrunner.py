@@ -1,6 +1,6 @@
 import unittest
 import mock
-from tv_runner import TvRunner
+from tv_runner import TvRunner, FIND_FAIL_STRING
 
 class TestTvRunner(unittest.TestCase):
     def setUp(self):
@@ -84,9 +84,9 @@ class TestTvRunner(unittest.TestCase):
 
     @mock.patch('tv_runner.os.path.basename', side_effect=lambda x: x)
     @mock.patch('tv_runner.commands.getoutput')
-    def test_buildLocalFileSet(self,
-                               mock_commands_getoutput,
-                               mock_os_path_basename):
+    def test_buildLocalFileSet_valid_path(self,
+                                          mock_commands_getoutput,
+                                          mock_os_path_basename):
         mock_commands_getoutput.return_value = 'asdf\nsdfg\ndfgh'
 
         test_path = 'test_path'
@@ -97,3 +97,12 @@ class TestTvRunner(unittest.TestCase):
         actualFileSet = self.tvRunner.buildLocalFileSet(test_path)
 
         self.assertEquals(expectedFileSet, actualFileSet)
+
+    @mock.patch('tv_runner.commands.getoutput')
+    def test_buildLocalFileSet_invalid_path(self,
+                                          mock_commands_getoutput,
+                                          ):
+        mock_commands_getoutput.return_value = FIND_FAIL_STRING
+        test_path = 'test_path'
+
+        self.assertRaises(Exception, self.tvRunner.buildLocalFileSet, test_path)
