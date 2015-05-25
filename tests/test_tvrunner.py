@@ -129,9 +129,12 @@ class TestTvRunner(unittest.TestCase):
         self.tvRunner.buildLocalFileSet.assert_has_calls([call('sdfg'),
                                                           call('asdf')],
                                                           any_order=True)
+        self.assertEqual(2, self.tvRunner.buildLocalFileSet.call_count)
         self.tvRunner.buildRemoteFileSetForPathIDs.assert_has_calls([call([1]),
                                                                      call([12, 23])],
                                                                      any_order=True)
+        self.assertEqual(2, self.tvRunner.buildRemoteFileSetForPathIDs.call_count)
+
         self.tvRunner.updateFileRecords.assert_has_calls(
             [call('sdfg', 
                   set(['paths', 'some']),
@@ -140,3 +143,4 @@ class TestTvRunner(unittest.TestCase):
                   set(['paths', 'some']),
                   set(['remote', 'some', 'paths']))],
             any_order=True)
+        self.assertEqual(2, self.tvRunner.updateFileRecords.call_count)
