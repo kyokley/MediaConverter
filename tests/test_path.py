@@ -1,6 +1,5 @@
 import unittest
 import mock
-from mock import call
 
 from path import Path
 
@@ -29,3 +28,22 @@ class TestPath(unittest.TestCase):
         actualPathDict = self.path.getPaths()
 
         self.assertEquals(expectedPathDict, actualPathDict)
+
+    @mock.patch('path.Path.getLocalPaths')
+    @mock.patch('path.Path.getPaths')
+    def test_getAllPaths(self,
+                         mock_getPaths,
+                         mock_getLocalPaths):
+        mock_getPaths.return_value = {'path1': set([123]),
+                                           'path2': set([234]),
+                                           'path3': set([345])}
+        mock_getLocalPaths.return_value = ['localpath1',
+                                                'path2',
+                                                'path3']
+
+        expectedDict = {'path1': set([123]),
+                        'path2': set([234, -1]),
+                        'path3': set([345, -1]),
+                        'localpath1': set([-1])}
+
+        self.assertEquals(expectedDict, self.path.getAllPaths())
