@@ -1,4 +1,5 @@
 import mock
+from mock import call
 import unittest
 
 from movie_runner import MovieRunner
@@ -25,3 +26,25 @@ class TestMovieRunner(unittest.TestCase):
                         'movie3',
                         ])
         self.assertEquals(expected, self.movieRunner.movies)
+
+    @mock.patch('movie_runner.reencodeFilesInDirectory')
+    @mock.patch('movie_runner.commands.getoutput')
+    def test_postMovies(self,
+                        mock_commands_getoutput,
+                        mock_reencodeFilesInDirectory):
+        mock_commands_getoutput.return_value = 'movie1\nmovie2\nmovie3'
+        self.movieRunner._postMovie = mock.MagicMock()
+
+        self.movieRunner.movies = ['movie2']
+        self.movieRunner.postMovies()
+
+        self.movieRunner._postMovie.assert_has_calls([call('movie1'),
+                                                      call('movie3')],
+                                                      any_order=True)
+        self.assertEqual(2, self.movieRunner._postMovie.call_count)
+
+        mock_reencodeFilesInDirectory.assert_has_calls([call('movie1'),
+                                                        call('movie3')],
+                                                        any_order=True)
+        self.assertEqual(2, mock_reencodeFilesInDirectory.call_count)
+
