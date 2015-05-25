@@ -1,6 +1,7 @@
 import unittest
 import mock
-from tv_runner import TvRunner, FIND_FAIL_STRING
+from mock import call
+from tv_runner import TvRunner, FIND_FAIL_STRING, MOVIE_PATH_ID
 
 class TestTvRunner(unittest.TestCase):
     def setUp(self):
@@ -106,3 +107,36 @@ class TestTvRunner(unittest.TestCase):
         test_path = 'test_path'
 
         self.assertRaises(Exception, self.tvRunner.buildLocalFileSet, test_path)
+
+    def test_run(self):
+        test_data = {'asdf': [1],
+                     'sdfg': [12, 23],
+                     'movie': [MOVIE_PATH_ID]
+                     }
+        self.tvRunner.paths = test_data
+        self.tvRunner.loadPaths = mock.MagicMock()
+
+        self.tvRunner.buildLocalFileSet = mock.MagicMock()
+        self.tvRunner.buildLocalFileSet.return_value = set(['some', 'paths'])
+
+        self.tvRunner.buildRemoteFileSetForPathIDs = mock.MagicMock()
+        self.tvRunner.buildRemoteFileSetForPathIDs.return_value = set(['some', 'remote', 'paths'])
+
+        self.tvRunner.updateFileRecords = mock.MagicMock()
+
+        self.tvRunner.run()
+
+        self.tvRunner.buildLocalFileSet.assert_has_calls([call('sdfg'),
+                                                          call('asdf')],
+                                                          any_order=True)
+        self.tvRunner.buildRemoteFileSetForPathIDs.assert_has_calls([call([1]),
+                                                                     call([12, 23])],
+                                                                     any_order=True)
+        self.tvRunner.updateFileRecords.assert_has_calls(
+            [call('sdfg', 
+                  set(['paths', 'some']),
+                  set(['remote', 'some', 'paths'])),
+             call('asdf',
+                  set(['paths', 'some']),
+                  set(['remote', 'some', 'paths']))],
+            any_order=True)
