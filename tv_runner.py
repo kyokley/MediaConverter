@@ -18,12 +18,12 @@ class TvRunner(object):
 
     @staticmethod
     def getOrCreateRemotePath(localPath):
-        print 'Get or create path for %s' % localPath
+        log.debug('Get or create path for %s' % localPath)
         newPath = Path(localPath, localPath)
         newPath.post()
         data = Path.getPathByLocalPathAndRemotePath(localPath, localPath)
         pathid = data['results'][0]['pk']
-        print 'Got path'
+        log.debug('Got path')
 
         return pathid
 
@@ -36,7 +36,7 @@ class TvRunner(object):
                 continue
             remoteFilenames = File.getFileSet(pathid)
             fileSet.update(remoteFilenames)
-        print 'Built fileSet'
+        log.debug('Built fileSet')
 
         return fileSet
 
@@ -48,7 +48,7 @@ class TvRunner(object):
                     if not pathid:
                         pathid = self.getOrCreateRemotePath(path)
 
-                    print "Attempting to add %s" % (localFile,)
+                    log.debug("Attempting to add %s" % (localFile,))
                     fullPath = os.path.join(path, localFile)
                     try:
                         fullPath = makeFileStreamable(fullPath,
@@ -56,7 +56,6 @@ class TvRunner(object):
                                                       removeOriginal=True,
                                                       dryRun=False)
                     except Exception, e:
-                        print e
                         log.error(e)
                         log.error("Something bad happened. Attempting to continue")
 
@@ -79,13 +78,13 @@ class TvRunner(object):
 
         localFileSet = local_files.split('\n')
         localFileSet = set([os.path.basename(x) for x in localFileSet])
-        print localFileSet
+        log.debug(localFileSet)
         return localFileSet
 
     def run(self):
-        print 'Attempting to get paths'
+        log.debug('Attempting to get paths')
         self.loadPaths()
-        print 'Got paths'
+        log.debug('Got paths')
         for path, pathIDs in self.paths.items():
             if MOVIE_PATH_ID in pathIDs:
                 continue
@@ -95,9 +94,9 @@ class TvRunner(object):
             except:
                 continue
 
-            print 'Attempting to get files for %s' % path
+            log.debug('Attempting to get files for %s' % path)
             remoteFileSet = self.buildRemoteFileSetForPathIDs(pathIDs)
 
             self.updateFileRecords(path, localFileSet, remoteFileSet)
 
-        print 'Done'
+        log.debug('Done')

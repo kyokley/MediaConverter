@@ -37,16 +37,13 @@ class MovieRunner(object):
 
         for token in tokens:
             if token not in self.movies:
-                print "Found %s" % token
-                print "Attempting to re-encode media files"
+                log.info("Found %s" % token)
                 log.info("Found %s. Starting re-encoding..." % token)
                 try:
                     reencodeFilesInDirectory(token)
                 except Exception, e:
-                    print "Error processing %s" % token
                     log.error("Error processing %s" % token)
                     log.error(e)
-                print "Posting %s" % (token,)
                 log.info("Posting %s" % (token,))
                 self._postMovie(token)
 
