@@ -2,6 +2,8 @@ import requests, commands, os
 from settings import (LOCAL_TV_SHOWS_PATH,
                       SERVER_NAME,
                       MEDIAVIEWER_PATH_URL,
+                      WAITER_USERNAME,
+                      WAITER_PASSWORD,
                       )
 from utils import postData
 
@@ -25,7 +27,7 @@ class Path(object):
         pathDict = dict()
         data = {'next': MEDIAVIEWER_PATH_URL}
         while data['next']:
-            request = requests.get(data['next'], verify=False)
+            request = requests.get(data['next'], verify=False, auth=(WAITER_USERNAME, WAITER_PASSWORD))
             data = request.json()
 
             if data['results']:
