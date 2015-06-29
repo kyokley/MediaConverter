@@ -57,7 +57,11 @@ class Path(object):
                                         remotepath,
                                         ):
         payload = {'localpath': localpath, 'remotepath': remotepath}
-        request = requests.get(MEDIAVIEWER_PATH_URL, params=payload, verify=False)
+        request = requests.get(MEDIAVIEWER_PATH_URL,
+                               params=payload,
+                               verify=False,
+                               auth=(WAITER_USERNAME, WAITER_PASSWORD),
+                               )
         data = request.json()
         return data
 
