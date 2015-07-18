@@ -101,8 +101,9 @@ def reencodeFilesInDirectory(dir, dryRun=False):
         ext = os.path.splitext(token)[-1].lower()
         if ext in MEDIA_FILE_EXTENSIONS:
             try:
-                cleanPath = stripUnicode(token)
-                makeFileStreamable(cleanPath,
+                # TODO: Fix for movies
+                #cleanPath = stripUnicode(token)
+                makeFileStreamable(token,
                                    appendSuffix=True,
                                    removeOriginal=True,
                                    dryRun=dryRun)

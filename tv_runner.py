@@ -50,8 +50,7 @@ class TvRunner(object):
                         pathid = self.getOrCreateRemotePath(path)
 
                     log.debug("Attempting to add %s" % (localFile,))
-                    fullPath = os.path.join(path, localFile)
-                    fullPath = stripUnicode(fullPath)
+                    fullPath = stripUnicode(path, localFile)
                     try:
                         fullPath = makeFileStreamable(fullPath,
                                                       appendSuffix=True,
