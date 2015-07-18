@@ -1,4 +1,5 @@
-import requests
+import requests, os
+from unidecode import unidecode
 
 from log import LogFile
 log = LogFile().getLogger()
@@ -15,3 +16,9 @@ def postData(values, url):
         return request
     except Exception, e:
         log.error(e)
+
+def stripUnicode(fullPath):
+    strippedPath = unidecode(fullPath)
+    if strippedPath != fullPath:
+        os.rename(fullPath, strippedPath)
+    return strippedPath
