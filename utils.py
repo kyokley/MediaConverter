@@ -17,11 +17,19 @@ def postData(values, url):
     except Exception, e:
         log.error(e)
 
-def stripUnicode(path, filename):
-    strippedFilename = unidecode(filename)
+def stripUnicode(filename, path=None):
+    strippedFilename = unidecode(filename.decode('utf-8'))
     if strippedFilename != filename:
-        currentDir = os.getcwd()
-        os.chdir(path)
+        if path:
+            currentDir = os.getcwd()
+            os.chdir(path)
+
         os.rename(filename, strippedFilename)
-        os.chdir(currentDir)
-    return os.path.join(path, strippedFilename)
+
+        if path:
+            os.chdir(currentDir)
+
+    if path:
+        return os.path.join(path, strippedFilename)
+    else:
+        return strippedFilename
