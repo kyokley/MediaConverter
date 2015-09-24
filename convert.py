@@ -52,6 +52,7 @@ def encode(source, dest, dryRun=False):
                         "libmp3lame",
                         ])
 
+    command.append('-threads 4')
     command.append(dest)
     command = tuple(command)
 
