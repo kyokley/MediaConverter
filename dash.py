@@ -7,7 +7,7 @@ def arp_capture(pkt):
     if pkt[ARP].op == 1: #who-has (request)
         if pkt[ARP].psrc == '0.0.0.0': # ARP Probe
             if pkt[ARP].hwsrc == GATORADE:
-                main()
+                main.delay()
 
 def dash():
     sniff(prn=arp_capture, filter="arp", store=0)
