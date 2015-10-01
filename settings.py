@@ -22,8 +22,7 @@ MEDIAVIEWER_PATH_URL = 'https://127.0.0.1:8001/mediaviewer/api/path/'
 MEDIAVIEWER_FILE_URL = 'https://127.0.0.1:8001/mediaviewer/api/file/'
 MEDIAVIEWER_UNSTREAMABLE_FILE_URL = 'https://127.0.0.1:8001/mediaviewer/api/unstreamablefile/'
 MEDIAVIEWER_PATHFILES_URL = 'https://127.0.0.1:8001/mediaviewer/api/file/?pathid=%s'
-
-MEDIAVIEWER_CERT = 'mediaviewer.ca_bundle'
+MEDIAVIEWER_INFER_SCRAPERS_URL = 'https://127.0.0.1:8001/mediaviewer/api/inferscrapers/'
 
 MEDIAVIEWER_SUFFIX = '%s.mv-encoded.mp4'
 

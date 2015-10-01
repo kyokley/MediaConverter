@@ -3,6 +3,7 @@ from file import File
 from path import Path
 from convert import makeFileStreamable
 from settings import MOVIE_PATH_ID
+from utils import stripUnicode
 
 from log import LogFile
 log = LogFile().getLogger()
@@ -49,7 +50,7 @@ class TvRunner(object):
                         pathid = self.getOrCreateRemotePath(path)
 
                     log.debug("Attempting to add %s" % (localFile,))
-                    fullPath = os.path.join(path, localFile)
+                    fullPath = stripUnicode(localFile, path=path)
                     try:
                         fullPath = makeFileStreamable(fullPath,
                                                       appendSuffix=True,
@@ -70,6 +71,8 @@ class TvRunner(object):
                 except Exception, e:
                     log.error(e)
                     continue
+
+
 
     def buildLocalFileSet(self, path):
         local_files = commands.getoutput("find '%s' -maxdepth 1 -not -type d" % path)

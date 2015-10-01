@@ -1,3 +1,4 @@
 requests
 qtfaststart
 scapy
+unidecode

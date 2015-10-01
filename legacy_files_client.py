@@ -3,7 +3,6 @@ from settings import (WAITER_USERNAME,
                       WAITER_PASSWORD,
                       MEDIAVIEWER_FILE_URL,
                       MEDIAVIEWER_UNSTREAMABLE_FILE_URL,
-                      MEDIAVIEWER_CERT,
                       )
 from convert import makeFileStreamable, reencodeFilesInDirectory
 class LegacyFilesClient(object):
@@ -14,7 +13,7 @@ class LegacyFilesClient(object):
         requests.put(MEDIAVIEWER_FILE_URL + '%s/' % pk,
                      data=data,
                      auth=(WAITER_USERNAME, WAITER_PASSWORD),
-                     verify=MEDIAVIEWER_CERT,
+                     verify=False,
                      )
 
     def getUnstreamableFiles(self):

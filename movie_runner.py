@@ -2,6 +2,8 @@ import requests, commands
 from settings import (MOVIE_PATH_ID,
                       MEDIAVIEWER_MOVIE_URL,
                       LOCAL_MOVIE_PATH,
+                      WAITER_USERNAME,
+                      WAITER_PASSWORD,
                       )
 from convert import reencodeFilesInDirectory
 from utils import postData
@@ -21,7 +23,7 @@ class MovieRunner(object):
         while data['next']:
             try:
                 log.debug("Making API call with data: %s" % (data,))
-                request = requests.get(data['next'], verify=False)
+                request = requests.get(data['next'], verify=False, auth=(WAITER_USERNAME, WAITER_PASSWORD))
                 data = request.json()
 
                 if data['results']:

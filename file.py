@@ -1,7 +1,8 @@
 import requests
 from settings import (MEDIAVIEWER_FILE_URL,
                       MEDIAVIEWER_PATHFILES_URL,
-                      MEDIAVIEWER_CERT,
+                      WAITER_USERNAME,
+                      WAITER_PASSWORD,
                       )
 from utils import postData
 
@@ -31,7 +32,7 @@ class File(object):
         fileSet = set()
         data = {'next': MEDIAVIEWER_PATHFILES_URL % pathid}
         while data['next']:
-            r = requests.get(data['next'], verify=MEDIAVIEWER_CERT)
+            r = requests.get(data['next'], verify=False, auth=(WAITER_USERNAME, WAITER_PASSWORD))
             data = r.json()
 
             if data['results']:

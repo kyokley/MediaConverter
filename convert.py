@@ -6,6 +6,7 @@ from settings import (MEDIAVIEWER_SUFFIX,
                       ENCODER,
                       MEDIA_FILE_EXTENSIONS,
                       )
+from utils import stripUnicode
 
 def checkVideoEncoding(source):
     ffmpeg = Popen((ENCODER, "-i", source), stderr=PIPE)
@@ -100,7 +101,8 @@ def reencodeFilesInDirectory(dir, dryRun=False):
         ext = os.path.splitext(token)[-1].lower()
         if ext in MEDIA_FILE_EXTENSIONS:
             try:
-                makeFileStreamable(token,
+                cleanPath = stripUnicode(token)
+                makeFileStreamable(cleanPath,
                                    appendSuffix=True,
                                    removeOriginal=True,
                                    dryRun=dryRun)
