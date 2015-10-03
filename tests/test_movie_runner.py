@@ -7,6 +7,7 @@ from movie_runner import MovieRunner
 class TestMovieRunner(unittest.TestCase):
     def setUp(self):
         self.movieRunner = MovieRunner()
+        self.movieRunner._postMovie = mock.MagicMock()
 
     @mock.patch('movie_runner.requests')
     def test_loadMovies(self,
@@ -33,7 +34,6 @@ class TestMovieRunner(unittest.TestCase):
                         mock_commands_getoutput,
                         mock_reencodeFilesInDirectory):
         mock_commands_getoutput.return_value = 'movie1\nmovie2\nmovie3'
-        self.movieRunner._postMovie = mock.MagicMock()
 
         self.movieRunner.movies = ['movie2']
         self.movieRunner.postMovies()
