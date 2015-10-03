@@ -90,7 +90,7 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
     fixMetaData(new, dryRun=dryRun)
     log.info("Finished fixing metadata")
 
-    log.info("Renaming file %s to %s" % (orig, new))
+    log.info("Renaming file %s to %s" % (new, orig))
     dest = overwriteExistingFile(new, orig, dryRun=dryRun, appendSuffix=appendSuffix, removeOriginal=removeOriginal)
     log.info("Finished renaming file")
 
