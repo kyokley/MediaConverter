@@ -8,6 +8,9 @@ from settings import (MEDIAVIEWER_SUFFIX,
                       )
 from utils import stripUnicode
 
+from log import LogFile
+log = LogFile().getLogger()
+
 def checkVideoEncoding(source):
     ffmpeg = Popen((ENCODER, "-i", source), stderr=PIPE)
     output = ffmpeg.communicate()[1]
@@ -55,7 +58,7 @@ def encode(source, dest, dryRun=False):
     command.append(dest)
     command = tuple(command)
 
-    print command
+    log.info(command)
     if not dryRun:
         process = Popen(command)
         process.wait()
@@ -79,16 +82,16 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
     orig = os.path.realpath(filename)
     new = "tmpfile.mp4"
 
-    print "Begin re-encoding..."
+    log.info("Begin re-encoding...")
     encode(orig, new, dryRun=dryRun)
 
-    print "Fixing metadata"
+    log.info("Fixing metadata")
     fixMetaData(new, dryRun=dryRun)
 
-    print "Renaming file"
+    log.info("Renaming file")
     dest = overwriteExistingFile(new, orig, dryRun=dryRun, appendSuffix=appendSuffix, removeOriginal=removeOriginal)
 
-    print "Done"
+    log.info("Done")
     return dest
 
 def reencodeFilesInDirectory(dir, dryRun=False):
@@ -107,6 +110,6 @@ def reencodeFilesInDirectory(dir, dryRun=False):
                                    removeOriginal=True,
                                    dryRun=dryRun)
             except Exception, e:
-                print e
+                log.error(e)
                 errors.append(e)
     return errors

@@ -40,7 +40,7 @@ class MovieRunner(object):
         for token in tokens:
             if token not in self.movies:
                 log.info("Found %s" % token)
-                log.info("Found %s. Starting re-encoding..." % token)
+                log.info("Starting re-encoding of %s..." % token)
                 try:
                     reencodeFilesInDirectory(token)
                 except Exception, e:
