@@ -57,8 +57,9 @@ class TvRunner(object):
                                                       removeOriginal=True,
                                                       dryRun=False)
                     except Exception, e:
+                        log.error("Something bad happened attempting to make %s streamable" % fullPath)
                         log.error(e)
-                        log.error("Something bad happened. Attempting to continue")
+                        raise
 
                     if os.path.exists(fullPath):
                         newFile = File(os.path.basename(fullPath),
@@ -70,7 +71,7 @@ class TvRunner(object):
                         newFile.post()
                 except Exception, e:
                     log.error(e)
-                    continue
+                    raise
 
 
 

@@ -32,6 +32,7 @@ class MovieRunner(object):
             except Exception, e:
                 log.error("An error has occurred")
                 log.error(e)
+                raise
 
     def postMovies(self):
         res = commands.getoutput("ls '%s'" % (LOCAL_MOVIE_PATH,))
@@ -46,6 +47,7 @@ class MovieRunner(object):
                 except Exception, e:
                     log.error("Error processing %s" % token)
                     log.error(e)
+                    raise
                 log.info("Posting %s" % (token,))
                 self._postMovie(token)
 
