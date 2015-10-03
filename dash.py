@@ -7,7 +7,7 @@ GATORADE = '74:75:48:41:3c:1c'
 SLEEP_INTERVAL = 60 * 2
 
 def arp_capture(pkt):
-    if pkt[ARP].op == 1: #who-has (request)
+    if ARP in pkt and pkt[ARP].op == 1: #who-has (request)
         if pkt[ARP].psrc == '0.0.0.0': # ARP Probe
             if pkt[ARP].hwsrc == GATORADE:
                 print '%s: Got a button press! Run the converter!' % datetime.now()
