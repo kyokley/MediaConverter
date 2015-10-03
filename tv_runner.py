@@ -96,11 +96,13 @@ class TvRunner(object):
             try:
                 log.debug('Building local file set for %s' % path)
                 localFileSet = self.buildLocalFileSet(path)
+                log.debug('Done building local file set for %s' % path)
             except:
                 continue
 
             log.debug('Attempting to get remote files for %s' % path)
             remoteFileSet = self.buildRemoteFileSetForPathIDs(pathIDs)
+            log.debug('Done building remote file set for %s' % path)
 
             self.updateFileRecords(path, localFileSet, remoteFileSet)
 
