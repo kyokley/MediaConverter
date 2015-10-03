@@ -20,8 +20,8 @@ def checkVideoEncoding(source):
 
 def fixMetaData(source, dryRun=False):
     if not dryRun:
-        process = Popen(("qtfaststart", source))
-        process.wait()
+        process = Popen(("qtfaststart", source), stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        process.communicate()
 
 def encode(source, dest, dryRun=False):
     vres, ares = checkVideoEncoding(source)
@@ -60,8 +60,8 @@ def encode(source, dest, dryRun=False):
 
     log.info(command)
     if not dryRun:
-        process = Popen(command)
-        process.wait()
+        process = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        process.communicate()
 
 def overwriteExistingFile(source,
                           dest,
@@ -82,14 +82,17 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
     orig = os.path.realpath(filename)
     new = "tmpfile.mp4"
 
-    log.info("Begin re-encoding...")
+    log.info("Begin re-encoding of %s..." % orig)
     encode(orig, new, dryRun=dryRun)
+    log.info("Finished encoding")
 
     log.info("Fixing metadata")
     fixMetaData(new, dryRun=dryRun)
+    log.info("Finished fixing metadata")
 
-    log.info("Renaming file")
+    log.info("Renaming file %s to %s" % (orig, new))
     dest = overwriteExistingFile(new, orig, dryRun=dryRun, appendSuffix=appendSuffix, removeOriginal=removeOriginal)
+    log.info("Finished renaming file")
 
     log.info("Done")
     return dest
