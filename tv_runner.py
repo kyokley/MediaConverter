@@ -3,7 +3,7 @@ from file import File
 from path import Path
 from convert import makeFileStreamable
 from settings import MOVIE_PATH_ID
-from utils import stripUnicode
+from utils import stripUnicode, EncoderException, MissingPathException
 
 from log import LogFile
 log = LogFile().getLogger()
@@ -56,10 +56,10 @@ class TvRunner(object):
                                                       appendSuffix=True,
                                                       removeOriginal=True,
                                                       dryRun=False)
-                    except Exception, e:
-                        log.error("Something bad happened attempting to make %s streamable" % fullPath)
-                        log.error(e)
-                        raise
+                    except EncoderException, e:
+                        log.error("Got an encoding error attempting to make %s streamable" % fullPath)
+                        log.error('Attempting to recover and continue')
+                        continue
 
                     if os.path.exists(fullPath):
                         newFile = File(os.path.basename(fullPath),
@@ -70,6 +70,7 @@ class TvRunner(object):
 
                         newFile.post()
                 except Exception, e:
+                    log.error("Something bad happened attempting to make %s streamable" % fullPath)
                     log.error(e)
                     raise
 
@@ -78,7 +79,7 @@ class TvRunner(object):
     def buildLocalFileSet(self, path):
         local_files = commands.getoutput("find '%s' -maxdepth 1 -not -type d" % path)
         if FIND_FAIL_STRING in local_files:
-            raise Exception('Path not found: %s' % path)
+            raise MissingPathException('Path not found: %s' % path)
 
         localFileSet = local_files.split('\n')
         localFileSet = set([os.path.basename(x) for x in localFileSet])
@@ -97,7 +98,9 @@ class TvRunner(object):
                 log.debug('Building local file set for %s' % path)
                 localFileSet = self.buildLocalFileSet(path)
                 log.debug('Done building local file set for %s' % path)
-            except:
+            except MissingPathException, e:
+                log.error(e)
+                log.error('Continuing...')
                 continue
 
             log.debug('Attempting to get remote files for %s' % path)

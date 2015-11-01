@@ -8,6 +8,12 @@ from settings import (WAITER_USERNAME,
                       WAITER_PASSWORD,
                       )
 
+class EncoderException(Exception):
+    pass
+
+class MissingPathException(Exception):
+    pass
+
 def postData(values, url):
     try:
         log.debug(values)

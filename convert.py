@@ -6,7 +6,7 @@ from settings import (MEDIAVIEWER_SUFFIX,
                       ENCODER,
                       MEDIA_FILE_EXTENSIONS,
                       )
-from utils import stripUnicode
+from utils import stripUnicode, EncoderException
 
 from log import LogFile
 log = LogFile().getLogger()
@@ -63,6 +63,10 @@ def encode(source, dest, dryRun=False):
         process = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         process.communicate()
 
+        if process.returncode != 0:
+            os.remove(dest)
+            raise EncoderException('Encoding failed')
+
 def overwriteExistingFile(source,
                           dest,
                           removeOriginal=True,
@@ -112,7 +116,7 @@ def reencodeFilesInDirectory(dir, dryRun=False):
                                    appendSuffix=True,
                                    removeOriginal=True,
                                    dryRun=dryRun)
-            except Exception, e:
+            except EncoderException, e:
                 log.error(e)
                 errors.append(e)
     return errors
