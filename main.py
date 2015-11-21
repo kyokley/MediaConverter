@@ -11,17 +11,21 @@ app = Celery('tasks', broker='amqp://guest@localhost//')
 
 @app.task
 def main():
+    all_errors = []
     tvRunner = TvRunner()
-    errors = tvRunner.run()
+    tv_errors = tvRunner.run()
 
     movieRunner = MovieRunner()
-    movieRunner.run()
+    movie_errors = movieRunner.run()
 
     postData({}, MEDIAVIEWER_INFER_SCRAPERS_URL)
 
-    if errors:
+    all_errors.extend(tv_errors)
+    all_errors.extend(movie_errors)
+
+    if all_errors:
         log.error('Errors occured in the following files:')
-        for error in errors:
+        for error in all_errors:
             log.error(error)
 
     log.info('All done')

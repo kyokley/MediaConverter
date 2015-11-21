@@ -118,5 +118,5 @@ def reencodeFilesInDirectory(dir, dryRun=False):
                                    dryRun=dryRun)
             except EncoderException, e:
                 log.error(e)
-                errors.append(e)
+                errors.append(cleanPath)
     return errors

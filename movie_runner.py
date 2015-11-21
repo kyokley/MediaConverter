@@ -14,6 +14,7 @@ log = LogFile().getLogger()
 class MovieRunner(object):
     def __init__(self):
         self.movies = set()
+        self.errors = []
 
     def loadMovies(self):
         self.movies = set()
@@ -43,7 +44,11 @@ class MovieRunner(object):
                 log.info("Found %s" % token)
                 log.info("Starting re-encoding of %s..." % token)
                 try:
-                    reencodeFilesInDirectory(token)
+                    errors = reencodeFilesInDirectory(token)
+
+                    if errors:
+                        self.errors.extend(errors)
+                        continue
                 except Exception, e:
                     log.error("Error processing %s" % token)
                     log.error(e)
@@ -55,6 +60,7 @@ class MovieRunner(object):
         self.loadMovies()
         self.postMovies()
         log.debug('Done running movies')
+        return self.errors
 
     def _postMovie(self, name):
         values = {'pathid': MOVIE_PATH_ID,
