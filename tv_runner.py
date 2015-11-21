@@ -13,6 +13,7 @@ FIND_FAIL_STRING = 'No such file or directory'
 class TvRunner(object):
     def __init__(self):
         self.paths = dict()
+        self.errors = []
 
     def loadPaths(self):
         self.paths = Path.getAllPaths()
@@ -59,6 +60,7 @@ class TvRunner(object):
                     except EncoderException, e:
                         log.error("Got an encoding error attempting to make %s streamable" % fullPath)
                         log.error('Attempting to recover and continue')
+                        self.errors.append(fullPath)
                         continue
 
                     if os.path.exists(fullPath):
@@ -109,4 +111,8 @@ class TvRunner(object):
 
             self.updateFileRecords(path, localFileSet, remoteFileSet)
 
+        if self.errors:
+            log.error('Errors occured in the following files:')
+            for error in self.errors:
+                log.error(error)
         log.debug('Done')
