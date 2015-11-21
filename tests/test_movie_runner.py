@@ -34,6 +34,7 @@ class TestMovieRunner(unittest.TestCase):
                         mock_commands_getoutput,
                         mock_reencodeFilesInDirectory):
         mock_commands_getoutput.return_value = 'movie1\nmovie2\nmovie3'
+        mock_reencodeFilesInDirectory.return_value = None
 
         self.movieRunner.movies = ['movie2']
         self.movieRunner.postMovies()
