@@ -115,4 +115,5 @@ class TvRunner(object):
             log.error('Errors occured in the following files:')
             for error in self.errors:
                 log.error(error)
-        log.debug('Done')
+        log.debug('Done running tv shows')
+        return self.errors

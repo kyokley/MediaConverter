@@ -54,6 +54,7 @@ class MovieRunner(object):
     def run(self):
         self.loadMovies()
         self.postMovies()
+        log.debug('Done running movies')
 
     def _postMovie(self, name):
         values = {'pathid': MOVIE_PATH_ID,
