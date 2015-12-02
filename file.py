@@ -20,9 +20,9 @@ class File(object):
     def post(self):
         values = {'pathid': self.pathid,
                   'filename': self.filename,
-                  'skip': 1,
+                  'skip': True,
                   'size': self.size,
-                  'finished': 1,
+                  'finished': True,
                   'streamable': self.streamable,
                   }
         postData(values, MEDIAVIEWER_FILE_URL)
