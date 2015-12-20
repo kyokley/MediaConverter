@@ -1,11 +1,15 @@
 import requests, os
 from unidecode import unidecode
+import smtplib
 
 from log import LogFile
 log = LogFile().getLogger()
 
 from settings import (WAITER_USERNAME,
                       WAITER_PASSWORD,
+                      GMAIL_USER,
+                      GMAIL_PASSWORD,
+                      EMAIL_RECIPIENTS,
                       )
 
 class EncoderException(Exception):
@@ -39,3 +43,18 @@ def stripUnicode(filename, path=None):
         return os.path.join(path, strippedFilename)
     else:
         return strippedFilename
+
+def send_email(subject, body):
+    # Prepare actual message
+    message = """\From: %s\nTo: %s\nSubject: %s\n\n%s
+    """ % (GMAIL_USER, ", ".join(EMAIL_RECIPIENTS), subject, body)
+    try:
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.ehlo()
+        server.starttls()
+        server.login(GMAIL_USER, GMAIL_PASSWORD)
+        server.sendmail(GMAIL_USER, EMAIL_RECIPIENTS, message)
+        server.close()
+        print 'successfully sent the mail'
+    except:
+        print "failed to send mail"
