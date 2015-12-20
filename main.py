@@ -1,7 +1,7 @@
 from tv_runner import TvRunner
 from movie_runner import MovieRunner
-from settings import MEDIAVIEWER_INFER_SCRAPERS_URL
-from utils import postData
+from settings import MEDIAVIEWER_INFER_SCRAPERS_URL, SEND_EMAIL
+from utils import postData, send_email
 from celery import Celery
 
 from log import LogFile
@@ -27,6 +27,11 @@ def main():
         log.error('Errors occured in the following files:')
         for error in all_errors:
             log.error(error)
+
+        if SEND_EMAIL:
+            subject = 'MC: Got some errors'
+            message = '\n'.join(all_errors)
+            send_email(subject, message)
 
     log.info('All done')
 
