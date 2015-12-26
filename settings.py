@@ -36,6 +36,11 @@ MEDIA_FILE_EXTENSIONS = ('.mp4',
 
 SERVER_NAME = '127.0.0.1'
 
+SEND_EMAIL = False
+GMAIL_USER = 'some@user.com'
+GMAIL_PASSWORD = 'some_password'
+EMAIL_RECIPIENTS = ['another@user.com']
+
 # DON'T MAKE ANY EDITS BELOW THIS LINE!!!!
 try:
     from local_settings import *
