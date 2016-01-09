@@ -1,6 +1,5 @@
 from main import main
 from flask import (Flask,
-                   jsonify,
                    request,
                    Response)
 from settings import (WAITER_USERNAME,
