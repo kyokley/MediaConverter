@@ -8,7 +8,8 @@ app = Flask(__name__)
 
 @app.route('/alexa', methods=['POST'])
 def alexa():
-    if request.form['pass'] == ALEXA_AUTH:
+    data = request.get_json()
+    if data['pass'] == ALEXA_AUTH:
         main.delay()
         return 'Success', 200
     else:
