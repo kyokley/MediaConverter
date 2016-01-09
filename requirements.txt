@@ -3,3 +3,4 @@ qtfaststart
 scapy
 unidecode
 celery
+flask
