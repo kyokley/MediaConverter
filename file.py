@@ -20,7 +20,7 @@ class File(object):
     def post(self):
         values = {'pathid': self.pathid,
                   'filename': self.filename,
-                  'skip': True,
+                  'skip': False,
                   'size': self.size,
                   'finished': True,
                   'streamable': self.streamable,

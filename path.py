@@ -17,7 +17,7 @@ class Path(object):
     def post(self):
         values = {'localpath': self.localpath,
                   'remotepath': self.remotepath,
-                  'skip': True,
+                  'skip': False,
                   'server': SERVER_NAME,
                   }
         postData(values, MEDIAVIEWER_PATH_URL)
