@@ -3,3 +3,5 @@ qtfaststart
 scapy
 unidecode
 celery
+flask
+uwsgi
