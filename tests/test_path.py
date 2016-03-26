@@ -53,15 +53,15 @@ class TestPath(unittest.TestCase):
 
         self.assertEquals(expectedPathDict, actualPathDict)
 
-    @mock.patch('path.Path.getLocalTVPaths')
-    @mock.patch('path.Path.getTVPaths')
+    @mock.patch('path.Path._getLocalPaths')
+    @mock.patch('path.Path._getPaths')
     def test_getAllPaths(self,
-                         mock_getTVPaths,
-                         mock_getLocalTVPaths):
-        mock_getTVPaths.return_value = {'path1': set([123]),
+                         mock_getPaths,
+                         mock_getLocalPaths):
+        mock_getPaths.return_value = {'path1': set([123]),
                                       'path2': set([234]),
                                       'path3': set([345])}
-        mock_getLocalTVPaths.return_value = ['localpath1',
+        mock_getLocalPaths.return_value = ['localpath1',
                                            'path2',
                                            'path3']
 

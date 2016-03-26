@@ -12,13 +12,17 @@ log = LogFile().getLogger()
 class MovieRunner(object):
     def __init__(self):
         self.movies = set()
+        self.remoteMoviePaths = set()
         self.errors = []
 
     def loadMovies(self):
-        self.movies = Path.getMoviePaths()
+        self.remoteMoviePaths = Path.getMoviePaths()
+
+    def _getLocalMoviePathsSetting(self):
+        return LOCAL_MOVIE_PATHS
 
     def postMovies(self):
-        for moviepath in LOCAL_MOVIE_PATHS:
+        for moviepath in self._getLocalMoviePathsSetting():
             path = Path(moviepath, moviepath)
             path.postMovie()
             data = Path.getMoviePathByLocalPathAndRemotePath(moviepath, moviepath)

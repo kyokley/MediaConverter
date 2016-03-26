@@ -34,17 +34,25 @@ class TestMovieRunner(unittest.TestCase):
                         ])
         self.assertEquals(expected, self.movieRunner.movies)
 
+    @mock.patch('path.Path.getMoviePathByLocalPathAndRemotePath')
     @mock.patch('path.requests')
     @mock.patch('movie_runner.reencodeFilesInDirectory')
     @mock.patch('movie_runner.commands.getoutput')
+    @mock.patch('movie_runner.MovieRunner._getLocalMoviePathsSetting')
     def test_postMovies(self,
+                        mock_getLocalMoviePathsSetting,
                         mock_commands_getoutput,
                         mock_reencodeFilesInDirectory,
-                        mock_requests):
+                        mock_requests,
+                        mock_getMoviePathByLocalPathAndRemotePath):
+        def gen_test_data(num):
+            return [dict(results=[dict(pk=i)]) for i in xrange(1, num + 1)]
+        mock_getMoviePathByLocalPathAndRemotePath.side_effect = gen_test_data(5)
+        mock_getLocalMoviePathsSetting.return_value = ['/path/to/movies']
         mock_commands_getoutput.return_value = 'movie1\nmovie2\nmovie3'
         mock_reencodeFilesInDirectory.return_value = None
 
-        self.movieRunner.movies = ['movie2']
+        self.movieRunner.movies = ['/path/to/other/movies']
         self.movieRunner.postMovies()
 
         self.movieRunner._postMovie.assert_has_calls([call('movie1'),
