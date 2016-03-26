@@ -2,7 +2,6 @@ import os, commands
 from file import File
 from path import Path
 from convert import makeFileStreamable
-from settings import MOVIE_PATH_ID
 from utils import stripUnicode, EncoderException, MissingPathException
 
 from log import LogFile
@@ -16,14 +15,14 @@ class TvRunner(object):
         self.errors = []
 
     def loadPaths(self):
-        self.paths = Path.getAllPaths()
+        self.paths = Path.getAllTVPaths()
 
     @staticmethod
     def getOrCreateRemotePath(localPath):
         log.debug('Get or create path for %s' % localPath)
         newPath = Path(localPath, localPath)
-        newPath.post()
-        data = Path.getPathByLocalPathAndRemotePath(localPath, localPath)
+        newPath.postTVShow()
+        data = Path.getTVPathByLocalPathAndRemotePath(localPath, localPath)
         pathid = data['results'][0]['pk']
         log.debug('Got path')
 
@@ -36,7 +35,7 @@ class TvRunner(object):
             # Skip local paths
             if pathid == -1:
                 continue
-            remoteFilenames = File.getFileSet(pathid)
+            remoteFilenames = File.getTVFileSet(pathid)
             fileSet.update(remoteFilenames)
         log.debug('Built remote fileSet')
 
@@ -93,9 +92,6 @@ class TvRunner(object):
         self.loadPaths()
         log.debug('Got paths')
         for path, pathIDs in self.paths.items():
-            if MOVIE_PATH_ID in pathIDs:
-                continue
-
             try:
                 log.debug('Building local file set for %s' % path)
                 localFileSet = self.buildLocalFileSet(path)

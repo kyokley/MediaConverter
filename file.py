@@ -1,6 +1,8 @@
 import requests
-from settings import (MEDIAVIEWER_FILE_URL,
-                      MEDIAVIEWER_PATHFILES_URL,
+from settings import (MEDIAVIEWER_MOVIE_FILE_URL,
+                      MEDIAVIEWER_TV_FILE_URL,
+                      MEDIAVIEWER_TV_PATHFILES_URL,
+                      MEDIAVIEWER_MOVIE_PATHFILES_URL,
                       WAITER_USERNAME,
                       WAITER_PASSWORD,
                       )
@@ -17,7 +19,11 @@ class File(object):
         self.size = size
         self.streamable = streamable
 
-    def post(self):
+    def _post(self, useMovieURL=False):
+        if useMovieURL:
+            url = MEDIAVIEWER_MOVIE_FILE_URL
+        else:
+            url = MEDIAVIEWER_TV_FILE_URL
         values = {'path': self.pathid,
                   'filename': self.filename,
                   'skip': False,
@@ -25,12 +31,22 @@ class File(object):
                   'finished': True,
                   'streamable': self.streamable,
                   }
-        postData(values, MEDIAVIEWER_FILE_URL)
+        postData(values, url)
+
+    def postTVFile(self):
+        self._post(useMovieURL=False)
+
+    def postMovieFile(self):
+        self._post(useMovieURL=True)
 
     @classmethod
-    def getFileSet(cls, pathid):
+    def _getFileSet(cls, pathid, useMovieURL=False):
         fileSet = set()
-        data = {'next': MEDIAVIEWER_PATHFILES_URL % pathid}
+        if useMovieURL:
+            url = MEDIAVIEWER_MOVIE_PATHFILES_URL
+        else:
+            url = MEDIAVIEWER_TV_PATHFILES_URL
+        data = {'next': url % pathid}
         while data['next']:
             r = requests.get(data['next'], verify=False, auth=(WAITER_USERNAME, WAITER_PASSWORD))
             data = r.json()
@@ -39,3 +55,11 @@ class File(object):
                 for result in data['results']:
                     fileSet.add(result['filename'])
         return fileSet
+
+    @classmethod
+    def getTVFileSet(cls, pathid):
+        return cls._getFileSet(pathid, useMovieURL=False)
+
+    @classmethod
+    def getMovieFileSet(cls, pathid):
+        return cls._getFileSet(pathid, useMovieURL=True)

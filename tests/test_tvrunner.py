@@ -1,7 +1,7 @@
 import unittest
 import mock
 from mock import call
-from tv_runner import TvRunner, FIND_FAIL_STRING, MOVIE_PATH_ID
+from tv_runner import TvRunner, FIND_FAIL_STRING
 
 class TestTvRunner(unittest.TestCase):
     def setUp(self):
@@ -111,7 +111,6 @@ class TestTvRunner(unittest.TestCase):
     def test_run(self):
         test_data = {'asdf': [1],
                      'sdfg': [12, 23],
-                     'movie': [MOVIE_PATH_ID]
                      }
         self.tvRunner.paths = test_data
         self.tvRunner.loadPaths = mock.MagicMock()

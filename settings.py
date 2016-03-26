@@ -8,20 +8,22 @@ except OSError:
     pass
 LOG_FILE_NAME = os.path.join(LOG_DIR, 'converterLog')
 
-MOVIE_PATH_ID = 57
-
 WAITER_USERNAME = 'user'
 WAITER_PASSWORD = 'password'
 
-LOCAL_MOVIE_PATH = 'movies'
-LOCAL_TV_SHOWS_PATH = 'tv_shows'
+LOCAL_MOVIE_PATHS = ['movies']
+LOCAL_TV_SHOWS_PATHS = ['tv_shows']
 
-MEDIAVIEWER_MOVIE_URL = 'https://127.0.0.1:8001/mediaviewer/api/movie/'
+MEDIAVIEWER_MOVIE_PATH_URL = 'https://127.0.0.1:8001/mediaviewer/api/moviepath/'
+MEDIAVIEWER_TV_PATH_URL = 'https://127.0.0.1:8001/mediaviewer/api/tvpath/'
 
-MEDIAVIEWER_PATH_URL = 'https://127.0.0.1:8001/mediaviewer/api/path/'
-MEDIAVIEWER_FILE_URL = 'https://127.0.0.1:8001/mediaviewer/api/file/'
+MEDIAVIEWER_MOVIE_FILE_URL = 'https://127.0.0.1:8001/mediaviewer/api/movie/'
+MEDIAVIEWER_TV_FILE_URL = 'https://127.0.0.1:8001/mediaviewer/api/tv/'
+
+MEDIAVIEWER_TV_PATHFILES_URL = 'https://127.0.0.1:8001/mediaviewer/api/tv/?pathid=%s'
+MEDIAVIEWER_MOVIE_PATHFILES_URL = 'https://127.0.0.1:8001/mediaviewer/api/movie/?pathid=%s'
+
 MEDIAVIEWER_UNSTREAMABLE_FILE_URL = 'https://127.0.0.1:8001/mediaviewer/api/unstreamablefile/'
-MEDIAVIEWER_PATHFILES_URL = 'https://127.0.0.1:8001/mediaviewer/api/file/?pathid=%s'
 MEDIAVIEWER_INFER_SCRAPERS_URL = 'https://127.0.0.1:8001/mediaviewer/api/inferscrapers/'
 
 MEDIAVIEWER_SUFFIX = '%s.mv-encoded.mp4'
