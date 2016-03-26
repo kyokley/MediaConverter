@@ -1,6 +1,7 @@
 import unittest
 import mock
 from file import File
+from settings import MEDIAVIEWER_FILE_URL
 
 class TestFile(unittest.TestCase):
     def setUp(self):
@@ -28,3 +29,14 @@ class TestFile(unittest.TestCase):
                            ])
 
         self.assertEquals(expectedSet, self.file.getFileSet(1))
+
+    @mock.patch('file.postData')
+    def test_post(self, mock_postData):
+        expected = {'path': 123,
+                    'filename': 'testfilename',
+                    'skip': False,
+                    'size': 234,
+                    'finished': True,
+                    'streamable': True}
+        self.file.post()
+        mock_postData.assert_called_once_with(expected, MEDIAVIEWER_FILE_URL)

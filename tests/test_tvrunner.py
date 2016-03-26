@@ -19,7 +19,7 @@ class TestTvRunner(unittest.TestCase):
         expectedPathID = 123
         testData = {'results': [{'pk': expectedPathID}]}
         testPath = 'test path'
-        
+
         mock_path.getPathByLocalPathAndRemotePath.return_value = testData
 
         actualPathID = self.tvRunner.getOrCreateRemotePath(testPath)
@@ -37,7 +37,7 @@ class TestTvRunner(unittest.TestCase):
                            'test123',
                            ])
         mock_file.getFileSet = lambda x: testData.get(x)
-        
+
         actualSet = self.tvRunner.buildRemoteFileSetForPathIDs([-1,
                                                                 1,
                                                                 12,
@@ -136,7 +136,7 @@ class TestTvRunner(unittest.TestCase):
         self.assertEqual(2, self.tvRunner.buildRemoteFileSetForPathIDs.call_count)
 
         self.tvRunner.updateFileRecords.assert_has_calls(
-            [call('sdfg', 
+            [call('sdfg',
                   set(['paths', 'some']),
                   set(['remote', 'some', 'paths'])),
              call('asdf',
