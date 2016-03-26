@@ -2,10 +2,20 @@ import unittest
 import mock
 
 from path import Path
+from settings import SERVER_NAME, MEDIAVIEWER_PATH_URL
 
 class TestPath(unittest.TestCase):
     def setUp(self):
         self.path = Path('localpath', 'remotepath')
+
+    @mock.patch('path.postData')
+    def test_post(self, mock_postData):
+        expected = {'localpath': 'localpath',
+                    'remotepath': 'remotepath',
+                    'skip': False,
+                    'server': SERVER_NAME}
+        self.path.post()
+        mock_postData.assert_called_once_with(expected, MEDIAVIEWER_PATH_URL)
 
     @mock.patch('path.requests')
     def test_getPaths(self,
