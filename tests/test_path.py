@@ -2,7 +2,10 @@ import unittest
 import mock
 
 from path import Path
-from settings import SERVER_NAME, MEDIAVIEWER_PATH_URL
+from settings import (SERVER_NAME,
+                      MEDIAVIEWER_PATH_URL,
+                      LOCAL_TV_SHOWS_PATH,
+                      )
 
 class TestPath(unittest.TestCase):
     def setUp(self):
@@ -57,3 +60,20 @@ class TestPath(unittest.TestCase):
                         'localpath1': set([-1])}
 
         self.assertEquals(expectedDict, self.path.getAllPaths())
+
+    @mock.patch('path.os')
+    @mock.patch('path.commands')
+    def test_getLocalPaths(self,
+                           mock_commands,
+                           mock_os):
+        mock_commands.getoutput.return_value = 'tv.show.1\ntv.show.2\ntv.show.3'
+        path = mock.MagicMock()
+        path.join.side_effect = lambda x,y: '%s/%s' % (x,y)
+        mock_os.path = path
+
+        expected = set(['%s/%s' % (LOCAL_TV_SHOWS_PATH, 'tv.show.1'),
+                        '%s/%s' % (LOCAL_TV_SHOWS_PATH, 'tv.show.2'),
+                        '%s/%s' % (LOCAL_TV_SHOWS_PATH, 'tv.show.3'),
+                        ])
+        actual = self.path.getLocalPaths()
+        self.assertEquals(expected, actual)
