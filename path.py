@@ -44,6 +44,9 @@ class Path(object):
 
     @classmethod
     def getAllPaths(cls):
+        ''' Returns a dict of localpaths related to pathids
+            Local paths not in the server are represented with pathid -1.
+        '''
         allPaths = cls.getPaths()
         localPaths = cls.getLocalPaths()
 

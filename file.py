@@ -18,7 +18,7 @@ class File(object):
         self.streamable = streamable
 
     def post(self):
-        values = {'pathid': self.pathid,
+        values = {'path': self.pathid,
                   'filename': self.filename,
                   'skip': False,
                   'size': self.size,

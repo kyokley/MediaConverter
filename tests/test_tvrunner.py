@@ -51,12 +51,12 @@ class TestTvRunner(unittest.TestCase):
     @mock.patch('tv_runner.makeFileStreamable')
     @mock.patch('tv_runner.File')
     def test_updateFileRecords(self,
-            mock_file,
-            mock_makeFileStreamable,
-            mock_getOrCreateRemotePath,
-            mock_os_path_exists,
-            mock_os_path_getsize,
-            mock_os_path_basename):
+                               mock_file,
+                               mock_makeFileStreamable,
+                               mock_getOrCreateRemotePath,
+                               mock_os_path_exists,
+                               mock_os_path_getsize,
+                               mock_os_path_basename):
         mock_getOrCreateRemotePath.return_value = 1
         mock_os_path_exists.return_value = True
         mock_os_path_getsize.return_value = 1

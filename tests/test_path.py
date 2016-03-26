@@ -5,6 +5,8 @@ from path import Path
 from settings import (SERVER_NAME,
                       MEDIAVIEWER_PATH_URL,
                       LOCAL_TV_SHOWS_PATH,
+                      WAITER_USERNAME,
+                      WAITER_PASSWORD,
                       )
 
 class TestPath(unittest.TestCase):
@@ -48,11 +50,11 @@ class TestPath(unittest.TestCase):
                          mock_getPaths,
                          mock_getLocalPaths):
         mock_getPaths.return_value = {'path1': set([123]),
-                                           'path2': set([234]),
-                                           'path3': set([345])}
+                                      'path2': set([234]),
+                                      'path3': set([345])}
         mock_getLocalPaths.return_value = ['localpath1',
-                                                'path2',
-                                                'path3']
+                                           'path2',
+                                           'path3']
 
         expectedDict = {'path1': set([123]),
                         'path2': set([234, -1]),
@@ -77,3 +79,21 @@ class TestPath(unittest.TestCase):
                         ])
         actual = self.path.getLocalPaths()
         self.assertEquals(expected, actual)
+
+    @mock.patch('path.requests')
+    def test_getPathByLocalPathAndRemotePath(self,
+                                             mock_requests):
+        response = mock.MagicMock()
+        mock_requests.get.return_value = response
+
+        localpath = '/path/to/local/folder'
+        remotepath = '/path/to/remote/folder'
+        Path.getPathByLocalPathAndRemotePath(localpath,
+                                             remotepath)
+
+        mock_requests.get.assert_called_once_with(MEDIAVIEWER_PATH_URL,
+                                                  params={'localpath': localpath,
+                                                          'remotepath': remotepath},
+                                                  verify=False,
+                                                  auth=(WAITER_USERNAME, WAITER_PASSWORD))
+        self.assertTrue(response.json.called)
