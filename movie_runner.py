@@ -1,12 +1,12 @@
-import requests, commands
-from settings import (MOVIE_PATH_ID,
-                      MEDIAVIEWER_MOVIE_URL,
-                      LOCAL_MOVIE_PATH,
+import requests, commands, os
+from settings import (MEDIAVIEWER_MOVIE_FILE_URL,
+                      LOCAL_MOVIE_PATHS,
                       WAITER_USERNAME,
                       WAITER_PASSWORD,
                       )
 from convert import reencodeFilesInDirectory
 from utils import postData
+from path import Path
 
 from log import LogFile
 log = LogFile().getLogger()
@@ -17,44 +17,35 @@ class MovieRunner(object):
         self.errors = []
 
     def loadMovies(self):
-        self.movies = set()
-
-        log.info("Loading movie paths")
-        data = {'next': MEDIAVIEWER_MOVIE_URL}
-        while data['next']:
-            try:
-                log.debug("Making API call with data: %s" % (data,))
-                request = requests.get(data['next'], verify=False, auth=(WAITER_USERNAME, WAITER_PASSWORD))
-                data = request.json()
-
-                if data['results']:
-                    for result in data['results']:
-                        self.movies.add(result['filename'])
-            except Exception, e:
-                log.error("An error has occurred")
-                log.error(e)
-                raise
+        self.movies = Path.getMoviePaths()
 
     def postMovies(self):
-        res = commands.getoutput("ls '%s'" % (LOCAL_MOVIE_PATH,))
-        tokens = res.split('\n')
+        for moviepath in LOCAL_MOVIE_PATHS:
+            path = Path(moviepath, moviepath)
+            path.postMovie()
+            data = Path.getMoviePathByLocalPathAndRemotePath(moviepath, moviepath)
+            pathid = data['results'][0]['pk']
 
-        for token in tokens:
-            if token not in self.movies:
-                log.info("Found %s" % token)
-                log.info("Starting re-encoding of %s..." % token)
-                try:
-                    errors = reencodeFilesInDirectory(token)
+            res = commands.getoutput("ls '%s'" % (moviepath,))
+            tokens = res.split('\n')
 
-                    if errors:
-                        self.errors.extend(errors)
-                        continue
-                except Exception, e:
-                    log.error("Error processing %s" % token)
-                    log.error(e)
-                    raise
-                log.info("Posting %s" % (token,))
-                self._postMovie(token)
+            for token in tokens:
+                localpath = os.path.join(moviepath, token)
+                if localpath not in self.movies:
+                    log.info("Found %s" % localpath)
+                    log.info("Starting re-encoding of %s..." % localpath)
+                    try:
+                        errors = reencodeFilesInDirectory(localpath)
+
+                        if errors:
+                            self.errors.extend(errors)
+                            continue
+                    except Exception, e:
+                        log.error("Error processing %s" % localpath)
+                        log.error(e)
+                        raise
+                    log.info("Posting %s" % (localpath,))
+                    self._postMovie(token, pathid)
 
     def run(self):
         self.loadMovies()
@@ -62,12 +53,12 @@ class MovieRunner(object):
         log.debug('Done running movies')
         return self.errors
 
-    def _postMovie(self, name):
-        values = {'pathid': MOVIE_PATH_ID,
+    def _postMovie(self, name, pathid):
+        values = {'path': pathid,
                   'filename': name,
                   'skip': 1,
                   'size': 0,
                   'finished': 1,
                   'streamable': True,
                   }
-        postData(values, MEDIAVIEWER_MOVIE_URL)
+        postData(values, MEDIAVIEWER_MOVIE_FILE_URL)

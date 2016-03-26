@@ -1,6 +1,5 @@
 import requests, commands, os
-from settings import (LOCAL_TV_SHOWS_PATH,
-                      SERVER_NAME,
+from settings import (SERVER_NAME,
                       MEDIAVIEWER_TV_PATH_URL,
                       MEDIAVIEWER_MOVIE_PATH_URL,
                       WAITER_USERNAME,
@@ -61,15 +60,25 @@ class Path(object):
 
     @classmethod
     def getMoviePaths(cls):
-        return cls._getPath(getMovies=True)
+        return cls._getPaths(getMovies=True)
+
+    @classmethod
+    def _getLocalMoviePathsSetting(cls):
+        '''Useful for testing'''
+        return LOCAL_MOVIE_PATHS
+
+    @classmethod
+    def _getLocalTVShowsPathsSettings(cls):
+        '''Useful for testing'''
+        return LOCAL_TV_SHOWS_PATHS
 
     @classmethod
     def _getLocalPaths(cls, getMovies=False):
         localpaths = set()
         if getMovies:
-            filepaths = LOCAL_MOVIE_PATHS
+            filepaths = cls._getLocalMoviePathsSetting()
         else:
-            filepaths = LOCAL_TV_SHOWS_PATHS
+            filepaths = cls._getLocalTVShowsPathsSettings()
 
         for localpath in filepaths:
             res = commands.getoutput("ls '%s'" % localpath)

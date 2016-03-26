@@ -2,7 +2,6 @@ from subprocess import Popen, PIPE
 import os, shutil, commands
 from re import search
 from settings import (MEDIAVIEWER_SUFFIX,
-                      LOCAL_MOVIE_PATH,
                       ENCODER,
                       MEDIA_FILE_EXTENSIONS,
                       )
@@ -101,9 +100,8 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
     log.info("Done")
     return dest
 
-def reencodeFilesInDirectory(dir, dryRun=False):
+def reencodeFilesInDirectory(fullPath, dryRun=False):
     errors = list()
-    fullPath = os.path.join(LOCAL_MOVIE_PATH, dir)
     res = commands.getoutput("find '%s' -maxdepth 10 -not -type d" % fullPath)
     tokens = res.split('\n')
 

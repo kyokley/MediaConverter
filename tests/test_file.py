@@ -1,7 +1,7 @@
 import unittest
 import mock
 from file import File
-from settings import MEDIAVIEWER_FILE_URL
+from settings import MEDIAVIEWER_TV_FILE_URL
 
 class TestFile(unittest.TestCase):
     def setUp(self):
@@ -39,4 +39,4 @@ class TestFile(unittest.TestCase):
                     'finished': True,
                     'streamable': True}
         self.file.post()
-        mock_postData.assert_called_once_with(expected, MEDIAVIEWER_FILE_URL)
+        mock_postData.assert_called_once_with(expected, MEDIAVIEWER_TV_FILE_URL)
