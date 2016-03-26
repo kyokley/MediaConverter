@@ -10,7 +10,7 @@ class TestTvRunner(unittest.TestCase):
     @mock.patch('tv_runner.Path')
     def test_loadPaths(self, mock_path):
         fake_paths = [object() for i in xrange(3)]
-        mock_path.getAllPaths.return_value = fake_paths
+        mock_path.getAllTVPaths.return_value = fake_paths
         self.tvRunner.loadPaths()
         self.assertEquals(fake_paths, self.tvRunner.paths)
 
@@ -20,7 +20,7 @@ class TestTvRunner(unittest.TestCase):
         testData = {'results': [{'pk': expectedPathID}]}
         testPath = 'test path'
 
-        mock_path.getPathByLocalPathAndRemotePath.return_value = testData
+        mock_path.getTVPathByLocalPathAndRemotePath.return_value = testData
 
         actualPathID = self.tvRunner.getOrCreateRemotePath(testPath)
         self.assertEquals(expectedPathID, actualPathID)
@@ -36,7 +36,7 @@ class TestTvRunner(unittest.TestCase):
                            'test12',
                            'test123',
                            ])
-        mock_file.getFileSet = lambda x: testData.get(x)
+        mock_file.getTVFileSet = lambda x: testData.get(x)
 
         actualSet = self.tvRunner.buildRemoteFileSetForPathIDs([-1,
                                                                 1,

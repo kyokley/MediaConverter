@@ -67,7 +67,7 @@ class Path(object):
         return LOCAL_MOVIE_PATHS
 
     @classmethod
-    def _getLocalTVShowsPathsSettings(cls):
+    def _getLocalTVShowsPathsSetting(cls):
         '''Useful for testing'''
         return LOCAL_TV_SHOWS_PATHS
 
@@ -77,7 +77,7 @@ class Path(object):
         if getMovies:
             filepaths = cls._getLocalMoviePathsSetting()
         else:
-            filepaths = cls._getLocalTVShowsPathsSettings()
+            filepaths = cls._getLocalTVShowsPathsSetting()
 
         for localpath in filepaths:
             res = commands.getoutput("ls '%s'" % localpath)

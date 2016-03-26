@@ -53,15 +53,15 @@ class TestPath(unittest.TestCase):
 
         self.assertEquals(expectedPathDict, actualPathDict)
 
-    @mock.patch('path.Path.getLocalPaths')
-    @mock.patch('path.Path.getPaths')
+    @mock.patch('path.Path.getLocalTVPaths')
+    @mock.patch('path.Path.getTVPaths')
     def test_getAllPaths(self,
-                         mock_getPaths,
-                         mock_getLocalPaths):
-        mock_getPaths.return_value = {'path1': set([123]),
+                         mock_getTVPaths,
+                         mock_getLocalTVPaths):
+        mock_getTVPaths.return_value = {'path1': set([123]),
                                       'path2': set([234]),
                                       'path3': set([345])}
-        mock_getLocalPaths.return_value = ['localpath1',
+        mock_getLocalTVPaths.return_value = ['localpath1',
                                            'path2',
                                            'path3']
 
@@ -70,16 +70,16 @@ class TestPath(unittest.TestCase):
                         'path3': set([345, -1]),
                         'localpath1': set([-1])}
 
-        self.assertEquals(expectedDict, self.path.getAllPaths())
+        self.assertEquals(expectedDict, self.path.getAllTVPaths())
 
-    @mock.patch('path.Path._getLocalMoviePathsSetting')
+    @mock.patch('path.Path._getLocalTVShowsPathsSetting')
     @mock.patch('path.os')
     @mock.patch('path.commands')
     def test_getLocalPaths(self,
                            mock_commands,
                            mock_os,
-                           mock_getLocalMoviePathsSetting):
-        mock_getLocalMoviePathsSetting.return_value = '/test/path'
+                           mock_getLocalTVShowsPathsSetting):
+        mock_getLocalTVShowsPathsSetting.return_value = ['/test/path']
         mock_commands.getoutput.return_value = 'tv.show.1\ntv.show.2\ntv.show.3'
         path = mock.MagicMock()
         path.join.side_effect = lambda x,y: '%s/%s' % (x,y)
@@ -118,7 +118,7 @@ class TestPath(unittest.TestCase):
 
         localpath = '/path/to/local/folder'
         remotepath = '/path/to/remote/folder'
-        Path.getTVPathByLocalPathAndRemotePath(localpath,
+        Path.getMoviePathByLocalPathAndRemotePath(localpath,
                                              remotepath)
 
         mock_requests.get.assert_called_once_with(MEDIAVIEWER_MOVIE_PATH_URL,
