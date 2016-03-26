@@ -1,8 +1,6 @@
-import requests, commands, os
+import commands, os
 from settings import (MEDIAVIEWER_MOVIE_FILE_URL,
                       LOCAL_MOVIE_PATHS,
-                      WAITER_USERNAME,
-                      WAITER_PASSWORD,
                       )
 from convert import reencodeFilesInDirectory
 from utils import postData

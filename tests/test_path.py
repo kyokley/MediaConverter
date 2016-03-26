@@ -5,7 +5,6 @@ from path import Path
 from settings import (SERVER_NAME,
                       MEDIAVIEWER_TV_PATH_URL,
                       MEDIAVIEWER_MOVIE_PATH_URL,
-                      LOCAL_TV_SHOWS_PATHS,
                       WAITER_USERNAME,
                       WAITER_PASSWORD,
                       )
@@ -50,7 +49,7 @@ class TestPath(unittest.TestCase):
 
         expectedPathDict = {'path1': set([12, 234]),
                             'path2': set([123])}
-        actualPathDict = self.path.getPaths()
+        actualPathDict = self.path.getTVPaths()
 
         self.assertEquals(expectedPathDict, actualPathDict)
 

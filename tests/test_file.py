@@ -28,7 +28,7 @@ class TestFile(unittest.TestCase):
                            'file3',
                            ])
 
-        self.assertEquals(expectedSet, self.file.getFileSet(1))
+        self.assertEquals(expectedSet, self.file.getTVFileSet(1))
 
     @mock.patch('file.postData')
     def test_post(self, mock_postData):
@@ -38,5 +38,5 @@ class TestFile(unittest.TestCase):
                     'size': 234,
                     'finished': True,
                     'streamable': True}
-        self.file.post()
+        self.file.postTVFile()
         mock_postData.assert_called_once_with(expected, MEDIAVIEWER_TV_FILE_URL)

@@ -50,8 +50,7 @@ class Path(object):
 
             if data['results']:
                 for result in data['results']:
-                    if result['is_movie'] == getMovies:
-                        pathDict.setdefault(result['localpath'], set()).add(result['pk'])
+                    pathDict.setdefault(result['localpath'], set()).add(result['pk'])
         return pathDict
 
     @classmethod

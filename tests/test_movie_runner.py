@@ -9,12 +9,18 @@ class TestMovieRunner(unittest.TestCase):
         self.movieRunner = MovieRunner()
         self.movieRunner._postMovie = mock.MagicMock()
 
-    @mock.patch('movie_runner.requests')
+    @mock.patch('path.requests')
     def test_loadMovies(self,
                         mock_requests):
-        test_data = {'results': [{'filename': 'movie1'},
-                                 {'filename': 'movie2'},
-                                 {'filename': 'movie3'}],
+        test_data = {'results': [{'filename': 'movie1',
+                                  'localpath': '/first/path',
+                                  'pk': 1},
+                                 {'filename': 'movie2',
+                                  'localpath': '/second/path',
+                                  'pk': 2},
+                                 {'filename': 'movie3',
+                                  'localpath': '/third/path',
+                                  'pk': 3}],
                      'next': None}
         mock_request = mock.MagicMock()
         mock_request.json.return_value = test_data
@@ -28,11 +34,13 @@ class TestMovieRunner(unittest.TestCase):
                         ])
         self.assertEquals(expected, self.movieRunner.movies)
 
+    @mock.patch('path.requests')
     @mock.patch('movie_runner.reencodeFilesInDirectory')
     @mock.patch('movie_runner.commands.getoutput')
     def test_postMovies(self,
                         mock_commands_getoutput,
-                        mock_reencodeFilesInDirectory):
+                        mock_reencodeFilesInDirectory,
+                        mock_requests):
         mock_commands_getoutput.return_value = 'movie1\nmovie2\nmovie3'
         mock_reencodeFilesInDirectory.return_value = None
 
