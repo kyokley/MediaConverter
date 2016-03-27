@@ -5,6 +5,7 @@ from settings import (MEDIAVIEWER_MOVIE_FILE_URL,
 from convert import reencodeFilesInDirectory
 from utils import postData
 from path import Path
+from file import File
 
 from log import LogFile
 log = LogFile().getLogger()
@@ -12,11 +13,12 @@ log = LogFile().getLogger()
 class MovieRunner(object):
     def __init__(self):
         self.movies = set()
-        self.remoteMoviePaths = set()
+        #self.remoteMoviePaths = set()
+        self.movies = set()
         self.errors = []
 
-    def loadMovies(self):
-        self.remoteMoviePaths = Path.getMoviePaths()
+    #def loadMovies(self):
+        #self.remoteMoviePaths = Path.getMoviePaths()
 
     def _getLocalMoviePathsSetting(self):
         return LOCAL_MOVIE_PATHS
@@ -28,12 +30,16 @@ class MovieRunner(object):
             data = Path.getMoviePathByLocalPathAndRemotePath(moviepath, moviepath)
             pathid = data['results'][0]['pk']
 
+            results = File.getMovieFileSet(pathid)
+            fileset = [os.path.join(moviepath, res)
+                           for res in results]
+
             res = commands.getoutput("ls '%s'" % (moviepath,))
             tokens = res.split('\n')
 
             for token in tokens:
                 localpath = os.path.join(moviepath, token)
-                if localpath not in self.movies:
+                if localpath not in fileset:
                     log.info("Found %s" % localpath)
                     log.info("Starting re-encoding of %s..." % localpath)
                     try:
