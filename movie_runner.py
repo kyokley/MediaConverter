@@ -13,7 +13,6 @@ log = LogFile().getLogger()
 class MovieRunner(object):
     def __init__(self):
         self.movies = set()
-        self.movies = set()
         self.errors = []
 
     def _getLocalMoviePathsSetting(self):
