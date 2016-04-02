@@ -9,30 +9,11 @@ class TestMovieRunner(unittest.TestCase):
         self.movieRunner = MovieRunner()
         self.movieRunner._postMovie = mock.MagicMock()
 
-    #@mock.patch('path.requests')
-    #def test_loadMovies(self,
-                        #mock_requests):
-        #test_data = {'results': [{'filename': 'movie1',
-                                  #'localpath': '/first/path',
-                                  #'pk': 1},
-                                 #{'filename': 'movie2',
-                                  #'localpath': '/second/path',
-                                  #'pk': 2},
-                                 #{'filename': 'movie3',
-                                  #'localpath': '/third/path',
-                                  #'pk': 3}],
-                     #'next': None}
-        #mock_request = mock.MagicMock()
-        #mock_request.json.return_value = test_data
-        #mock_requests.get.side_effect = [mock_request]
-#
-        #self.movieRunner.loadMovies()
-#
-        #expected = set(['movie1',
-                        #'movie2',
-                        #'movie3',
-                        #])
-        #self.assertEquals(expected, self.movieRunner.movies)
+    @mock.patch('movie_runner.MovieRunner.postMovies')
+    def test_run(self,
+                 mock_postMovies):
+        self.movieRunner.run()
+        self.assertEquals(1, mock_postMovies.call_count)
 
     @mock.patch('path.Path.getMoviePathByLocalPathAndRemotePath')
     @mock.patch('file.requests')
@@ -69,4 +50,3 @@ class TestMovieRunner(unittest.TestCase):
         mock_reencodeFilesInDirectory.assert_has_calls([call('/path/to/movies/movie2')],
                                                         any_order=True)
         self.assertEqual(1, mock_reencodeFilesInDirectory.call_count)
-
