@@ -8,6 +8,9 @@ from settings import (MEDIAVIEWER_MOVIE_FILE_URL,
                       )
 from utils import postData
 
+from log import LogFile
+log = LogFile().getLogger()
+
 class File(object):
     def __init__(self,
                  filename,
@@ -24,6 +27,13 @@ class File(object):
             url = MEDIAVIEWER_MOVIE_FILE_URL
         else:
             url = MEDIAVIEWER_TV_FILE_URL
+
+        if (not self.filename or
+                not self.pathid):
+            log.error('Invalid request')
+            log.error('Filename: %s Pathid: %s' % (self.filename, self.pathid))
+            return
+
         values = {'path': self.pathid,
                   'filename': self.filename,
                   'skip': False,
@@ -49,6 +59,7 @@ class File(object):
         data = {'next': url % pathid}
         while data['next']:
             r = requests.get(data['next'], verify=False, auth=(WAITER_USERNAME, WAITER_PASSWORD))
+            r.raise_for_status()
             data = r.json()
 
             if data['results']:

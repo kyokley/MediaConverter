@@ -20,6 +20,10 @@ class MovieRunner(object):
 
     def postMovies(self):
         for moviepath in self._getLocalMoviePathsSetting():
+            if not os.path.exists(moviepath):
+                self.errors.append('%s does not exist. Continuing...' % moviepath)
+                continue
+
             path = Path(moviepath, moviepath)
             path.postMovie()
             data = Path.getMoviePathByLocalPathAndRemotePath(moviepath, moviepath)
@@ -56,6 +60,12 @@ class MovieRunner(object):
         return self.errors
 
     def _postMovie(self, name, pathid):
+        if (not name or
+                not pathid):
+            log.error('Invalid request')
+            log.error('Filename: %s Pathid: %s' % (name, pathid))
+            return
+
         values = {'path': pathid,
                   'filename': name,
                   'skip': 1,

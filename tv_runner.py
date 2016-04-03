@@ -69,7 +69,7 @@ class TvRunner(object):
                                        True,
                                        )
 
-                        newFile.post()
+                        newFile.postTVFile()
                 except Exception, e:
                     log.error("Something bad happened attempting to make %s streamable" % fullPath)
                     log.error(e)

@@ -9,6 +9,9 @@ from settings import (SERVER_NAME,
                       )
 from utils import postData
 
+from log import LogFile
+log = LogFile().getLogger()
+
 class Path(object):
     def __init__(self,
                  localpath,
@@ -46,6 +49,7 @@ class Path(object):
         data = {'next': url}
         while data['next']:
             request = requests.get(data['next'], verify=False, auth=(WAITER_USERNAME, WAITER_PASSWORD))
+            request.raise_for_status()
             data = request.json()
 
             if data['results']:
@@ -80,9 +84,13 @@ class Path(object):
             filepaths = cls._getLocalTVShowsPathsSetting()
 
         for localpath in filepaths:
+            if not os.path.exists(localpath):
+                log.error('%s does not exist. Continuing...' % localpath)
+                continue
+
             res = commands.getoutput("ls '%s'" % localpath)
             res = res.split('\n')
-            res = set([os.path.join(localpath, path) for path in res])
+            res = set([os.path.join(localpath, path) for path in res if path])
             localpaths.update(res)
         return localpaths
 
@@ -130,6 +138,7 @@ class Path(object):
                                verify=False,
                                auth=(WAITER_USERNAME, WAITER_PASSWORD),
                                )
+        request.raise_for_status()
         data = request.json()
         return data
 
