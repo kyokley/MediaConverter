@@ -15,6 +15,7 @@ class TestMovieRunner(unittest.TestCase):
         self.movieRunner.run()
         self.assertEquals(1, mock_postMovies.call_count)
 
+    @mock.patch('movie_runner.os.path.exists')
     @mock.patch('path.Path.getMoviePathByLocalPathAndRemotePath')
     @mock.patch('file.requests')
     @mock.patch('movie_runner.reencodeFilesInDirectory')
@@ -25,10 +26,12 @@ class TestMovieRunner(unittest.TestCase):
                         mock_commands_getoutput,
                         mock_reencodeFilesInDirectory,
                         mock_requests,
-                        mock_getMoviePathByLocalPathAndRemotePath):
+                        mock_getMoviePathByLocalPathAndRemotePath,
+                        mock_exists):
         def gen_test_data(num):
             return [dict(results=[dict(pk=i)]) for i in xrange(1, num + 1)]
 
+        mock_exists.return_value = True
         mock_getMoviePathByLocalPathAndRemotePath.side_effect = gen_test_data(5)
         mock_getLocalMoviePathsSetting.return_value = ['/path/to/movies']
         mock_commands_getoutput.return_value = 'movie1\nmovie2\nmovie3'
