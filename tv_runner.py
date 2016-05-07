@@ -1,8 +1,14 @@
-import os, commands
+import os
+import commands
+import traceback
 from file import File
 from path import Path
+from settings import SEND_EMAIL
 from convert import makeFileStreamable
-from utils import stripUnicode, EncoderException, MissingPathException
+from utils import (stripUnicode,
+                   EncoderException,
+                   MissingPathException,
+                   send_email)
 
 from log import LogFile
 log = LogFile().getLogger()
@@ -44,7 +50,7 @@ class TvRunner(object):
     def updateFileRecords(self, path, localFileSet, remoteFileSet):
         pathid = None
         for localFile in localFileSet:
-            if localFile not in remoteFileSet:
+            if localFile and localFile not in remoteFileSet:
                 try:
                     if not pathid:
                         pathid = self.getOrCreateRemotePath(path)
@@ -73,6 +79,14 @@ class TvRunner(object):
                 except Exception, e:
                     log.error("Something bad happened attempting to make %s streamable" % fullPath)
                     log.error(e)
+
+                    if SEND_EMAIL:
+                        subject = 'MC: Got some errors'
+                        message = '''
+                        Got the following:
+                        %s
+                        ''' % traceback.format_exc()
+                        send_email(subject, message)
                     raise
 
 
