@@ -12,6 +12,7 @@ def arp_capture(pkt):
                 main.delay()
 
 def dash():
+    print 'Starting up'
     sniff(prn=arp_capture, filter="arp", store=0)
 
 if __name__ == '__main__':
