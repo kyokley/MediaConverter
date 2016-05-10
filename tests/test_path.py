@@ -7,6 +7,7 @@ from settings import (SERVER_NAME,
                       MEDIAVIEWER_MOVIE_PATH_URL,
                       WAITER_USERNAME,
                       WAITER_PASSWORD,
+                      VERIFY_REQUESTS,
                       )
 
 class TestPath(unittest.TestCase):
@@ -106,7 +107,7 @@ class TestPath(unittest.TestCase):
         mock_requests.get.assert_called_once_with(MEDIAVIEWER_TV_PATH_URL,
                                                   params={'localpath': localpath,
                                                           'remotepath': remotepath},
-                                                  verify=False,
+                                                  verify=VERIFY_REQUESTS,
                                                   auth=(WAITER_USERNAME, WAITER_PASSWORD))
         self.assertTrue(response.json.called)
 
@@ -124,6 +125,6 @@ class TestPath(unittest.TestCase):
         mock_requests.get.assert_called_once_with(MEDIAVIEWER_MOVIE_PATH_URL,
                                                   params={'localpath': localpath,
                                                           'remotepath': remotepath},
-                                                  verify=False,
+                                                  verify=VERIFY_REQUESTS,
                                                   auth=(WAITER_USERNAME, WAITER_PASSWORD))
         self.assertTrue(response.json.called)

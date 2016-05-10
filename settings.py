@@ -45,6 +45,8 @@ EMAIL_RECIPIENTS = ['another@user.com']
 
 ALEXA_AUTH = 'secret'
 
+VERIFY_REQUESTS = True
+
 # DON'T MAKE ANY EDITS BELOW THIS LINE!!!!
 try:
     from local_settings import *

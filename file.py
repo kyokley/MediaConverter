@@ -5,6 +5,7 @@ from settings import (MEDIAVIEWER_MOVIE_FILE_URL,
                       MEDIAVIEWER_MOVIE_PATHFILES_URL,
                       WAITER_USERNAME,
                       WAITER_PASSWORD,
+                      VERIFY_REQUESTS,
                       )
 from utils import postData
 
@@ -58,7 +59,7 @@ class File(object):
             url = MEDIAVIEWER_TV_PATHFILES_URL
         data = {'next': url % pathid}
         while data['next']:
-            r = requests.get(data['next'], verify=False, auth=(WAITER_USERNAME, WAITER_PASSWORD))
+            r = requests.get(data['next'], verify=VERIFY_REQUESTS, auth=(WAITER_USERNAME, WAITER_PASSWORD))
             r.raise_for_status()
             data = r.json()
 

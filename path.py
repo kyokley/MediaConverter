@@ -6,6 +6,7 @@ from settings import (SERVER_NAME,
                       WAITER_PASSWORD,
                       LOCAL_TV_SHOWS_PATHS,
                       LOCAL_MOVIE_PATHS,
+                      VERIFY_REQUESTS,
                       )
 from utils import postData
 
@@ -48,7 +49,7 @@ class Path(object):
 
         data = {'next': url}
         while data['next']:
-            request = requests.get(data['next'], verify=False, auth=(WAITER_USERNAME, WAITER_PASSWORD))
+            request = requests.get(data['next'], verify=VERIFY_REQUESTS, auth=(WAITER_USERNAME, WAITER_PASSWORD))
             request.raise_for_status()
             data = request.json()
 
@@ -135,7 +136,7 @@ class Path(object):
             url = MEDIAVIEWER_TV_PATH_URL
         request = requests.get(url,
                                params=payload,
-                               verify=False,
+                               verify=VERIFY_REQUESTS,
                                auth=(WAITER_USERNAME, WAITER_PASSWORD),
                                )
         request.raise_for_status()

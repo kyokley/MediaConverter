@@ -10,6 +10,7 @@ from settings import (WAITER_USERNAME,
                       GMAIL_USER,
                       GMAIL_PASSWORD,
                       EMAIL_RECIPIENTS,
+                      VERIFY_REQUESTS,
                       )
 
 class EncoderException(Exception):
@@ -21,7 +22,7 @@ class MissingPathException(Exception):
 def postData(values, url):
     try:
         log.debug(values)
-        request = requests.post(url, data=values, auth=(WAITER_USERNAME, WAITER_PASSWORD), verify=False)
+        request = requests.post(url, data=values, auth=(WAITER_USERNAME, WAITER_PASSWORD), verify=VERIFY_REQUESTS)
         request.raise_for_status()
         return request
     except Exception, e:
