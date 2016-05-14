@@ -8,6 +8,8 @@ except OSError:
     pass
 LOG_FILE_NAME = os.path.join(LOG_DIR, 'converterLog')
 
+CELERY_VHOST = '/'
+
 WAITER_USERNAME = 'user'
 WAITER_PASSWORD = 'password'
 
