@@ -21,6 +21,7 @@ class MissingPathException(Exception):
 
 def postData(values, url):
     try:
+        log.debug('Posting the following values:')
         log.debug(values)
         request = requests.post(url, data=values, auth=(WAITER_USERNAME, WAITER_PASSWORD), verify=VERIFY_REQUESTS)
         request.raise_for_status()
@@ -47,6 +48,7 @@ def stripUnicode(filename, path=None):
 
 def send_email(subject, body):
     # Prepare actual message
+    log.info('sending error email')
     message = """\From: %s\nTo: %s\nSubject: %s\n\n%s
     """ % (GMAIL_USER, ", ".join(EMAIL_RECIPIENTS), subject, body)
     try:
@@ -56,6 +58,6 @@ def send_email(subject, body):
         server.login(GMAIL_USER, GMAIL_PASSWORD)
         server.sendmail(GMAIL_USER, EMAIL_RECIPIENTS, message)
         server.close()
-        print 'successfully sent the mail'
+        log.debug('successfully sent the mail')
     except:
-        print "failed to send mail"
+        log.error("failed to send mail")
