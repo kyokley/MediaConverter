@@ -63,9 +63,10 @@ class TvRunner(object):
                                                       removeOriginal=True,
                                                       dryRun=False)
                     except EncoderException, e:
-                        log.error("Got an encoding error attempting to make %s streamable" % fullPath)
+                        errorMsg = "Got a non-fatal encoding error attempting to make %s streamable" % fullPath
+                        log.error(errorMsg)
                         log.error('Attempting to recover and continue')
-                        self.errors.append(fullPath)
+                        self.errors.append(errorMsg)
                         continue
 
                     if os.path.exists(fullPath):
@@ -77,15 +78,17 @@ class TvRunner(object):
 
                         newFile.postTVFile()
                 except Exception, e:
-                    log.error("Something bad happened attempting to make %s streamable" % fullPath)
+                    errorMsg = "Something bad happened attempting to make %s streamable" % fullPath
+                    log.error(errorMsg)
                     log.error(e)
 
                     if SEND_EMAIL:
                         subject = 'MC: Got some errors'
                         message = '''
+                        %s
                         Got the following:
                         %s
-                        ''' % traceback.format_exc()
+                        ''' % (errorMsg, traceback.format_exc())
                         send_email(subject, message)
                     raise
 

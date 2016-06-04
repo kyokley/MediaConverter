@@ -77,8 +77,12 @@ def overwriteExistingFile(source,
 
     dest = appendSuffix and MEDIAVIEWER_SUFFIX % dest or dest
 
+    log.info("Renaming file %s to %s" % (source, dest))
     if not dryRun:
         shutil.move(source, dest)
+    else:
+        log.info('Skipping move execution for dry-run')
+    log.info("Finished renaming file")
     return dest
 
 def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal=True):
@@ -93,9 +97,7 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
     fixMetaData(new, dryRun=dryRun)
     log.info("Finished fixing metadata")
 
-    log.info("Renaming file %s to %s" % (new, orig))
     dest = overwriteExistingFile(new, orig, dryRun=dryRun, appendSuffix=appendSuffix, removeOriginal=removeOriginal)
-    log.info("Finished renaming file")
 
     log.info("Done")
     return dest
