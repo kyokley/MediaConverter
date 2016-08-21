@@ -1,4 +1,4 @@
-from scapy.all import sniff, ARP
+from scapy.all import sniff, ARP, BOOTP
 from main import main
 from datetime import datetime
 
@@ -13,10 +13,14 @@ def arp_capture(pkt):
             if pkt[ARP].hwsrc == GATORADE:
                 log.debug('%s: Got a button press! Run the converter!' % datetime.now())
                 main.delay()
+    elif BOOTP in pkt and pkt[BOOTP].op == 1:
+        if 'src' in pkt.fields and pkt.fields['src'] == GATORADE:
+            log.debug('%s: Got a button press! Run the converter!' % datetime.now())
+            main.delay()
 
 def dash():
     log.info('Starting up')
-    sniff(prn=arp_capture, filter="arp", store=0)
+    sniff(prn=arp_capture, filter="arp or (port 67 and port 68)", store=0)
 
 if __name__ == '__main__':
     dash()
