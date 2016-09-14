@@ -120,6 +120,27 @@ class TestExtractSubtitles(unittest.TestCase):
                                         stderr=PIPE)
         self.assertTrue(self.process2.communicate.called)
 
+    def test_subtitle_extract_failed(self):
+        self.process1.returncode = 1
+
+        _extractSubtitles(self.source,
+                          self.dest,
+                          self.stream_identifier,
+                          )
+
+        self.mock_popen.assert_any_call([ENCODER,
+                                         '-hide_banner',
+                                         '-y',
+                                         '-i',
+                                         self.source,
+                                         '-map',
+                                         '0:2',
+                                         '/tmp/test_dest.srt'],
+                                        stdin=PIPE,
+                                        stdout=PIPE,
+                                        stderr=PIPE)
+        self.assertTrue(self.process1.communicate.called)
+
 
 VALID_SAMPLE_OUTPUT = '''
 Input #0, matroska,webm, from '/tmp/test.mkv':
