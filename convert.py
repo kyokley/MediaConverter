@@ -1,5 +1,6 @@
 from subprocess import Popen, PIPE
 import os, shutil, commands
+import itertools
 from re import search
 from settings import (MEDIAVIEWER_SUFFIX,
                       ENCODER,
@@ -15,7 +16,8 @@ def checkVideoEncoding(source):
     output = ffmpeg.communicate()[1]
     vmatch = search("Video.*h264", output)
     amatch = search("Audio.*(mp3|aac)", output)
-    return (vmatch and 1 or 0, amatch and 1 or 0)
+    smatch = search("(\d+):(\d+)\(eng.*Subtitle", output)
+    return (vmatch and 1 or 0, amatch and 1 or 0, smatch)
 
 def fixMetaData(source, dryRun=False):
     if not dryRun:
@@ -23,13 +25,28 @@ def fixMetaData(source, dryRun=False):
         process.communicate()
 
 def encode(source, dest, dryRun=False):
-    vres, ares = checkVideoEncoding(source)
+    vres, ares, sres = checkVideoEncoding(source)
 
     command = [ENCODER,
                "-y",
                "-i",
                source,
                ]
+
+    if sres:
+        srt_filename = '%s.srt' % dest[:-4]
+        #vtt_filename = '%s.vtt' % dest[:-4]
+        subtitle_command = itertools.chain(command,
+                                           ['-map',
+                                            '%s:s:%s' % (sres[0], sres[1]),
+                                            srt_filename])
+        process = Popen(subtitle_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        process.communicate()
+
+        srt_vtt_command = ['srt-vtt',
+                           srt_filename]
+        process = Popen(srt_vtt_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        process.communicate()
 
     if vres and ares:
         command.extend(["-c",
