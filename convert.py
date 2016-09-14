@@ -29,6 +29,44 @@ def fixMetaData(source, dryRun=False):
         process = Popen(("qtfaststart", source), stdin=PIPE, stdout=PIPE, stderr=PIPE)
         process.communicate()
 
+def _extractSubtitles(source, dest, stream_identifier):
+    command = [ENCODER,
+               "-hide_banner",
+               "-y",
+               "-i",
+               source,
+               ]
+    srt_filename = '%s.srt' % os.path.splitext(dest)[0]
+    vtt_filename = '%s.vtt' % os.path.splitext(dest)[0]
+    subtitle_command = command + ['-map',
+                                  stream_identifier,
+                                  srt_filename]
+    log.debug('Extracting using following command:')
+    log.debug(' '.join(subtitle_command))
+    process = Popen(subtitle_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    out, err = process.communicate()
+    if process.returncode != 0:
+        log.error(err)
+        try:
+            os.remove(srt_filename)
+        except OSError, e:
+            log.warn(e)
+        raise EncoderException(err)
+
+    srt_vtt_command = ['srt-vtt',
+                       srt_filename]
+    log.debug('Extracting using following command:')
+    log.debug(' '.join(srt_vtt_command))
+    process = Popen(srt_vtt_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    out, err = process.communicate()
+    if process.returncode != 0:
+        log.error(err)
+        try:
+            os.remove(vtt_filename)
+        except OSError, e:
+            log.warn(e)
+        raise EncoderException(err)
+
 def encode(source, dest, dryRun=False):
     vres, ares, sres = checkVideoEncoding(source)
 
@@ -42,36 +80,11 @@ def encode(source, dest, dryRun=False):
     if sres:
         log.info('Found subtitles stream. Attempting to extract')
         sres = sres.groups()
-        srt_filename = '%s.srt' % os.path.splitext(dest)[0]
-        vtt_filename = '%s.vtt' % os.path.splitext(dest)[0]
-        subtitle_command = command + ['-map',
-                                      '%s:%s' % (sres[0], sres[1]),
-                                      srt_filename]
-        log.debug('Extracting using following command:')
-        log.debug(' '.join(subtitle_command))
-        process = Popen(subtitle_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        out, err = process.communicate()
-        if process.returncode != 0:
-            log.error(err)
-            try:
-                os.remove(srt_filename)
-            except OSError, e:
-                log.warn(e)
-            raise EncoderException(err)
-
-        srt_vtt_command = ['srt-vtt',
-                           srt_filename]
-        log.debug('Extracting using following command:')
-        log.debug(' '.join(srt_vtt_command))
-        process = Popen(srt_vtt_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        out, err = process.communicate()
-        if process.returncode != 0:
-            log.error(err)
-            try:
-                os.remove(vtt_filename)
-            except OSError, e:
-                log.warn(e)
-            raise EncoderException(err)
+        stream_identifier = '%s:%s' % (sres[0], sres[1])
+        _extractSubtitles(source,
+                          dest,
+                          stream_identifier,
+                          )
 
     if vres and ares:
         command.extend(["-c",

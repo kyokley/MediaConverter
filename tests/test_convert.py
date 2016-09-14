@@ -5,7 +5,7 @@ from settings import ENCODER
 from utils import EncoderException
 from convert import (checkVideoEncoding,
                      fixMetaData,
-                     encode,
+                     _extractSubtitles,
                      )
 
 class TestCheckVideoEncoding(unittest.TestCase):
@@ -70,6 +70,55 @@ class TestFixMetaData(unittest.TestCase):
                                                 stdout=PIPE,
                                                 stderr=PIPE)
         self.assertTrue(self.process.communicate.called)
+
+class TestExtractSubtitles(unittest.TestCase):
+    def setUp(self):
+        self.popen_patcher = mock.patch('convert.Popen')
+        self.mock_popen = self.popen_patcher.start()
+        self.addCleanup(self.popen_patcher.stop)
+
+        self.log_patcher = mock.patch('convert.log')
+        self.mock_log = self.log_patcher.start()
+        self.addCleanup(self.log_patcher.stop)
+
+        self.process1 = mock.MagicMock()
+        self.process1.communicate.return_value = ('srt_stdout', 'srt_stderr')
+        self.process1.returncode = 0
+
+        self.process2 = mock.MagicMock()
+        self.process2.communicate.return_value = ('vtt_stdout', 'vtt_stderr')
+        self.mock_popen.side_effect = [self.process1, self.process2]
+        self.process2.returncode = 0
+
+        self.source = '/tmp/test_source.mkv'
+        self.dest = '/tmp/test_dest.mp4'
+        self.stream_identifier = '0:2'
+
+    def test_success(self):
+        _extractSubtitles(self.source,
+                          self.dest,
+                          self.stream_identifier,
+                          )
+
+        self.mock_popen.assert_any_call([ENCODER,
+                                         '-hide_banner',
+                                         '-y',
+                                         '-i',
+                                         self.source,
+                                         '-map',
+                                         '0:2',
+                                         '/tmp/test_dest.srt'],
+                                        stdin=PIPE,
+                                        stdout=PIPE,
+                                        stderr=PIPE)
+        self.assertTrue(self.process1.communicate.called)
+
+        self.mock_popen.assert_any_call(['srt-vtt',
+                                         '/tmp/test_dest.srt'],
+                                        stdin=PIPE,
+                                        stdout=PIPE,
+                                        stderr=PIPE)
+        self.assertTrue(self.process2.communicate.called)
 
 
 VALID_SAMPLE_OUTPUT = '''
