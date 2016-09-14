@@ -16,7 +16,7 @@ def checkVideoEncoding(source):
     output = ffmpeg.communicate()[1]
     vmatch = search("Video.*h264", output)
     amatch = search("Audio.*(mp3|aac)", output)
-    smatch = search("(\d+):(\d+)\(eng.*Subtitle", output)
+    smatch = search("(\d+).(\d+)\(eng.*Subtitle", output)
     return (vmatch and 1 or 0, amatch and 1 or 0, smatch)
 
 def fixMetaData(source, dryRun=False):
@@ -34,19 +34,27 @@ def encode(source, dest, dryRun=False):
                ]
 
     if sres:
+        log.info('Found subtitles stream. Attempting to extract')
+        sres = sres.groups()
         srt_filename = '%s.srt' % dest[:-4]
-        #vtt_filename = '%s.vtt' % dest[:-4]
+        vtt_filename = '%s.vtt' % dest[:-4]
         subtitle_command = itertools.chain(command,
                                            ['-map',
                                             '%s:s:%s' % (sres[0], sres[1]),
                                             srt_filename])
         process = Popen(subtitle_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        process.communicate()
+        out, err = process.communicate()
+        if process.returncode != 0:
+            os.remove(srt_filename)
+            raise EncoderException('Failed to extract subtitle')
 
         srt_vtt_command = ['srt-vtt',
                            srt_filename]
         process = Popen(srt_vtt_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        process.communicate()
+        out, err = process.communicate()
+        if process.returncode != 0:
+            os.remove(vtt_filename)
+            raise EncoderException('Failed to convert srt to vtt')
 
     if vres and ares:
         command.extend(["-c",
