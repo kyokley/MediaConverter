@@ -1,6 +1,5 @@
 from subprocess import Popen, PIPE
 import os, shutil, commands
-import itertools
 from re import search
 from settings import (MEDIAVIEWER_SUFFIX,
                       ENCODER,
@@ -12,8 +11,14 @@ from log import LogFile
 log = LogFile().getLogger()
 
 def checkVideoEncoding(source):
-    ffmpeg = Popen((ENCODER, "-i", source), stderr=PIPE)
+    ffmpeg = Popen((ENCODER, '-hide_banner', "-i", source), stderr=PIPE)
     output = ffmpeg.communicate()[1]
+
+    # Can't check returncode here since we always get back 1
+    if 'At least one output file must be specified' != output.split('\n')[-2]:
+        log.error(output)
+        raise EncoderException(output)
+
     vmatch = search("Video.*h264", output)
     amatch = search("Audio.*(mp3|aac)", output)
     smatch = search("(\d+).(\d+)\(eng.*Subtitle", output)
@@ -28,6 +33,7 @@ def encode(source, dest, dryRun=False):
     vres, ares, sres = checkVideoEncoding(source)
 
     command = [ENCODER,
+               "-hide_banner",
                "-y",
                "-i",
                source,
@@ -36,25 +42,36 @@ def encode(source, dest, dryRun=False):
     if sres:
         log.info('Found subtitles stream. Attempting to extract')
         sres = sres.groups()
-        srt_filename = '%s.srt' % dest[:-4]
-        vtt_filename = '%s.vtt' % dest[:-4]
-        subtitle_command = itertools.chain(command,
-                                           ['-map',
-                                            '%s:s:%s' % (sres[0], sres[1]),
-                                            srt_filename])
+        srt_filename = '%s.srt' % os.path.splitext(dest)[0]
+        vtt_filename = '%s.vtt' % os.path.splitext(dest)[0]
+        subtitle_command = command + ['-map',
+                                      '%s:%s' % (sres[0], sres[1]),
+                                      srt_filename]
+        log.debug('Extracting using following command:')
+        log.debug(' '.join(subtitle_command))
         process = Popen(subtitle_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         out, err = process.communicate()
         if process.returncode != 0:
-            os.remove(srt_filename)
-            raise EncoderException('Failed to extract subtitle')
+            log.error(err)
+            try:
+                os.remove(srt_filename)
+            except OSError, e:
+                log.warn(e)
+            raise EncoderException(err)
 
         srt_vtt_command = ['srt-vtt',
                            srt_filename]
+        log.debug('Extracting using following command:')
+        log.debug(' '.join(srt_vtt_command))
         process = Popen(srt_vtt_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         out, err = process.communicate()
         if process.returncode != 0:
-            os.remove(vtt_filename)
-            raise EncoderException('Failed to convert srt to vtt')
+            log.error(err)
+            try:
+                os.remove(vtt_filename)
+            except OSError, e:
+                log.warn(e)
+            raise EncoderException(err)
 
     if vres and ares:
         command.extend(["-c",
@@ -104,9 +121,32 @@ def overwriteExistingFile(source,
 
     log.info("Renaming file %s to %s" % (source, dest))
     if not dryRun:
-        shutil.move(source, dest)
+        try:
+            shutil.move(source, dest)
+        except Exception, e:
+            log.error(e)
+            raise
     else:
         log.info('Skipping move execution for dry-run')
+
+    srt_filename = '%s.srt' % os.path.splitext(source)[0]
+    source_vtt_filename = '%s.vtt' % os.path.splitext(source)[0]
+    dest_vtt_filename = '%s.vtt' % os.path.splitext(dest)[0]
+    if os.path.exists(source_vtt_filename):
+        log.info('Found associated subtitle')
+        if not dryRun:
+            try:
+                log.info('Moving subtitle from %s to %s' % (source_vtt_filename, dest_vtt_filename))
+                shutil.move(source_vtt_filename, dest_vtt_filename)
+            except Exception, e:
+                log.error(e)
+                raise
+
+            try:
+                log.info('Removing old srt file %s' % srt_filename)
+                os.remove(srt_filename)
+            except OSError, e:
+                log.warn(e)
     log.info("Finished renaming file")
     return dest
 
