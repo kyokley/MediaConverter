@@ -6,6 +6,7 @@ from utils import EncoderException
 from convert import (checkVideoEncoding,
                      fixMetaData,
                      _extractSubtitles,
+                     _moveSubtitleFile,
                      )
 
 class TestCheckVideoEncoding(unittest.TestCase):
@@ -182,6 +183,62 @@ class TestExtractSubtitles(unittest.TestCase):
         self.assertTrue(self.mock_remove.called)
         self.assertEqual(self.mock_popen.call_count, 2)
 
+class TestMoveSubtitleFile(unittest.TestCase):
+    def setUp(self):
+        self.log_patcher = mock.patch('convert.log')
+        self.mock_log = self.log_patcher.start()
+        self.addCleanup(self.log_patcher.stop)
+
+        self.exists_patcher = mock.patch('convert.os.path.exists')
+        self.mock_exists = self.exists_patcher.start()
+        self.addCleanup(self.exists_patcher.stop)
+
+        self.remove_patcher = mock.patch('convert.os.remove')
+        self.mock_remove = self.remove_patcher.start()
+        self.addCleanup(self.remove_patcher.stop)
+
+        self.move_patcher = mock.patch('convert.shutil.move')
+        self.mock_move = self.move_patcher.start()
+        self.addCleanup(self.move_patcher.stop)
+
+        self.source = 'tmpfile.mp4'
+        self.dest = '/tmp/this.is.a.file.mp4'
+
+    def test_subtitle_does_not_exist_no_dryRun(self):
+        self.mock_exists.return_value = False
+        _moveSubtitleFile(self.source,
+                          self.dest,
+                          dryRun=False)
+        self.mock_exists.assert_called_once_with('tmpfile.vtt')
+        self.assertFalse(self.mock_move.called)
+        self.assertFalse(self.mock_remove.called)
+
+    def test_subtitle_does_not_exist_dryRun(self):
+        self.mock_exists.return_value = False
+        _moveSubtitleFile(self.source,
+                          self.dest,
+                          dryRun=True)
+        self.mock_exists.assert_called_once_with('tmpfile.vtt')
+        self.assertFalse(self.mock_move.called)
+        self.assertFalse(self.mock_remove.called)
+
+    def test_subtitle_exists_no_dryRun(self):
+        self.mock_exists.return_value = True
+        _moveSubtitleFile(self.source,
+                          self.dest,
+                          dryRun=False)
+        self.mock_exists.assert_called_once_with('tmpfile.vtt')
+        self.mock_move.assert_called_once_with('tmpfile.vtt', '/tmp/this.is.a.file.vtt')
+        self.mock_remove.assert_called_once_with('tmpfile.srt')
+
+    def test_subtitle_exists_dryRun(self):
+        self.mock_exists.return_value = True
+        _moveSubtitleFile(self.source,
+                          self.dest,
+                          dryRun=True)
+        self.mock_exists.assert_called_once_with('tmpfile.vtt')
+        self.assertFalse(self.mock_move.called)
+        self.assertFalse(self.mock_remove.called)
 
 VALID_SAMPLE_OUTPUT = '''
 Input #0, matroska,webm, from '/tmp/test.mkv':

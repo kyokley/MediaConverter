@@ -121,6 +121,26 @@ def encode(source, dest, dryRun=False):
             os.remove(dest)
             raise EncoderException('Encoding failed')
 
+def _moveSubtitleFile(source, dest, dryRun=False):
+    srt_filename = '%s.srt' % os.path.splitext(source)[0]
+    source_vtt_filename = '%s.vtt' % os.path.splitext(source)[0]
+    dest_vtt_filename = '%s.vtt' % os.path.splitext(dest)[0]
+    if os.path.exists(source_vtt_filename):
+        log.info('Found associated subtitle')
+        if not dryRun:
+            try:
+                log.info('Moving subtitle from %s to %s' % (source_vtt_filename, dest_vtt_filename))
+                shutil.move(source_vtt_filename, dest_vtt_filename)
+            except Exception, e:
+                log.error(e)
+                raise
+
+            try:
+                log.info('Removing old srt file %s' % srt_filename)
+                os.remove(srt_filename)
+            except OSError, e:
+                log.warn(e)
+
 def overwriteExistingFile(source,
                           dest,
                           removeOriginal=True,
@@ -142,24 +162,7 @@ def overwriteExistingFile(source,
     else:
         log.info('Skipping move execution for dry-run')
 
-    srt_filename = '%s.srt' % os.path.splitext(source)[0]
-    source_vtt_filename = '%s.vtt' % os.path.splitext(source)[0]
-    dest_vtt_filename = '%s.vtt' % os.path.splitext(dest)[0]
-    if os.path.exists(source_vtt_filename):
-        log.info('Found associated subtitle')
-        if not dryRun:
-            try:
-                log.info('Moving subtitle from %s to %s' % (source_vtt_filename, dest_vtt_filename))
-                shutil.move(source_vtt_filename, dest_vtt_filename)
-            except Exception, e:
-                log.error(e)
-                raise
-
-            try:
-                log.info('Removing old srt file %s' % srt_filename)
-                os.remove(srt_filename)
-            except OSError, e:
-                log.warn(e)
+    _moveSubtitleFile(source, dest, dryRun=dryRun)
     log.info("Finished renaming file")
     return dest
 
