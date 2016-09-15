@@ -7,6 +7,7 @@ from convert import (checkVideoEncoding,
                      fixMetaData,
                      _extractSubtitles,
                      _moveSubtitleFile,
+                     overwriteExistingFile,
                      )
 
 class TestCheckVideoEncoding(unittest.TestCase):
@@ -239,6 +240,110 @@ class TestMoveSubtitleFile(unittest.TestCase):
         self.mock_exists.assert_called_once_with('tmpfile.vtt')
         self.assertFalse(self.mock_move.called)
         self.assertFalse(self.mock_remove.called)
+
+@mock.patch('convert.MEDIAVIEWER_SUFFIX', '%s.suffix.mp4')
+class TestOverwriteExistingFile(unittest.TestCase):
+    def setUp(self):
+        self.log_patcher = mock.patch('convert.log')
+        self.mock_log = self.log_patcher.start()
+        self.addCleanup(self.log_patcher.stop)
+
+        self.exists_patcher = mock.patch('convert.os.path.exists')
+        self.mock_exists = self.exists_patcher.start()
+        self.addCleanup(self.exists_patcher.stop)
+
+        self.remove_patcher = mock.patch('convert.os.remove')
+        self.mock_remove = self.remove_patcher.start()
+        self.addCleanup(self.remove_patcher.stop)
+
+        self.move_patcher = mock.patch('convert.shutil.move')
+        self.mock_move = self.move_patcher.start()
+        self.addCleanup(self.move_patcher.stop)
+
+        self.moveSubtitleFile_patcher = mock.patch('convert._moveSubtitleFile')
+        self.mock_moveSubtitleFile = self.moveSubtitleFile_patcher.start()
+        self.addCleanup(self.moveSubtitleFile_patcher.stop)
+
+        self.mock_exists.return_value = True
+
+        self.source = 'tmpfile.mp4'
+        self.dest = '/tmp/this.is.a.file.mp4'
+
+    def test_keepOriginal_noDryRun_noSuffix(self):
+        overwriteExistingFile('tmpfile.mp4',
+                              '/tmp/this.is.a.file.mp4',
+                              removeOriginal=False,
+                              dryRun=False,
+                              appendSuffix=False)
+        self.assertFalse(self.mock_remove.called)
+        self.mock_move.assert_called_once_with('tmpfile.mp4',
+                                               '/tmp/this.is.a.file.mp4')
+        self.mock_moveSubtitleFile.assert_called_once_with('tmpfile.mp4',
+                                                           '/tmp/this.is.a.file.mp4',
+                                                           dryRun=False)
+
+    def test_removeOriginal_noDryRun_noSuffix(self):
+        overwriteExistingFile('tmpfile.mp4',
+                              '/tmp/this.is.a.file.mp4',
+                              removeOriginal=True,
+                              dryRun=False,
+                              appendSuffix=False)
+        self.mock_remove.assert_called_once_with('/tmp/this.is.a.file.mp4')
+        self.mock_move.assert_called_once_with('tmpfile.mp4',
+                                               '/tmp/this.is.a.file.mp4')
+        self.mock_moveSubtitleFile.assert_called_once_with('tmpfile.mp4',
+                                                           '/tmp/this.is.a.file.mp4',
+                                                           dryRun=False)
+
+    def test_keepOriginal_noDryRun_suffix(self):
+        overwriteExistingFile('tmpfile.mp4',
+                              '/tmp/this.is.a.file.mp4',
+                              removeOriginal=False,
+                              dryRun=False,
+                              appendSuffix=True)
+        self.assertFalse(self.mock_remove.called)
+        self.mock_move.assert_called_once_with('tmpfile.mp4',
+                                               '/tmp/this.is.a.file.mp4.suffix.mp4')
+        self.mock_moveSubtitleFile.assert_called_once_with('tmpfile.mp4',
+                                                           '/tmp/this.is.a.file.mp4.suffix.mp4',
+                                                           dryRun=False)
+
+    def test_removeOriginal_noDryRun_suffix(self):
+        overwriteExistingFile('tmpfile.mp4',
+                              '/tmp/this.is.a.file.mp4',
+                              removeOriginal=True,
+                              dryRun=False,
+                              appendSuffix=True)
+        self.mock_remove.assert_called_once_with('/tmp/this.is.a.file.mp4')
+        self.mock_move.assert_called_once_with('tmpfile.mp4',
+                                               '/tmp/this.is.a.file.mp4.suffix.mp4')
+        self.mock_moveSubtitleFile.assert_called_once_with('tmpfile.mp4',
+                                                           '/tmp/this.is.a.file.mp4.suffix.mp4',
+                                                           dryRun=False)
+
+    def test_removeOriginal_dryRun_suffix(self):
+        overwriteExistingFile('tmpfile.mp4',
+                              '/tmp/this.is.a.file.mp4',
+                              removeOriginal=True,
+                              dryRun=True,
+                              appendSuffix=True)
+        self.assertFalse(self.mock_remove.called)
+        self.assertFalse(self.mock_move.called)
+        self.mock_moveSubtitleFile.assert_called_once_with('tmpfile.mp4',
+                                                           '/tmp/this.is.a.file.mp4.suffix.mp4',
+                                                           dryRun=True)
+
+    def test_removeOriginal_dryRun_noSuffix(self):
+        overwriteExistingFile('tmpfile.mp4',
+                              '/tmp/this.is.a.file.mp4',
+                              removeOriginal=True,
+                              dryRun=True,
+                              appendSuffix=False)
+        self.assertFalse(self.mock_remove.called)
+        self.assertFalse(self.mock_move.called)
+        self.mock_moveSubtitleFile.assert_called_once_with('tmpfile.mp4',
+                                                           '/tmp/this.is.a.file.mp4',
+                                                           dryRun=True)
 
 VALID_SAMPLE_OUTPUT = '''
 Input #0, matroska,webm, from '/tmp/test.mkv':

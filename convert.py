@@ -147,7 +147,7 @@ def overwriteExistingFile(source,
                           dryRun=False,
                           appendSuffix=True):
     if not dryRun:
-        if removeOriginal:
+        if removeOriginal and os.path.exists(dest):
             os.remove(dest)
 
     dest = appendSuffix and MEDIAVIEWER_SUFFIX % dest or dest
