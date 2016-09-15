@@ -28,6 +28,7 @@ def postData(values, url):
         return request
     except Exception, e:
         log.error(e)
+        raise
 
 def stripUnicode(filename, path=None):
     strippedFilename = unidecode(filename.decode('utf-8'))
