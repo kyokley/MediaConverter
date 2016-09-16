@@ -15,6 +15,7 @@ class TestMovieRunner(unittest.TestCase):
         self.movieRunner.run()
         self.assertEquals(1, mock_postMovies.call_count)
 
+    @mock.patch('utils.requests.post')
     @mock.patch('movie_runner.os.path.exists')
     @mock.patch('path.Path.getMoviePathByLocalPathAndRemotePath')
     @mock.patch('file.requests')
@@ -27,7 +28,8 @@ class TestMovieRunner(unittest.TestCase):
                         mock_reencodeFilesInDirectory,
                         mock_requests,
                         mock_getMoviePathByLocalPathAndRemotePath,
-                        mock_exists):
+                        mock_exists,
+                        mock_requestsPost):
         def gen_test_data(num):
             return [dict(results=[dict(pk=i)]) for i in xrange(1, num + 1)]
 
