@@ -30,14 +30,27 @@ def fixMetaData(source, dryRun=False):
         process.communicate()
 
 def _extractSubtitles(source, dest, stream_identifier):
+    srt_filename = '%s.srt' % os.path.splitext(dest)[0]
+
+    _extractSubtitleFromVideo(source,
+                              dest,
+                              stream_identifier,
+                              srt_filename,
+                              )
+
+    _convertSrtToVtt(srt_filename)
+
+def _extractSubtitleFromVideo(source,
+                              dest,
+                              stream_identifier,
+                              srt_filename,
+                              ):
     command = [ENCODER,
                "-hide_banner",
                "-y",
                "-i",
                source,
                ]
-    srt_filename = '%s.srt' % os.path.splitext(dest)[0]
-    vtt_filename = '%s.vtt' % os.path.splitext(dest)[0]
     subtitle_command = command + ['-map',
                                   stream_identifier,
                                   srt_filename]
@@ -53,6 +66,8 @@ def _extractSubtitles(source, dest, stream_identifier):
             log.warn(e)
         raise EncoderException(err)
 
+def _convertSrtToVtt(srt_filename):
+    vtt_filename = '%s.vtt' % os.path.splitext(srt_filename)[0]
     srt_vtt_command = ['srt-vtt',
                        srt_filename]
     log.debug('Extracting using following command:')
@@ -66,6 +81,7 @@ def _extractSubtitles(source, dest, stream_identifier):
         except OSError, e:
             log.warn(e)
         raise EncoderException(err)
+    return vtt_filename
 
 def encode(source, dest, dryRun=False):
     vres, ares, sres = checkVideoEncoding(source)
@@ -77,7 +93,14 @@ def encode(source, dest, dryRun=False):
                source,
                ]
 
-    if sres:
+    dirname = os.path.dirname(source)
+    srt_path = os.path.join(dirname, 'English.srt')
+    if os.path.exists(srt_path):
+        dest_path = '%s.vtt' % os.path.splitext(dest)[0]
+        vtt_filename = _convertSrtToVtt(srt_path)
+        _moveSubtitleFile(vtt_filename,
+                          dest_path)
+    elif sres:
         log.info('Found subtitles stream. Attempting to extract')
         sres = sres.groups()
         stream_identifier = '%s:%s' % (sres[0], sres[1])
@@ -140,6 +163,8 @@ def _moveSubtitleFile(source, dest, dryRun=False):
                 os.remove(srt_filename)
             except OSError, e:
                 log.warn(e)
+    else:
+        log.warn('File not found: %s' % source_vtt_filename)
 
 def overwriteExistingFile(source,
                           dest,
