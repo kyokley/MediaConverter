@@ -194,7 +194,17 @@ class TestConvertSrtToVtt(unittest.TestCase):
         self.srt_filename = '/path/to/file.srt'
 
     def test_success(self):
-        _convertSrtToVtt(self.srt_filename)
+        expected = '/path/to/file.vtt'
+        actual = _convertSrtToVtt(self.srt_filename)
+
+        self.mock_popen.assert_called_once_with(['srt-vtt',
+                                                 '/path/to/file.srt'],
+                                                stdin=PIPE,
+                                                stdout=PIPE,
+                                                stderr=PIPE)
+        self.process.communicate.assert_called_once_with()
+        self.assertFalse(self.mock_remove.called)
+        self.assertEqual(expected, actual)
 
     def test_vtt_extract_failed(self):
         self.process.returncode = 1
