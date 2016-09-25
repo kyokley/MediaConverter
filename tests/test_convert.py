@@ -6,6 +6,8 @@ from utils import EncoderException
 from convert import (checkVideoEncoding,
                      fixMetaData,
                      _extractSubtitles,
+                     _extractSubtitleFromVideo,
+                     _convertSrtToVtt,
                      _moveSubtitleFile,
                      overwriteExistingFile,
                      makeFileStreamable,
@@ -76,6 +78,33 @@ class TestFixMetaData(unittest.TestCase):
 
 class TestExtractSubtitles(unittest.TestCase):
     def setUp(self):
+        self.extractSubtitleFromVideo_patcher = mock.patch('convert._extractSubtitleFromVideo')
+        self.mock_extractSubtitleFromVideo = self.extractSubtitleFromVideo_patcher.start()
+        self.addCleanup(self.extractSubtitleFromVideo_patcher.stop)
+
+        self.convertSrtToVtt_patcher = mock.patch('convert._convertSrtToVtt')
+        self.mock_convertSrtToVtt = self.convertSrtToVtt_patcher.start()
+        self.addCleanup(self.convertSrtToVtt_patcher.stop)
+
+    def test_(self):
+        source = '/path/to/file.mp4'
+        dest = 'tmpfile.mp4'
+        stream_identifier = '0:1'
+
+        expected_srt = 'tmpfile.srt'
+
+        _extractSubtitles(source,
+                          dest,
+                          stream_identifier)
+
+        self.mock_extractSubtitleFromVideo.assert_called_once_with(source,
+                                                                   dest,
+                                                                   stream_identifier,
+                                                                   expected_srt)
+        self.mock_convertSrtToVtt.assert_called_once_with(expected_srt)
+
+class TestExtractSubtitleFromVideo(unittest.TestCase):
+    def setUp(self):
         self.popen_patcher = mock.patch('convert.Popen')
         self.mock_popen = self.popen_patcher.start()
         self.addCleanup(self.popen_patcher.stop)
@@ -88,48 +117,38 @@ class TestExtractSubtitles(unittest.TestCase):
         self.mock_remove = self.remove_patcher.start()
         self.addCleanup(self.remove_patcher.stop)
 
-        self.process1 = mock.MagicMock()
-        self.process1.communicate.return_value = ('srt_stdout', 'srt_stderr')
-        self.process1.returncode = 0
+        self.process = mock.MagicMock()
+        self.process.communicate.return_value = ('srt_stdout', 'srt_stderr')
+        self.process.returncode = 0
 
-        self.process2 = mock.MagicMock()
-        self.process2.communicate.return_value = ('vtt_stdout', 'vtt_stderr')
-        self.mock_popen.side_effect = [self.process1, self.process2]
-        self.process2.returncode = 0
+        self.mock_popen.return_value = self.process
 
         self.source = '/tmp/test_source.mkv'
         self.dest = '/tmp/test_dest.mp4'
         self.stream_identifier = '0:2'
 
     def test_success(self):
-        _extractSubtitles(self.source,
-                          self.dest,
-                          self.stream_identifier,
-                          )
+        _extractSubtitleFromVideo(self.source,
+                                  self.dest,
+                                  self.stream_identifier,
+                                  '/tmp/test_dest.srt',
+                                  )
 
-        self.mock_popen.assert_any_call([ENCODER,
-                                         '-hide_banner',
-                                         '-y',
-                                         '-i',
-                                         self.source,
-                                         '-map',
-                                         '0:2',
-                                         '/tmp/test_dest.srt'],
-                                        stdin=PIPE,
-                                        stdout=PIPE,
-                                        stderr=PIPE)
-        self.assertTrue(self.process1.communicate.called)
-
-        self.mock_popen.assert_any_call(['srt-vtt',
-                                         '/tmp/test_dest.srt'],
-                                        stdin=PIPE,
-                                        stdout=PIPE,
-                                        stderr=PIPE)
-        self.assertTrue(self.process2.communicate.called)
-        self.assertEqual(self.mock_popen.call_count, 2)
+        self.mock_popen.assert_called_once_with([ENCODER,
+                                                 '-hide_banner',
+                                                 '-y',
+                                                 '-i',
+                                                 self.source,
+                                                 '-map',
+                                                 '0:2',
+                                                 '/tmp/test_dest.srt'],
+                                                stdin=PIPE,
+                                                stdout=PIPE,
+                                                stderr=PIPE)
+        self.assertTrue(self.process.communicate.called)
 
     def test_subtitle_extract_failed(self):
-        self.process1.returncode = 1
+        self.process.returncode = 1
 
         self.assertRaises(EncoderException,
                           _extractSubtitles,
@@ -138,52 +157,60 @@ class TestExtractSubtitles(unittest.TestCase):
                           self.stream_identifier,
                           )
 
-        self.mock_popen.assert_any_call([ENCODER,
-                                         '-hide_banner',
-                                         '-y',
-                                         '-i',
-                                         self.source,
-                                         '-map',
-                                         '0:2',
-                                         '/tmp/test_dest.srt'],
-                                        stdin=PIPE,
-                                        stdout=PIPE,
-                                        stderr=PIPE)
-        self.assertTrue(self.process1.communicate.called)
+        self.mock_popen.assert_called_once_with([ENCODER,
+                                                 '-hide_banner',
+                                                 '-y',
+                                                 '-i',
+                                                 self.source,
+                                                 '-map',
+                                                 '0:2',
+                                                 '/tmp/test_dest.srt'],
+                                                stdin=PIPE,
+                                                stdout=PIPE,
+                                                stderr=PIPE)
+        self.assertTrue(self.process.communicate.called)
         self.assertTrue(self.mock_remove.called)
-        self.assertEqual(self.mock_popen.call_count, 1)
+
+class TestConvertSrtToVtt(unittest.TestCase):
+    def setUp(self):
+        self.popen_patcher = mock.patch('convert.Popen')
+        self.mock_popen = self.popen_patcher.start()
+        self.addCleanup(self.popen_patcher.stop)
+
+        self.log_patcher = mock.patch('convert.log')
+        self.mock_log = self.log_patcher.start()
+        self.addCleanup(self.log_patcher.stop)
+
+        self.remove_patcher = mock.patch('convert.os.remove')
+        self.mock_remove = self.remove_patcher.start()
+        self.addCleanup(self.remove_patcher.stop)
+
+        self.process = mock.MagicMock()
+        self.process.communicate.return_value = ('vtt_stdout', 'vtt_stderr')
+        self.process.returncode = 0
+
+        self.mock_popen.return_value = self.process
+
+        self.srt_filename = '/path/to/file.srt'
+
+    def test_success(self):
+        _convertSrtToVtt(self.srt_filename)
 
     def test_vtt_extract_failed(self):
-        self.process2.returncode = 1
+        self.process.returncode = 1
 
         self.assertRaises(EncoderException,
-                          _extractSubtitles,
-                          self.source,
-                          self.dest,
-                          self.stream_identifier,
+                          _convertSrtToVtt,
+                          self.srt_filename,
                           )
 
-        self.mock_popen.assert_any_call([ENCODER,
-                                         '-hide_banner',
-                                         '-y',
-                                         '-i',
-                                         self.source,
-                                         '-map',
-                                         '0:2',
-                                         '/tmp/test_dest.srt'],
-                                        stdin=PIPE,
-                                        stdout=PIPE,
-                                        stderr=PIPE)
-
-        self.mock_popen.assert_any_call(['srt-vtt',
-                                         '/tmp/test_dest.srt'],
-                                        stdin=PIPE,
-                                        stdout=PIPE,
-                                        stderr=PIPE)
-        self.assertTrue(self.process1.communicate.called)
-        self.assertTrue(self.process2.communicate.called)
-        self.assertTrue(self.mock_remove.called)
-        self.assertEqual(self.mock_popen.call_count, 2)
+        self.mock_popen.assert_called_once_with(['srt-vtt',
+                                                 '/path/to/file.srt'],
+                                                stdin=PIPE,
+                                                stdout=PIPE,
+                                                stderr=PIPE)
+        self.process.communicate.assert_called_once_with()
+        self.mock_remove.assert_called_once_with('/path/to/file.vtt')
 
 class TestMoveSubtitleFile(unittest.TestCase):
     def setUp(self):
