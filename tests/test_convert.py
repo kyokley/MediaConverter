@@ -502,7 +502,6 @@ class TestEncode(unittest.TestCase):
                                                         self.mock_ares,
                                                         dryRun=dryRunSentinel)
 
-
 class TestHandleSubtitles(unittest.TestCase):
     def setUp(self):
         self.exists_patcher = mock.patch('convert.os.path.exists')
@@ -555,6 +554,17 @@ class TestHandleSubtitles(unittest.TestCase):
         self.mock_extractSubtitles.assert_called_once_with(self.source,
                                                            self.dest,
                                                            '3:4')
+
+    def test_noSubtitles(self):
+        self.mock_exists.return_value = False
+
+        _handleSubtitles(self.source, self.dest, None)
+
+        self.mock_exists.assert_called_once_with('/path/to/English.srt')
+        self.assertFalse(self.mock_convertSrtToVtt.called)
+        self.assertFalse(self.mock_moveSubtitleFile.called)
+        self.assertFalse(self.mock_extractSubtitles.called)
+        self.assertFalse(self.sres.groups.called)
 
 VALID_SAMPLE_OUTPUT = '''
 Input #0, matroska,webm, from '/tmp/test.mkv':
