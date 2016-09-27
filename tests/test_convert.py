@@ -9,8 +9,10 @@ from convert import (checkVideoEncoding,
                      _extractSubtitleFromVideo,
                      _convertSrtToVtt,
                      _moveSubtitleFile,
+                     _handleSubtitles,
                      overwriteExistingFile,
                      makeFileStreamable,
+                     encode,
                      )
 
 class TestCheckVideoEncoding(unittest.TestCase):
@@ -466,13 +468,55 @@ class TestEncode(unittest.TestCase):
         self.mock_checkVideoEncoding = self.checkVideoEncoding_patcher.start()
         self.addCleanup(self.checkVideoEncoding_patcher.stop)
 
+        self.handleSubtitle_patcher = mock.patch('convert._handleSubtitles')
+        self.mock_handleSubtitles = self.handleSubtitle_patcher.start()
+        self.addCleanup(self.handleSubtitle_patcher.stop)
+
+        self.reencodeVideo_patcher = mock.patch('convert._reencodeVideo')
+        self.mock_reencodeVideo = self.reencodeVideo_patcher.start()
+        self.addCleanup(self.reencodeVideo_patcher.stop)
+
+        self.mock_vres = mock.MagicMock()
+        self.mock_ares = mock.MagicMock()
+        self.mock_sres = mock.MagicMock()
+
+        self.mock_checkVideoEncoding.return_value = (self.mock_vres,
+                                                     self.mock_ares,
+                                                     self.mock_sres)
+
+    def test_(self):
+        dryRunSentinel = object()
+
+        source = '/path/to/file.mkv'
+        dest = 'tmpfile.mp4'
+
+        encode(source, dest, dryRun=dryRunSentinel)
+
+        self.mock_checkVideoEncoding.assert_called_once_with(source)
+        self.mock_handleSubtitles.assert_called_once_with(source,
+                                                          dest,
+                                                          self.mock_sres)
+        self.mock_reencodeVideo.assert_called_once_with(source,
+                                                        dest,
+                                                        self.mock_vres,
+                                                        self.mock_ares,
+                                                        dryRun=dryRunSentinel)
+
+
+class TestHandleSubtitles(unittest.TestCase):
+    def setUp(self):
         self.exists_patcher = mock.patch('convert.os.path.exists')
         self.mock_exists = self.exists_patcher.start()
         self.addCleanup(self.exists_patcher.stop)
 
+        self.log_patcher = mock.patch('convert.log')
+        self.mock_log = self.log_patcher.start()
+        self.addCleanup(self.log_patcher.stop)
+
         self.convertSrtToVtt_patcher = mock.patch('convert._convertSrtToVtt')
         self.mock_convertSrtToVtt = self.convertSrtToVtt_patcher.start()
         self.addCleanup(self.convertSrtToVtt_patcher.stop)
+        self.mock_convertSrtToVtt.return_value = '/path/to/English.vtt'
 
         self.moveSubtitleFile_patcher = mock.patch('convert._moveSubtitleFile')
         self.mock_moveSubtitleFile = self.moveSubtitleFile_patcher.start()
@@ -482,9 +526,35 @@ class TestEncode(unittest.TestCase):
         self.mock_extractSubtitles = self.extractSubtitles_patcher.start()
         self.addCleanup(self.extractSubtitles_patcher.stop)
 
-        self.reencodeVideo_patcher = mock.patch('convert._reencodeVideo')
-        self.mock_reencodeVideo = self.reencodeVideo_patcher.start()
-        self.addCleanup(self.reencodeVideo_patcher.stop)
+        self.source = '/path/to/file.mkv'
+        self.dest = 'tmpfile.mp4'
+        self.sres = mock.MagicMock()
+        self.sres.groups.return_value = (3, 4)
+
+    def test_SrtExists(self):
+        self.mock_exists.return_value = True
+
+        _handleSubtitles(self.source, self.dest, self.sres)
+
+        self.mock_exists.assert_called_once_with('/path/to/English.srt')
+        self.mock_convertSrtToVtt.assert_called_once_with('/path/to/English.srt')
+        self.mock_moveSubtitleFile.assert_called_once_with('/path/to/English.vtt',
+                                                           'tmpfile.vtt')
+        self.assertFalse(self.mock_extractSubtitles.called)
+        self.assertFalse(self.sres.groups.called)
+
+    def test_subtitleStreamInFile(self):
+        self.mock_exists.return_value = False
+
+        _handleSubtitles(self.source, self.dest, self.sres)
+
+        self.mock_exists.assert_called_once_with('/path/to/English.srt')
+        self.assertFalse(self.mock_convertSrtToVtt.called)
+        self.assertFalse(self.mock_moveSubtitleFile.called)
+        self.sres.groups.assert_called_once_with()
+        self.mock_extractSubtitles.assert_called_once_with(self.source,
+                                                           self.dest,
+                                                           '3:4')
 
 VALID_SAMPLE_OUTPUT = '''
 Input #0, matroska,webm, from '/tmp/test.mkv':

@@ -86,9 +86,14 @@ def _convertSrtToVtt(srt_filename):
 def encode(source, dest, dryRun=False):
     vres, ares, sres = checkVideoEncoding(source)
 
+    _handleSubtitles(source, dest, sres)
+    _reencodeVideo(source, dest, vres, ares, dryRun=dryRun)
+
+def _handleSubtitles(source, dest, sres):
     dirname = os.path.dirname(source)
     srt_path = os.path.join(dirname, 'English.srt')
     if os.path.exists(srt_path):
+        log.info('English.srt found in directory. Attempting to convert.')
         dest_path = '%s.vtt' % os.path.splitext(dest)[0]
         vtt_filename = _convertSrtToVtt(srt_path)
         _moveSubtitleFile(vtt_filename,
@@ -101,8 +106,6 @@ def encode(source, dest, dryRun=False):
                           dest,
                           stream_identifier,
                           )
-
-    _reencodeVideo(source, dest, vres, ares, dryRun=dryRun)
 
 def _reencodeVideo(source, dest, vres, ares, dryRun=False):
     command = [ENCODER,
