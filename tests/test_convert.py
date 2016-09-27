@@ -460,6 +460,32 @@ class TestMakeFileStreamable(unittest.TestCase):
                                                                 appendSuffix=appendSuffixSentinel,
                                                                 removeOriginal=removeOriginalSentinel)
 
+class TestEncode(unittest.TestCase):
+    def setUp(self):
+        self.checkVideoEncoding_patcher = mock.patch('convert.checkVideoEncoding')
+        self.mock_checkVideoEncoding = self.checkVideoEncoding_patcher.start()
+        self.addCleanup(self.checkVideoEncoding_patcher.stop)
+
+        self.exists_patcher = mock.patch('convert.os.path.exists')
+        self.mock_exists = self.exists_patcher.start()
+        self.addCleanup(self.exists_patcher.stop)
+
+        self.convertSrtToVtt_patcher = mock.patch('convert._convertSrtToVtt')
+        self.mock_convertSrtToVtt = self.convertSrtToVtt_patcher.start()
+        self.addCleanup(self.convertSrtToVtt_patcher.stop)
+
+        self.moveSubtitleFile_patcher = mock.patch('convert._moveSubtitleFile')
+        self.mock_moveSubtitleFile = self.moveSubtitleFile_patcher.start()
+        self.addCleanup(self.moveSubtitleFile_patcher.stop)
+
+        self.extractSubtitles_patcher = mock.patch('convert._extractSubtitles')
+        self.mock_extractSubtitles = self.extractSubtitles_patcher.start()
+        self.addCleanup(self.extractSubtitles_patcher.stop)
+
+        self.reencodeVideo_patcher = mock.patch('convert._reencodeVideo')
+        self.mock_reencodeVideo = self.reencodeVideo_patcher.start()
+        self.addCleanup(self.reencodeVideo_patcher.stop)
+
 VALID_SAMPLE_OUTPUT = '''
 Input #0, matroska,webm, from '/tmp/test.mkv':
   Metadata:

@@ -86,13 +86,6 @@ def _convertSrtToVtt(srt_filename):
 def encode(source, dest, dryRun=False):
     vres, ares, sres = checkVideoEncoding(source)
 
-    command = [ENCODER,
-               "-hide_banner",
-               "-y",
-               "-i",
-               source,
-               ]
-
     dirname = os.path.dirname(source)
     srt_path = os.path.join(dirname, 'English.srt')
     if os.path.exists(srt_path):
@@ -108,6 +101,16 @@ def encode(source, dest, dryRun=False):
                           dest,
                           stream_identifier,
                           )
+
+    _reencodeVideo(source, dest, vres, ares, dryRun=dryRun)
+
+def _reencodeVideo(source, dest, vres, ares, dryRun=False):
+    command = [ENCODER,
+               "-hide_banner",
+               "-y",
+               "-i",
+               source,
+               ]
 
     if vres and ares:
         command.extend(["-c",
