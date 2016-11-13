@@ -12,7 +12,7 @@ packets = []
 
 def arp_capture(pkt):
     if ARP in pkt and pkt[ARP].op == 1: #who-has (request)
-        if pkt[ARP].psrc == '0.0.0.0': # ARP Probe
+        if pkt[ARP].psrc == '0.0.0.0': # nosec # ARP Probe
             if pkt[ARP].hwsrc == GATORADE:
                 log.debug('%s: Got a button press! Run the converter!' % datetime.now())
                 main.delay()
