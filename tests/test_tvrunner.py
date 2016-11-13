@@ -1,7 +1,12 @@
 import unittest
+import tempfile
+import shutil
+import os
+
 import mock
 from mock import call
 from tv_runner import TvRunner, FIND_FAIL_STRING
+from utils import MissingPathException
 
 class TestTvRunner(unittest.TestCase):
     def setUp(self):
@@ -143,3 +148,25 @@ class TestTvRunner(unittest.TestCase):
                   set(['remote', 'some', 'paths']))],
             any_order=True)
         self.assertEqual(2, self.tvRunner.updateFileRecords.call_count)
+
+class TestBuildLocalFileSetFunctional(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+
+        self.tv_runner = TvRunner()
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    def test_file_does_not_exist(self):
+        path_name = os.path.join(self.temp_dir, 'test_file')
+        self.assertRaises(MissingPathException,
+                          self.tv_runner.buildLocalFileSet,
+                          path_name)
+
+    def test_files_exist(self):
+        files = [tempfile.mkstemp(dir=self.temp_dir)
+                    for i in xrange(3)]
+        expected = set([os.path.basename(x[1]) for x in files])
+        actual = self.tv_runner.buildLocalFileSet(self.temp_dir)
+        self.assertEqual(expected, actual)
