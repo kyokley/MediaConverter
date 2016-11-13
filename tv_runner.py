@@ -1,6 +1,7 @@
 import os
-import commands
 import traceback
+import subprocess
+import shlex
 from file import File
 from path import Path
 from settings import SEND_EMAIL
@@ -95,12 +96,17 @@ class TvRunner(object):
 
 
     def buildLocalFileSet(self, path):
-        local_files = commands.getoutput("find '%s' -maxdepth 1 -not -type d" % path)
+        command = "find '%s' -maxdepth 1 -not -type d" % path
+        p = subprocess.Popen(shlex.split(command),
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT)
+        local_files = p.communicate()[0]
+
         if FIND_FAIL_STRING in local_files:
             raise MissingPathException('Path not found: %s' % path)
 
         localFileSet = local_files.split('\n')
-        localFileSet = set([os.path.basename(x) for x in localFileSet])
+        localFileSet = set([os.path.basename(x) for x in localFileSet if x])
         log.debug(localFileSet)
         return localFileSet
 

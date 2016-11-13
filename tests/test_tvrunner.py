@@ -88,31 +88,6 @@ class TestTvRunner(unittest.TestCase):
                                      1,
                                      True)
 
-    @mock.patch('tv_runner.os.path.basename', side_effect=lambda x: x)
-    @mock.patch('tv_runner.commands.getoutput')
-    def test_buildLocalFileSet_valid_path(self,
-                                          mock_commands_getoutput,
-                                          mock_os_path_basename):
-        mock_commands_getoutput.return_value = 'asdf\nsdfg\ndfgh'
-
-        test_path = 'test_path'
-        expectedFileSet = set(['asdf',
-                               'sdfg',
-                               'dfgh'])
-
-        actualFileSet = self.tvRunner.buildLocalFileSet(test_path)
-
-        self.assertEquals(expectedFileSet, actualFileSet)
-
-    @mock.patch('tv_runner.commands.getoutput')
-    def test_buildLocalFileSet_invalid_path(self,
-                                          mock_commands_getoutput,
-                                          ):
-        mock_commands_getoutput.return_value = FIND_FAIL_STRING
-        test_path = 'test_path'
-
-        self.assertRaises(Exception, self.tvRunner.buildLocalFileSet, test_path)
-
     def test_run(self):
         test_data = {'asdf': [1],
                      'sdfg': [12, 23],
