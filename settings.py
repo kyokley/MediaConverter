@@ -52,5 +52,5 @@ VERIFY_REQUESTS = True
 # DON'T MAKE ANY EDITS BELOW THIS LINE!!!!
 try:
     from local_settings import *
-except:
+except: # nosec
     pass
