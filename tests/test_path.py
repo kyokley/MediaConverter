@@ -1,5 +1,8 @@
 import unittest
 import mock
+import tempfile
+import shutil
+import os
 
 from path import Path
 from settings import (SERVER_NAME,
@@ -73,25 +76,35 @@ class TestPath(unittest.TestCase):
 
         self.assertEquals(expectedDict, self.path.getAllTVPaths())
 
+    @mock.patch('path.Path._buildLocalPaths')
+    @mock.patch('path.Path._getLocalMoviePathsSetting')
     @mock.patch('path.Path._getLocalTVShowsPathsSetting')
-    @mock.patch('path.os')
-    @mock.patch('path.commands')
-    def test_getLocalPaths(self,
-                           mock_commands,
-                           mock_os,
-                           mock_getLocalTVShowsPathsSetting):
-        mock_getLocalTVShowsPathsSetting.return_value = ['/test/path']
-        mock_commands.getoutput.return_value = 'tv.show.1\ntv.show.2\ntv.show.3'
-        path = mock.MagicMock()
-        path.join.side_effect = lambda x,y: '%s/%s' % (x,y)
-        mock_os.path = path
+    def test_getLocalPaths_noMovies(self,
+                                    mock_getLocalTVShowsPathsSetting,
+                                    mock_getLocalMoviePathsSetting,
+                                    mock_buildLocalPaths):
+        expected = mock_buildLocalPaths.return_value
+        actual = self.path._getLocalPaths()
+        self.assertEqual(expected, actual)
+        mock_getLocalTVShowsPathsSetting.assert_called_once_with()
+        self.assertFalse(mock_getLocalMoviePathsSetting.called)
+        mock_buildLocalPaths.assert_called_once_with(
+                mock_getLocalTVShowsPathsSetting.return_value)
 
-        expected = set(['%s/%s' % ('/test/path', 'tv.show.1'),
-                        '%s/%s' % ('/test/path', 'tv.show.2'),
-                        '%s/%s' % ('/test/path', 'tv.show.3'),
-                        ])
-        actual = self.path.getLocalTVPaths()
-        self.assertEquals(expected, actual)
+    @mock.patch('path.Path._buildLocalPaths')
+    @mock.patch('path.Path._getLocalMoviePathsSetting')
+    @mock.patch('path.Path._getLocalTVShowsPathsSetting')
+    def test_getLocalPaths_withMovies(self,
+                                      mock_getLocalTVShowsPathsSetting,
+                                      mock_getLocalMoviePathsSetting,
+                                      mock_buildLocalPaths):
+        expected = mock_buildLocalPaths.return_value
+        actual = self.path._getLocalPaths(getMovies=True)
+        self.assertEqual(expected, actual)
+        mock_getLocalMoviePathsSetting.assert_called_once_with()
+        self.assertFalse(mock_getLocalTVShowsPathsSetting.called)
+        mock_buildLocalPaths.assert_called_once_with(
+                mock_getLocalMoviePathsSetting.return_value)
 
     @mock.patch('path.requests')
     def test_getTVPathByLocalPathAndRemotePath(self,
@@ -128,3 +141,24 @@ class TestPath(unittest.TestCase):
                                                   verify=VERIFY_REQUESTS,
                                                   auth=(WAITER_USERNAME, WAITER_PASSWORD))
         self.assertTrue(response.json.called)
+
+class TestGetLocalPathsFunctional(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.path = Path('localpath', 'remotepath')
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    def test_path_does_not_exist(self):
+        filepath = os.path.join(self.temp_dir, 'test_file')
+        expected = set()
+        actual = self.path._buildLocalPaths([filepath])
+        self.assertEqual(expected, actual)
+
+    def test_paths_exist(self):
+        files = set([tempfile.mkstemp(dir=self.temp_dir)[1]
+                    for i in xrange(3)])
+        expected = files
+        actual = self.path._buildLocalPaths([self.temp_dir])
+        self.assertEqual(expected, actual)

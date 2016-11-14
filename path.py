@@ -78,12 +78,16 @@ class Path(object):
 
     @classmethod
     def _getLocalPaths(cls, getMovies=False):
-        localpaths = set()
         if getMovies:
             filepaths = cls._getLocalMoviePathsSetting()
         else:
             filepaths = cls._getLocalTVShowsPathsSetting()
 
+        return cls._buildLocalPaths(filepaths)
+
+    @staticmethod
+    def _buildLocalPaths(filepaths):
+        localpaths = set()
         for localpath in filepaths:
             if not os.path.exists(localpath):
                 log.error('%s does not exist. Continuing...' % localpath)

@@ -5,7 +5,7 @@ import os
 
 import mock
 from mock import call
-from tv_runner import TvRunner, FIND_FAIL_STRING
+from tv_runner import TvRunner
 from utils import MissingPathException
 
 class TestTvRunner(unittest.TestCase):
