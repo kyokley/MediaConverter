@@ -1,4 +1,7 @@
-import requests, commands, os
+import requests
+import os
+import subprocess
+import shlex
 from settings import (SERVER_NAME,
                       MEDIAVIEWER_TV_PATH_URL,
                       MEDIAVIEWER_MOVIE_PATH_URL,
@@ -93,7 +96,11 @@ class Path(object):
                 log.error('%s does not exist. Continuing...' % localpath)
                 continue
 
-            res = commands.getoutput("ls '%s'" % localpath)
+            command = "ls '%s'" % localpath
+            p = subprocess.Popen(shlex.split(command),
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT)
+            res = p.communicate()[0]
             res = res.split('\n')
             res = set([os.path.join(localpath, path) for path in res if path])
             localpaths.update(res)

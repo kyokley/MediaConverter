@@ -1,4 +1,7 @@
 import mock
+import tempfile
+import shutil
+import os
 from mock import call
 import unittest
 
@@ -20,11 +23,11 @@ class TestMovieRunner(unittest.TestCase):
     @mock.patch('path.Path.getMoviePathByLocalPathAndRemotePath')
     @mock.patch('file.requests')
     @mock.patch('movie_runner.reencodeFilesInDirectory')
-    @mock.patch('movie_runner.commands.getoutput')
+    @mock.patch('movie_runner.MovieRunner._getLocalMoviePaths')
     @mock.patch('movie_runner.MovieRunner._getLocalMoviePathsSetting')
     def test_postMovies(self,
                         mock_getLocalMoviePathsSetting,
-                        mock_commands_getoutput,
+                        mock_getLocalMoviePaths,
                         mock_reencodeFilesInDirectory,
                         mock_requests,
                         mock_getMoviePathByLocalPathAndRemotePath,
@@ -36,7 +39,7 @@ class TestMovieRunner(unittest.TestCase):
         mock_exists.return_value = True
         mock_getMoviePathByLocalPathAndRemotePath.side_effect = gen_test_data(5)
         mock_getLocalMoviePathsSetting.return_value = ['/path/to/movies']
-        mock_commands_getoutput.return_value = 'movie1\nmovie2\nmovie3'
+        mock_getLocalMoviePaths.return_value = ['movie1', 'movie2', 'movie3']
         mock_reencodeFilesInDirectory.return_value = None
         mock_json = mock.MagicMock()
         mock_json.json.return_value = dict(next=None,
@@ -55,3 +58,24 @@ class TestMovieRunner(unittest.TestCase):
         mock_reencodeFilesInDirectory.assert_has_calls([call('/path/to/movies/movie2')],
                                                         any_order=True)
         self.assertEqual(1, mock_reencodeFilesInDirectory.call_count)
+
+class TestgetLocalMoviePathsFunctional(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.movieRunner = MovieRunner()
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    def test_path_does_not_exist(self):
+        path_name = os.path.join(self.temp_dir, 'test_file')
+        expected = set()
+        actual = self.movieRunner._getLocalMoviePaths(path_name)
+        self.assertEqual(expected, actual)
+
+    def test_path_exists(self):
+        files = set([tempfile.mkstemp(dir=self.temp_dir)[1]
+                    for i in xrange(3)])
+        expected = set([os.path.basename(x) for x in files])
+        actual = self.movieRunner._getLocalMoviePaths(self.temp_dir)
+        self.assertEqual(expected, actual)

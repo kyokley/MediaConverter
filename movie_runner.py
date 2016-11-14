@@ -1,4 +1,6 @@
-import commands, os
+import os
+import subprocess
+import shlex
 from settings import (MEDIAVIEWER_MOVIE_FILE_URL,
                       LOCAL_MOVIE_PATHS,
                       )
@@ -33,8 +35,7 @@ class MovieRunner(object):
             fileset = [os.path.join(moviepath, res)
                            for res in results]
 
-            res = commands.getoutput("ls '%s'" % (moviepath,))
-            tokens = res.split('\n')
+            tokens = self._getLocalMoviePaths(moviepath)
 
             for token in tokens:
                 localpath = os.path.join(moviepath, token)
@@ -53,6 +54,19 @@ class MovieRunner(object):
                         raise
                     log.info("Posting %s" % (localpath,))
                     self._postMovie(token, pathid)
+
+    @staticmethod
+    def _getLocalMoviePaths(moviepath):
+        if not os.path.exists(moviepath):
+            return set()
+
+        command = "ls '%s'" % moviepath
+        p = subprocess.Popen(shlex.split(command),
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT)
+        res = p.communicate()[0]
+        tokens = res.split('\n')
+        return set([x for x in tokens if x])
 
     def run(self):
         self.postMovies()
