@@ -1,5 +1,7 @@
 import os
 
+DEBUG = False
+
 CWD = os.getcwd()
 LOG_DIR = os.path.join(CWD, 'logs')
 try:

@@ -2,7 +2,7 @@ from main import main
 from flask import (Flask,
                    request,
                    )
-from settings import ALEXA_AUTH
+from settings import ALEXA_AUTH, DEBUG
 
 app = Flask(__name__)
 
@@ -16,4 +16,4 @@ def alexa():
         return 'FAIL', 400
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=DEBUG)
