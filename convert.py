@@ -1,5 +1,6 @@
 from subprocess import Popen, PIPE
-import os, shutil, commands
+import os, shutil
+import shlex
 from re import search
 from settings import (MEDIAVIEWER_SUFFIX,
                       ENCODER,
@@ -215,7 +216,9 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
     return dest
 
 def _getFilesInDirectory(fullPath):
-    res = commands.getoutput("find '%s' -maxdepth 10 -not -type d" % fullPath)
+    command = "find '%s' -maxdepth 10 -not -type d" % fullPath
+    p = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE)
+    res = p.communicate()[0]
     tokens = res.split('\n')
     return set([x for x in tokens if x])
 

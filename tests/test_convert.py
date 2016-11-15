@@ -2,7 +2,6 @@ import unittest
 import mock
 import tempfile
 import os
-import shlex
 import shutil
 from subprocess import PIPE
 from settings import ENCODER
@@ -578,11 +577,11 @@ class TestGetFilesInDirectory(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.temp_dir)
 
-    #def test_path_does_not_exist(self):
-        #non_existent_path = os.path.join(self.temp_dir, 'test_file')
-        #expected = []
-        #actual = _getFilesInDirectory(non_existent_path)
-        #self.assertEqual(expected, actual)
+    def test_path_does_not_exist(self):
+        non_existent_path = os.path.join(self.temp_dir, 'test_file')
+        expected = set()
+        actual = _getFilesInDirectory(non_existent_path)
+        self.assertEqual(expected, actual)
 
     def test_path_is_empty(self):
         expected = set()
@@ -596,6 +595,17 @@ class TestGetFilesInDirectory(unittest.TestCase):
         actual = _getFilesInDirectory(self.temp_dir)
         self.assertEqual(expected, actual)
 
+    def test_nested_files_exist(self):
+        expected = set()
+        dirs = [tempfile.mkdtemp(dir=self.temp_dir)
+                    for i in xrange(3)]
+        for dir in dirs:
+            files = [tempfile.mkstemp(dir=dir)[1]
+                        for i in xrange(3)]
+            expected.update(files)
+
+        actual = _getFilesInDirectory(self.temp_dir)
+        self.assertEqual(expected, actual)
 
 VALID_SAMPLE_OUTPUT = '''
 Input #0, matroska,webm, from '/tmp/test.mkv':
