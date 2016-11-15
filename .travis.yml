@@ -5,4 +5,4 @@ install:
     - pip install -r test_requirements.txt
 script:
     - nosetests
-    - bandit-baseline -r -x tests .
+    - bandit -r -x tests -ll .
