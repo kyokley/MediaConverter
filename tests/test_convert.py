@@ -1,5 +1,9 @@
 import unittest
 import mock
+import tempfile
+import os
+import shlex
+import shutil
 from subprocess import PIPE
 from settings import ENCODER
 from utils import EncoderException
@@ -13,6 +17,7 @@ from convert import (checkVideoEncoding,
                      overwriteExistingFile,
                      makeFileStreamable,
                      encode,
+                     _getFilesInDirectory,
                      )
 
 class TestCheckVideoEncoding(unittest.TestCase):
@@ -565,6 +570,32 @@ class TestHandleSubtitles(unittest.TestCase):
         self.assertFalse(self.mock_moveSubtitleFile.called)
         self.assertFalse(self.mock_extractSubtitles.called)
         self.assertFalse(self.sres.groups.called)
+
+class TestGetFilesInDirectory(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    #def test_path_does_not_exist(self):
+        #non_existent_path = os.path.join(self.temp_dir, 'test_file')
+        #expected = []
+        #actual = _getFilesInDirectory(non_existent_path)
+        #self.assertEqual(expected, actual)
+
+    def test_path_is_empty(self):
+        expected = set()
+        actual = _getFilesInDirectory(self.temp_dir)
+        self.assertEqual(expected, actual)
+
+    def test_files_exist(self):
+        files = [tempfile.mkstemp(dir=self.temp_dir)
+                    for i in xrange(3)]
+        expected = set([x[1] for x in files])
+        actual = _getFilesInDirectory(self.temp_dir)
+        self.assertEqual(expected, actual)
+
 
 VALID_SAMPLE_OUTPUT = '''
 Input #0, matroska,webm, from '/tmp/test.mkv':

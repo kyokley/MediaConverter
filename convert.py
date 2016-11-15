@@ -214,10 +214,14 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
     log.info("Done")
     return dest
 
-def reencodeFilesInDirectory(fullPath, dryRun=False):
-    errors = list()
+def _getFilesInDirectory(fullPath):
     res = commands.getoutput("find '%s' -maxdepth 10 -not -type d" % fullPath)
     tokens = res.split('\n')
+    return set([x for x in tokens if x])
+
+def reencodeFilesInDirectory(fullPath, dryRun=False):
+    errors = list()
+    tokens = _getFilesInDirectory(fullPath)
 
     for token in tokens:
         ext = os.path.splitext(token)[-1].lower()
