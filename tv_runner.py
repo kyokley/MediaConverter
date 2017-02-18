@@ -15,7 +15,7 @@ from log import LogFile
 log = LogFile().getLogger()
 
 FIND_FAIL_STRING = 'No such file or directory'
-IGNORED_FILE_EXTENSIONS = ('.vtt',)
+IGNORED_FILE_EXTENSIONS = ('.vtt', '.srt')
 
 class TvRunner(object):
     def __init__(self):
