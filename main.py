@@ -12,7 +12,7 @@ log = LogFile().getLogger()
 
 app = Celery('tasks', broker='amqp://guest@localhost/%s' % CELERY_VHOST)
 
-@app.task
+@app.task(name='main.main')
 def main():
     all_errors = []
     tvRunner = TvRunner()
@@ -39,4 +39,4 @@ def main():
     log.info('All done')
 
 if __name__ == '__main__':
-    main()
+    main.delay()
