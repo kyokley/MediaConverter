@@ -4,6 +4,7 @@ from settings import (CELERY_VHOST,
 
 from celery import Celery
 app = Celery('tasks',
+             backend='rpc://',
              broker='amqp://guest@{vhost_ip}/{vhost}'.format(vhost=CELERY_VHOST,
                                                              vhost_ip=CELERY_VHOST_IP))
 

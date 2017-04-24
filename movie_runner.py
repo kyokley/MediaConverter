@@ -1,6 +1,7 @@
 import os
 import subprocess
 import shlex
+import time
 from settings import (MEDIAVIEWER_MOVIE_FILE_URL,
                       LOCAL_MOVIE_PATHS,
                       )
@@ -21,6 +22,7 @@ class MovieRunner(object):
         return LOCAL_MOVIE_PATHS
 
     def postMovies(self):
+        self.results = []
         for moviepath in self._getLocalMoviePathsSetting():
             if not os.path.exists(moviepath):
                 self.errors.append('%s does not exist. Continuing...' % moviepath)
@@ -31,9 +33,9 @@ class MovieRunner(object):
             data = Path.getMoviePathByLocalPathAndRemotePath(moviepath, moviepath)
             pathid = data['results'][0]['pk']
 
-            results = File.getMovieFileSet(pathid)
+            movie_file_set = File.getMovieFileSet(pathid)
             fileset = [os.path.join(moviepath, res)
-                           for res in results]
+                           for res in movie_file_set]
 
             tokens = self._getLocalMoviePaths(moviepath)
 
@@ -41,19 +43,29 @@ class MovieRunner(object):
                 localpath = os.path.join(moviepath, token)
                 if localpath not in fileset:
                     log.info("Found %s" % localpath)
-                    log.info("Starting re-encoding of %s..." % localpath)
-                    try:
-                        errors = reencodeFilesInDirectory(localpath)
+                    log.info("Adding job for %s" % localpath)
 
-                        if errors:
-                            self.errors.extend(errors)
-                            continue
-                    except Exception, e:
-                        log.error("Error processing %s" % localpath)
-                        log.error(e)
-                        raise
-                    log.info("Posting %s" % (localpath,))
-                    self._postMovie(token, pathid)
+                    self.results.append({'token': token,
+                                         'pathid': pathid,
+                                         'localpath': localpath,
+                                         'asyncResult': reencodeFilesInDirectory.delay(localpath)})
+
+            # Wait for workers to finish processing jobs
+            while any([not x.get('asyncResult').ready() for x in self.results]):
+                time.sleep(1)
+
+            for result in self.results:
+                try:
+                    errors = result.get('asyncResult').get()
+                    if errors:
+                        self.errors.extend(errors)
+                    else:
+                        log.info("Posting {path}".format(path=result.get('localpath')))
+                        self._postMovie(result.get('token'), result.get('pathid'))
+                except Exception, e:
+                    log.error("Error processing %s" % result.get('localpath'))
+                    log.error(e)
+                    self.errors.append(e)
 
     @staticmethod
     def _getLocalMoviePaths(moviepath):
