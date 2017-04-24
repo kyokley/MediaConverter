@@ -2,15 +2,12 @@ from tv_runner import TvRunner
 from movie_runner import MovieRunner
 from settings import (MEDIAVIEWER_INFER_SCRAPERS_URL,
                       SEND_EMAIL,
-                      CELERY_VHOST,
                       )
 from utils import postData, send_email
-from celery import Celery
+from celery_handler import app
 
 from log import LogFile
 log = LogFile().getLogger()
-
-app = Celery('tasks', broker='amqp://guest@localhost/%s' % CELERY_VHOST)
 
 @app.task(name='main.main')
 def main():

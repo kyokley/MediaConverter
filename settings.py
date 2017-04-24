@@ -11,6 +11,7 @@ except OSError:
 LOG_FILE_NAME = os.path.join(LOG_DIR, 'converterLog')
 
 CELERY_VHOST = '/'
+CELERY_VHOST_IP = '127.0.0.1'
 
 WAITER_USERNAME = 'user'
 WAITER_PASSWORD = 'password'

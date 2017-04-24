@@ -7,6 +7,7 @@ from settings import (MEDIAVIEWER_SUFFIX,
                       MEDIA_FILE_EXTENSIONS,
                       )
 from utils import stripUnicode, EncoderException
+from celery_handler import app
 
 from log import LogFile
 log = LogFile().getLogger()
@@ -229,6 +230,7 @@ def _getFilesInDirectory(fullPath):
     tokens = res.split('\n')
     return set([x for x in tokens if x])
 
+@app.task
 def reencodeFilesInDirectory(fullPath, dryRun=False):
     errors = list()
     tokens = _getFilesInDirectory(fullPath)
