@@ -108,18 +108,9 @@ class TvRunner(object):
 
             tasks.extend(self.updateFileRecords(path, localFileSet, remoteFileSet))
 
-        done = False
-        while not done:
-            time.sleep(1)
-            for task in tasks:
-                if not task.successful() and not task.failed():
-                    break
-            else:
-                done = True
-
         for task in tasks:
-            if task.successful():
-                fullPath, pathid = task.result
+            try:
+                fullPath, pathid = task.wait()
                 if os.path.exists(fullPath):
                     newFile = File(os.path.basename(fullPath),
                                    pathid,
@@ -128,8 +119,8 @@ class TvRunner(object):
                                    )
 
                     newFile.postTVFile()
-            elif task.failed():
-                error = task.get(propagate=False)
+            except Exception as e:
+                error = str(e)
                 log.error(error)
                 errors.append(error)
 

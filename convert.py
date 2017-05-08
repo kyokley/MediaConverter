@@ -232,7 +232,6 @@ def makeFileStreamable(filename, pathid, dryRun=False, appendSuffix=True, remove
         log.error(e)
 
         if SEND_EMAIL:
-            subject = 'MC: Got some errors'
             message = '''
             %s
             Got the following:
@@ -252,17 +251,14 @@ def _getFilesInDirectory(fullPath):
 def reencodeFilesInDirectory(fullPath, dryRun=False):
     errors = list()
     tokens = _getFilesInDirectory(fullPath)
+    tasks = []
 
     for token in tokens:
         ext = os.path.splitext(token)[-1].lower()
         if ext in MEDIA_FILE_EXTENSIONS:
-            try:
-                cleanPath = stripUnicode(token)
-                makeFileStreamable.delay(cleanPath,
-                                         appendSuffix=True,
-                                         removeOriginal=True,
-                                         dryRun=dryRun)
-            except EncoderException, e:
-                log.error(e)
-                errors.append(cleanPath)
-    return errors
+            cleanPath = stripUnicode(token)
+            tasks.append(makeFileStreamable.delay(cleanPath,
+                                                  appendSuffix=True,
+                                                  removeOriginal=True,
+                                                  dryRun=dryRun))
+    return tasks

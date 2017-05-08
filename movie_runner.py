@@ -48,20 +48,14 @@ class MovieRunner(object):
                     self.results.append({'token': token,
                                          'pathid': pathid,
                                          'localpath': localpath,
-                                         'asyncResult': reencodeFilesInDirectory.delay(localpath)})
-
-            # Wait for workers to finish processing jobs
-            while any([not x.get('asyncResult').ready() for x in self.results]):
-                time.sleep(1)
+                                         'asyncResults': reencodeFilesInDirectory(localpath)})
 
             for result in self.results:
                 try:
-                    errors = result.get('asyncResult').get()
-                    if errors:
-                        self.errors.extend(errors)
-                    else:
-                        log.info("Posting {path}".format(path=result.get('localpath')))
-                        self._postMovie(result.get('token'), result.get('pathid'))
+                    # We need to synchronize task completion here but don't actual care about the results
+                    [task.wait() for task in result.get('asyncResults')]
+                    log.info("Posting {path}".format(path=result.get('localpath')))
+                    self._postMovie(result.get('token'), result.get('pathid'))
                 except Exception, e:
                     log.error("Error processing %s" % result.get('localpath'))
                     log.error(e)
