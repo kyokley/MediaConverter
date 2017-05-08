@@ -1,3 +1,4 @@
+import traceback
 from subprocess import Popen, PIPE
 import os, shutil
 import shlex
@@ -5,6 +6,7 @@ from re import search
 from settings import (MEDIAVIEWER_SUFFIX,
                       ENCODER,
                       MEDIA_FILE_EXTENSIONS,
+                      SEND_EMAIL,
                       )
 from utils import stripUnicode, EncoderException
 from celery_handler import app
@@ -206,22 +208,39 @@ def overwriteExistingFile(source,
     log.info("Finished renaming file")
     return dest
 
-def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal=True):
-    orig = os.path.realpath(filename)
-    new = "tmpfile.mp4"
+@app.task
+def makeFileStreamable(filename, pathid, dryRun=False, appendSuffix=True, removeOriginal=True):
+    try:
+        orig = os.path.realpath(filename)
+        new = "tmpfile.mp4"
 
-    log.info("Begin re-encoding of %s..." % orig)
-    encode(orig, new, dryRun=dryRun)
-    log.info("Finished encoding")
+        log.info("Begin re-encoding of %s..." % orig)
+        encode(orig, new, dryRun=dryRun)
+        log.info("Finished encoding")
 
-    log.info("Fixing metadata")
-    fixMetaData(new, dryRun=dryRun)
-    log.info("Finished fixing metadata")
+        log.info("Fixing metadata")
+        fixMetaData(new, dryRun=dryRun)
+        log.info("Finished fixing metadata")
 
-    dest = overwriteExistingFile(new, orig, dryRun=dryRun, appendSuffix=appendSuffix, removeOriginal=removeOriginal)
+        dest = overwriteExistingFile(new, orig, dryRun=dryRun, appendSuffix=appendSuffix, removeOriginal=removeOriginal)
 
-    log.info("Done")
-    return dest
+        log.info("Done")
+        return dest, pathid
+    except Exception, e:
+        errorMsg = "Something bad happened attempting to make %s streamable" % filename
+        log.error(errorMsg)
+        log.error(e)
+
+        if SEND_EMAIL:
+            subject = 'MC: Got some errors'
+            message = '''
+            %s
+            Got the following:
+            %s
+            ''' % (errorMsg, traceback.format_exc())
+        else:
+            message = errorMsg
+        raise Exception(message)
 
 def _getFilesInDirectory(fullPath):
     command = "find '%s' -maxdepth 10 -not -type d" % fullPath
@@ -230,7 +249,6 @@ def _getFilesInDirectory(fullPath):
     tokens = res.split('\n')
     return set([x for x in tokens if x])
 
-@app.task
 def reencodeFilesInDirectory(fullPath, dryRun=False):
     errors = list()
     tokens = _getFilesInDirectory(fullPath)
@@ -240,10 +258,10 @@ def reencodeFilesInDirectory(fullPath, dryRun=False):
         if ext in MEDIA_FILE_EXTENSIONS:
             try:
                 cleanPath = stripUnicode(token)
-                makeFileStreamable(cleanPath,
-                                   appendSuffix=True,
-                                   removeOriginal=True,
-                                   dryRun=dryRun)
+                makeFileStreamable.delay(cleanPath,
+                                         appendSuffix=True,
+                                         removeOriginal=True,
+                                         dryRun=dryRun)
             except EncoderException, e:
                 log.error(e)
                 errors.append(cleanPath)

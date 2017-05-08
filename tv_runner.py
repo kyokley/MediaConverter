@@ -1,5 +1,5 @@
+import time
 import os
-import traceback
 import subprocess
 import shlex
 from file import File
@@ -51,48 +51,23 @@ class TvRunner(object):
 
     def updateFileRecords(self, path, localFileSet, remoteFileSet):
         pathid = None
+        tasks = []
         for localFile in localFileSet:
             if localFile and localFile not in remoteFileSet:
-                try:
-                    if not pathid:
-                        pathid = self.getOrCreateRemotePath(path)
+                if not pathid:
+                    pathid = self.getOrCreateRemotePath(path)
 
-                    log.debug("Attempting to add %s" % (localFile,))
-                    fullPath = stripUnicode(localFile, path=path)
-                    try:
-                        fullPath = makeFileStreamable(fullPath,
-                                                      appendSuffix=True,
-                                                      removeOriginal=True,
-                                                      dryRun=False)
-                    except EncoderException, e:
-                        errorMsg = "Got a non-fatal encoding error attempting to make %s streamable" % fullPath
-                        log.error(errorMsg)
-                        log.error('Attempting to recover and continue')
-                        self.errors.append(errorMsg)
-                        continue
+                log.debug("Attempting to add %s" % (localFile,))
+                fullPath = stripUnicode(localFile, path=path)
 
-                    if os.path.exists(fullPath):
-                        newFile = File(os.path.basename(fullPath),
-                                       pathid,
-                                       os.path.getsize(fullPath),
-                                       True,
-                                       )
+                task = makeFileStreamable.delay(fullPath,
+                                                pathid,
+                                                appendSuffix=True,
+                                                removeOriginal=True,
+                                                dryRun=False)
+                tasks.append(task)
+        return tasks
 
-                        newFile.postTVFile()
-                except Exception, e:
-                    errorMsg = "Something bad happened attempting to make %s streamable" % fullPath
-                    log.error(errorMsg)
-                    log.error(e)
-
-                    if SEND_EMAIL:
-                        subject = 'MC: Got some errors'
-                        message = '''
-                        %s
-                        Got the following:
-                        %s
-                        ''' % (errorMsg, traceback.format_exc())
-                        send_email(subject, message)
-                    raise
 
     def buildLocalFileSet(self, path):
         command = "find '%s' -maxdepth 1 -not -type d" % path
@@ -114,6 +89,9 @@ class TvRunner(object):
         log.debug('Attempting to get paths')
         self.loadPaths()
         log.debug('Got paths')
+        tasks = []
+        errors = []
+
         for path, pathIDs in self.paths.items():
             try:
                 log.debug('Building local file set for %s' % path)
@@ -128,11 +106,36 @@ class TvRunner(object):
             remoteFileSet = self.buildRemoteFileSetForPathIDs(pathIDs)
             log.debug('Done building remote file set for %s' % path)
 
-            self.updateFileRecords(path, localFileSet, remoteFileSet)
+            tasks.extend(self.updateFileRecords(path, localFileSet, remoteFileSet))
 
-        if self.errors:
-            log.error('Errors occured in the following files:')
-            for error in self.errors:
+        done = False
+        while not done:
+            time.sleep(1)
+            for task in tasks:
+                if not task.successful() and not task.failed():
+                    break
+            else:
+                done = True
+
+        for task in tasks:
+            if task.successful():
+                fullPath, pathid = task.result
+                if os.path.exists(fullPath):
+                    newFile = File(os.path.basename(fullPath),
+                                   pathid,
+                                   os.path.getsize(fullPath),
+                                   True,
+                                   )
+
+                    newFile.postTVFile()
+            elif task.failed():
+                error = task.get(propagate=False)
                 log.error(error)
+                errors.append(error)
+
+        if SEND_EMAIL and errors:
+            subject = 'MC: Got some errors'
+            send_email(subject, '\n'.join(errors))
+
         log.debug('Done running tv shows')
-        return self.errors
+        return errors
