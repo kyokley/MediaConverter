@@ -9,13 +9,12 @@ from celery_handler import app
 from log import LogFile
 log = LogFile().getLogger()
 
-@app.task(name='main.main')
-def main():
+def main(dryRun=False):
     all_errors = []
-    tvRunner = TvRunner()
+    tvRunner = TvRunner(dryRun=dryRun)
     tv_errors = tvRunner.run()
 
-    movieRunner = MovieRunner()
+    movieRunner = MovieRunner(dryRun=dryRun)
     movie_errors = movieRunner.run()
 
     postData({}, MEDIAVIEWER_INFER_SCRAPERS_URL)
@@ -36,4 +35,4 @@ def main():
     log.info('All done')
 
 if __name__ == '__main__':
-    main.delay()
+    main(dryRun=False)

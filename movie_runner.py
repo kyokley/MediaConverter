@@ -14,9 +14,10 @@ from log import LogFile
 log = LogFile().getLogger()
 
 class MovieRunner(object):
-    def __init__(self):
+    def __init__(self, dryRun=False):
         self.movies = set()
         self.errors = []
+        self.dryRun = dryRun
 
     def _getLocalMoviePathsSetting(self):
         return LOCAL_MOVIE_PATHS
@@ -48,7 +49,7 @@ class MovieRunner(object):
                     self.results.append({'token': token,
                                          'pathid': pathid,
                                          'localpath': localpath,
-                                         'asyncResults': reencodeFilesInDirectory(localpath)})
+                                         'asyncResults': reencodeFilesInDirectory(localpath, pathid, dryRun=self.dryRun)})
 
             for result in self.results:
                 try:

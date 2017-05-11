@@ -14,7 +14,11 @@ from celery_handler import app
 from log import LogFile
 log = LogFile().getLogger()
 
-def checkVideoEncoding(source):
+def checkVideoEncoding(source, dryRun=False):
+    if dryRun:
+        log.info('Skipping checkVideoEncoding for dryRun')
+        return 1, 1, 1
+
     ffmpeg = Popen((ENCODER, '-hide_banner', "-i", source), stderr=PIPE)
     output = ffmpeg.communicate()[1]
 
@@ -88,12 +92,16 @@ def _convertSrtToVtt(srt_filename):
     return vtt_filename
 
 def encode(source, dest, dryRun=False):
-    vres, ares, sres = checkVideoEncoding(source)
+    vres, ares, sres = checkVideoEncoding(source, dryRun=dryRun)
 
-    _handleSubtitles(source, dest, sres)
+    _handleSubtitles(source, dest, sres, dryRun=dryRun)
     _reencodeVideo(source, dest, vres, ares, dryRun=dryRun)
 
-def _handleSubtitles(source, dest, sres):
+def _handleSubtitles(source, dest, sres, dryRun=False):
+    if dryRun:
+        log.info('Skipping _handleSubtitles for dryRun')
+        return
+
     dirname = os.path.dirname(source)
     english_srt_path = os.path.join(dirname, 'English.srt')
     file_srt_path = os.path.splitext(source)[0] + '.srt'
@@ -248,8 +256,7 @@ def _getFilesInDirectory(fullPath):
     tokens = res.split('\n')
     return set([x for x in tokens if x])
 
-def reencodeFilesInDirectory(fullPath, dryRun=False):
-    errors = list()
+def reencodeFilesInDirectory(fullPath, pathid, dryRun=False):
     tokens = _getFilesInDirectory(fullPath)
     tasks = []
 
@@ -258,6 +265,7 @@ def reencodeFilesInDirectory(fullPath, dryRun=False):
         if ext in MEDIA_FILE_EXTENSIONS:
             cleanPath = stripUnicode(token)
             tasks.append(makeFileStreamable.delay(cleanPath,
+                                                  pathid,
                                                   appendSuffix=True,
                                                   removeOriginal=True,
                                                   dryRun=dryRun))
