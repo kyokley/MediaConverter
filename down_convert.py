@@ -1,6 +1,7 @@
 import os
 import argparse
 import shutil
+from datetime import datetime
 from subprocess import Popen, PIPE
 
 ENCODER = 'ffmpeg' # or 'avconv'
@@ -18,7 +19,7 @@ def recompress(filename):
     path = os.path.dirname(filename) or os.getcwd()
     base = os.path.basename(filename)
     bak_filename = os.path.join(path, '{}_bak'.format(base))
-    tmp_filename = os.path.join(path, '{}.tmp'.format(base))
+    tmp_filename = os.path.join(path, 'tmp-{}'.format(base))
 
     command = (ENCODER,
                '-hide_banner',
@@ -33,7 +34,7 @@ def recompress(filename):
                tmp_filename)
 
     # Run the command to recompress the file
-    print('Starting to recompress {}'.format(filename))
+    print('Starting to recompress {} at {}'.format(filename, datetime.now()))
     process = Popen(command, stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
     if process.returncode != 0:
