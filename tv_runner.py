@@ -1,4 +1,3 @@
-import time
 import os
 import subprocess
 import shlex
@@ -7,7 +6,6 @@ from path import Path
 from settings import SEND_EMAIL
 from convert import makeFileStreamable
 from utils import (stripUnicode,
-                   EncoderException,
                    MissingPathException,
                    send_email)
 
