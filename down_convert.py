@@ -71,19 +71,19 @@ def recompress_multiple(filename):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('infile', help='File to be down-compressed to a smaller size')
-    parser.add_argument('-f', '--file', help='Obtain files for decompression from the given file. One per line.')
+    parser.add_argument('-i', '--input', help='File to be down-compressed to a smaller size')
+    parser.add_argument('-s', '--sources', help='Obtain files for decompression from the given file. One per line.')
 
     args = parser.parse_args()
 
-    if not args.file and not args.infile:
-        raise Exception('Either file or infile must be provided')
-    elif args.file and args.infile:
-        raise Exception('Only file or infile is allowed to be defined. Not both.')
-    elif args.infile:
-        recompress(args.infile)
-    elif args.file:
-        recompress_multiple(args.file)
+    if not args.sources and not args.input:
+        raise Exception('Either sources or input must be provided')
+    elif args.sources and args.input:
+        raise Exception('Only sources or input is allowed to be defined. Not both.')
+    elif args.input:
+        recompress(args.input)
+    elif args.sources:
+        recompress_multiple(args.sources)
     else:
         raise Exception('Invalid Input')
 
