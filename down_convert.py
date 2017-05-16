@@ -12,7 +12,7 @@ class FileNotFound(Exception):
 class EncoderException(Exception):
     pass
 
-def recompress(filename):
+def recompress(filename, scale_down=False):
     if not os.path.exists(filename):
         raise FileNotFound('{} does not exist'.format(filename))
 
@@ -21,17 +21,24 @@ def recompress(filename):
     bak_filename = os.path.join(path, '{}_bak'.format(base))
     tmp_filename = os.path.join(path, 'tmp-{}'.format(base))
 
-    command = (ENCODER,
+    command = [ENCODER,
                '-hide_banner',
                '-i',
-               filename,
-               '-crf',
-               '30',
-               '-c:a',
-               'copy',
-               '-preset',
-               'slow',
-               tmp_filename)
+               filename,]
+
+    if scale_down:
+        command.extend(['-vf',
+                        'scale=-2:720:flags=lanczos'])
+
+    command.extend(['-movflags',
+                    '+faststart',
+                    '-crf',
+                    '30',
+                    '-acodec',
+                    'libfdk_aac',
+                    '-preset',
+                    'slow',
+                    tmp_filename])
 
     # Run the command to recompress the file
     print('Starting to recompress {} at {}'.format(filename, datetime.now()))
@@ -56,7 +63,7 @@ def recompress(filename):
     shutil.move(tmp_filename, filename)
     print('Done moving {} to {}'.format(tmp_filename, filename))
 
-def recompress_multiple(filename):
+def recompress_multiple(filename, scale_down=False):
     if not os.path.exists(filename):
         raise FileNotFound('{} does not exist'.format(filename))
 
@@ -66,13 +73,14 @@ def recompress_multiple(filename):
             files.append(line.strip())
 
     for file in files:
-        recompress(file)
+        recompress(file, scale_down=scale_down)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', help='File to be down-compressed to a smaller size')
     parser.add_argument('-s', '--sources', help='Obtain files for decompression from the given file. One per line.')
+    parser.add_argument('-d', '--scale_down', help='Scale down a natively 1080p file to 720p', action='store_true')
 
     args = parser.parse_args()
 
@@ -81,9 +89,9 @@ def main():
     elif args.sources and args.input:
         raise Exception('Only sources or input is allowed to be defined. Not both.')
     elif args.input:
-        recompress(args.input)
+        recompress(args.input, scale_down=args.scale_down)
     elif args.sources:
-        recompress_multiple(args.sources)
+        recompress_multiple(args.sources, scale_down=args.scale_down)
     else:
         raise Exception('Invalid Input')
 
