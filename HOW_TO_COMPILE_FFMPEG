@@ -44,3 +44,5 @@ PATH="$HOME/bin:$PATH" PKG_CONFIG_PATH="/usr/bin/pkg-config" ./configure \
   --enable-nonfree
 PATH="$HOME/bin:$PATH" make
 make install
+
+rm -rf /tmp/x265 /tmp/ffmpeg_sources
