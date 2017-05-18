@@ -1,3 +1,5 @@
+#!/bin/bash
+
 sudo aptitude install -y yasm \
                          cmake \
                          cmake-curses-gui \
@@ -25,10 +27,10 @@ tar xjvf ffmpeg-snapshot.tar.bz2
 cd ffmpeg
 
 PKG_CONFIG_PATH="/usr/bin/pkg-config" ./configure \
-  --prefix="$HOME/ffmpeg_build" \
+  --prefix="/tmp/ffmpeg_build" \
   --pkg-config-flags="--static" \
-  --extra-cflags="-I$HOME/ffmpeg_build/include" \
-  --extra-ldflags="-L$HOME/ffmpeg_build/lib" \
+  --extra-cflags="-I/tmp/ffmpeg_build/include" \
+  --extra-ldflags="-L/tmp/ffmpeg_build/lib" \
   --bindir="/usr/local/bin" \
   --enable-gpl \
   --enable-libass \
@@ -45,4 +47,4 @@ PKG_CONFIG_PATH="/usr/bin/pkg-config" ./configure \
 make
 sudo make install
 
-rm -rf /tmp/x265 /tmp/ffmpeg_sources $HOME/ffmpeg_build
+rm -rf /tmp/x265 /tmp/ffmpeg_sources /tmp/ffmpeg_build

@@ -31,7 +31,7 @@ MEDIAVIEWER_MOVIE_PATHFILES_URL = 'https://127.0.0.1:8001/mediaviewer/api/movie/
 MEDIAVIEWER_UNSTREAMABLE_FILE_URL = 'https://127.0.0.1:8001/mediaviewer/api/unstreamablefile/'
 MEDIAVIEWER_INFER_SCRAPERS_URL = 'https://127.0.0.1:8001/mediaviewer/api/inferscrapers/'
 
-MEDIAVIEWER_SUFFIX = '%s.mv-encoded.mp4'
+MEDIAVIEWER_SUFFIX = '{}.mv-encoded.mp4'
 
 ENCODER = 'avconv' # or 'ffmpeg'
 

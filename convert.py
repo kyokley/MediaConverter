@@ -49,15 +49,14 @@ def _extractSubtitleFromVideo(source,
                               stream_identifier,
                               srt_filename,
                               ):
-    command = [ENCODER,
-               "-hide_banner",
-               "-y",
-               "-i",
-               source,
-               ]
-    subtitle_command = command + ['-map',
-                                  stream_identifier,
-                                  srt_filename]
+    subtitle_command = (ENCODER,
+                        "-hide_banner",
+                        "-y",
+                        "-i",
+                        source,
+                        '-map',
+                        stream_identifier,
+                        srt_filename)
     log.debug('Extracting using following command:')
     log.debug(' '.join(subtitle_command))
     process = Popen(subtitle_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
