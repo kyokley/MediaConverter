@@ -24,7 +24,7 @@ def checkVideoEncoding(source):
         raise EncoderException(output)
 
     vmatch = search("Video.*h264", output)
-    amatch = search("Audio.*(mp3|aac)", output)
+    amatch = search("Audio.*aac", output)
     smatch = search("(\d+).(\d+)\(eng.*Subtitle", output)
     return (vmatch and 1 or 0, amatch and 1 or 0, smatch)
 
@@ -134,7 +134,7 @@ def _reencodeVideo(source, dest, vres, ares, dryRun=False):
         command.extend(["-c:v",
                         "copy",
                         "-c:a",
-                        "libmp3lame",
+                        "libfdk_aac",
                         ])
     elif ares:
         command.extend(["-c:v",
@@ -146,7 +146,7 @@ def _reencodeVideo(source, dest, vres, ares, dryRun=False):
         command.extend(["-c:v",
                         "libx264",
                         "-c:a",
-                        "libmp3lame",
+                        "libfdk_aac",
                         ])
 
     command.append(dest)
