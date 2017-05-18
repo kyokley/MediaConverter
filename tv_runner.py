@@ -25,7 +25,7 @@ class TvRunner(object):
 
     @staticmethod
     def getOrCreateRemotePath(localPath):
-        log.debug('Get or create path for %s' % localPath)
+        log.debug('Get or create path for {}'.format(localPath))
         newPath = Path(localPath, localPath)
         newPath.postTVShow()
         data = Path.getTVPathByLocalPathAndRemotePath(localPath, localPath)
@@ -55,7 +55,7 @@ class TvRunner(object):
                 if not pathid:
                     pathid = self.getOrCreateRemotePath(path)
 
-                log.debug("Attempting to add %s" % (localFile,))
+                log.debug("Attempting to add {}".format(localFile))
                 fullPath = stripUnicode(localFile, path=path)
 
                 task = makeFileStreamable.delay(fullPath,
@@ -68,14 +68,14 @@ class TvRunner(object):
 
 
     def buildLocalFileSet(self, path):
-        command = "find '%s' -maxdepth 1 -not -type d" % path
+        command = "find '{}' -maxdepth 1 -not -type d".format(path)
         p = subprocess.Popen(shlex.split(command),
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
         local_files = p.communicate()[0]
 
         if FIND_FAIL_STRING in local_files:
-            raise MissingPathException('Path not found: %s' % path)
+            raise MissingPathException('Path not found: {}'.format(path))
 
         localFileSet = local_files.split('\n')
         localFileSet = set([os.path.basename(x) for x in localFileSet
@@ -92,17 +92,17 @@ class TvRunner(object):
 
         for path, pathIDs in self.paths.items():
             try:
-                log.debug('Building local file set for %s' % path)
+                log.debug('Building local file set for {}'.format(path))
                 localFileSet = self.buildLocalFileSet(path)
-                log.debug('Done building local file set for %s' % path)
+                log.debug('Done building local file set for {}'.format(path))
             except MissingPathException, e:
                 log.error(e)
                 log.error('Continuing...')
                 continue
 
-            log.debug('Attempting to get remote files for %s' % path)
+            log.debug('Attempting to get remote files for {}'.format(path))
             remoteFileSet = self.buildRemoteFileSetForPathIDs(pathIDs)
-            log.debug('Done building remote file set for %s' % path)
+            log.debug('Done building remote file set for {}'.format(path))
 
             tasks.extend(self.updateFileRecords(path, localFileSet, remoteFileSet))
 

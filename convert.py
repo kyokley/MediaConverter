@@ -34,7 +34,7 @@ def fixMetaData(source, dryRun=False):
         process.communicate()
 
 def _extractSubtitles(source, dest, stream_identifier):
-    srt_filename = '%s.srt' % os.path.splitext(dest)[0]
+    srt_filename = '{}.srt'.format(os.path.splitext(dest)[0])
 
     _extractSubtitleFromVideo(source,
                               dest,
@@ -71,9 +71,9 @@ def _extractSubtitleFromVideo(source,
         raise EncoderException(err)
 
 def _convertSrtToVtt(srt_filename):
-    vtt_filename = '%s.vtt' % os.path.splitext(srt_filename)[0]
-    srt_vtt_command = ['srt-vtt',
-                       srt_filename]
+    vtt_filename = '{}.vtt'.format(os.path.splitext(srt_filename)[0])
+    srt_vtt_command = ('srt-vtt',
+                       srt_filename)
     log.debug('Extracting using following command:')
     log.debug(' '.join(srt_vtt_command))
     process = Popen(srt_vtt_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
@@ -99,20 +99,20 @@ def _handleSubtitles(source, dest, sres):
     file_srt_path = os.path.splitext(source)[0] + '.srt'
     if os.path.exists(english_srt_path):
         log.info('English.srt found in directory. Attempting to convert.')
-        dest_path = '%s.vtt' % os.path.splitext(dest)[0]
+        dest_path = '{}.vtt'.format(os.path.splitext(dest)[0])
         vtt_filename = _convertSrtToVtt(english_srt_path)
         _moveSubtitleFile(vtt_filename,
                           dest_path)
     elif os.path.exists(file_srt_path):
         log.info('{} found in directory. Attempting to convert.'.format(file_srt_path))
-        dest_path = '%s.vtt' % os.path.splitext(dest)[0]
+        dest_path = '{}.vtt'.format(os.path.splitext(dest)[0])
         vtt_filename = _convertSrtToVtt(file_srt_path)
         _moveSubtitleFile(vtt_filename,
                           dest_path)
     elif sres:
         log.info('Found subtitles stream. Attempting to extract')
         sres = sres.groups()
-        stream_identifier = '%s:%s' % (sres[0], sres[1])
+        stream_identifier = '{}:{}'.format(sres[0], sres[1])
         _extractSubtitles(source,
                           dest,
                           stream_identifier,
@@ -162,26 +162,26 @@ def _reencodeVideo(source, dest, vres, ares, dryRun=False):
             raise EncoderException('Encoding failed')
 
 def _moveSubtitleFile(source, dest, dryRun=False):
-    srt_filename = '%s.srt' % os.path.splitext(source)[0]
-    source_vtt_filename = '%s.vtt' % os.path.splitext(source)[0]
-    dest_vtt_filename = '%s.vtt' % os.path.splitext(dest)[0]
+    srt_filename = '{}.srt'.format(os.path.splitext(source)[0])
+    source_vtt_filename = '{}.vtt'.format(os.path.splitext(source)[0])
+    dest_vtt_filename = '{}.vtt'.format(os.path.splitext(dest)[0])
     if os.path.exists(source_vtt_filename):
         log.info('Found associated subtitle')
         if not dryRun:
             try:
-                log.info('Moving subtitle from %s to %s' % (source_vtt_filename, dest_vtt_filename))
+                log.info('Moving subtitle from {} to {}'.format(source_vtt_filename, dest_vtt_filename))
                 shutil.move(source_vtt_filename, dest_vtt_filename)
             except Exception, e:
                 log.error(e)
                 raise
 
             try:
-                log.info('Removing old srt file %s' % srt_filename)
+                log.info('Removing old srt file {}'.format(srt_filename))
                 os.remove(srt_filename)
             except OSError, e:
                 log.warn(e)
     else:
-        log.warn('File not found: %s' % source_vtt_filename)
+        log.warn('File not found: {}'.format(source_vtt_filename))
 
 def overwriteExistingFile(source,
                           dest,
@@ -192,9 +192,9 @@ def overwriteExistingFile(source,
         if removeOriginal and os.path.exists(dest):
             os.remove(dest)
 
-    dest = appendSuffix and MEDIAVIEWER_SUFFIX % dest or dest
+    dest = appendSuffix and MEDIAVIEWER_SUFFIX.format(dest) or dest
 
-    log.info("Renaming file %s to %s" % (source, dest))
+    log.info("Renaming file {} to {}".format(source, dest))
     if not dryRun:
         try:
             shutil.move(source, dest)
@@ -212,9 +212,9 @@ def overwriteExistingFile(source,
 def makeFileStreamable(filename, pathid, dryRun=False, appendSuffix=True, removeOriginal=True):
     try:
         orig = os.path.realpath(filename)
-        new = "tmpfile.mp4"
+        new = 'tmp-{}'.format(os.path.basename(filename))
 
-        log.info("Begin re-encoding of %s..." % orig)
+        log.info("Begin re-encoding of {}...".format(orig))
         encode(orig, new, dryRun=dryRun)
         log.info("Finished encoding")
 
@@ -227,29 +227,28 @@ def makeFileStreamable(filename, pathid, dryRun=False, appendSuffix=True, remove
         log.info("Done")
         return dest, pathid
     except Exception, e:
-        errorMsg = "Something bad happened attempting to make %s streamable" % filename
+        errorMsg = "Something bad happened attempting to make {} streamable".format(filename)
         log.error(errorMsg)
         log.error(e)
 
         if SEND_EMAIL:
             message = '''
-            %s
+            {}
             Got the following:
-            %s
-            ''' % (errorMsg, traceback.format_exc())
+            {}
+            '''.format(errorMsg, traceback.format_exc())
         else:
             message = errorMsg
         raise Exception(message)
 
 def _getFilesInDirectory(fullPath):
-    command = "find '%s' -maxdepth 10 -not -type d" % fullPath
+    command = "find '{}' -maxdepth 10 -not -type d".format(fullPath)
     p = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE)
     res = p.communicate()[0]
     tokens = res.split('\n')
     return set([x for x in tokens if x])
 
 def reencodeFilesInDirectory(fullPath, dryRun=False):
-    errors = list()
     tokens = _getFilesInDirectory(fullPath)
     tasks = []
 

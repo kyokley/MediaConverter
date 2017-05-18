@@ -14,14 +14,14 @@ def arp_capture(pkt):
     if ARP in pkt and pkt[ARP].op == 1: #who-has (request)
         if pkt[ARP].psrc == '0.0.0.0': # nosec # ARP Probe
             if pkt[ARP].hwsrc == GATORADE:
-                log.debug('%s: Got a button press! Run the converter!' % datetime.now())
+                log.debug('{}: Got a button press! Run the converter!'.format(datetime.now()))
                 main.delay()
     elif BOOTP in pkt and pkt[BOOTP].op == 1:
         if ('src' in pkt.fields and
                 pkt.fields['src'] == GATORADE and
                 DHCP in pkt and
                 DISCOVER_MESSAGE in pkt[DHCP].options):
-            log.debug('%s: Got a button press! Run the converter!' % datetime.now())
+            log.debug('{}: Got a button press! Run the converter!'.format(datetime.now()))
             main.delay()
 
 def dash():

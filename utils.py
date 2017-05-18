@@ -50,8 +50,11 @@ def stripUnicode(filename, path=None):
 def send_email(subject, body):
     # Prepare actual message
     log.info('sending error email')
-    message = """\From: %s\nTo: %s\nSubject: %s\n\n%s
-    """ % (GMAIL_USER, ", ".join(EMAIL_RECIPIENTS), subject, body)
+    message = """\From: {sender}\nTo: {to}\nSubject: {subject}\n\n{body}""".format(
+               sender=GMAIL_USER,
+               to=", ".join(EMAIL_RECIPIENTS),
+               subject=subject,
+               body=body)
     try:
         server = smtplib.SMTP("smtp.gmail.com", 587)
         server.ehlo()

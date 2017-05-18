@@ -1,7 +1,6 @@
 import os
 import subprocess
 import shlex
-import time
 from settings import (MEDIAVIEWER_MOVIE_FILE_URL,
                       LOCAL_MOVIE_PATHS,
                       )
@@ -25,7 +24,7 @@ class MovieRunner(object):
         self.results = []
         for moviepath in self._getLocalMoviePathsSetting():
             if not os.path.exists(moviepath):
-                self.errors.append('%s does not exist. Continuing...' % moviepath)
+                self.errors.append('{} does not exist. Continuing...'.format(moviepath))
                 continue
 
             path = Path(moviepath, moviepath)
@@ -42,8 +41,8 @@ class MovieRunner(object):
             for token in tokens:
                 localpath = os.path.join(moviepath, token)
                 if localpath not in fileset:
-                    log.info("Found %s" % localpath)
-                    log.info("Adding job for %s" % localpath)
+                    log.info("Found {}".format(localpath))
+                    log.info("Adding job for {}".format(localpath))
 
                     self.results.append({'token': token,
                                          'pathid': pathid,
@@ -57,7 +56,7 @@ class MovieRunner(object):
                     log.info("Posting {path}".format(path=result.get('localpath')))
                     self._postMovie(result.get('token'), result.get('pathid'))
                 except Exception, e:
-                    log.error("Error processing %s" % result.get('localpath'))
+                    log.error("Error processing {}".format(result.get('localpath')))
                     log.error(e)
                     self.errors.append(e)
 
@@ -66,7 +65,7 @@ class MovieRunner(object):
         if not os.path.exists(moviepath):
             return set()
 
-        command = "ls '%s'" % moviepath
+        command = "ls '{}'".format(moviepath)
         p = subprocess.Popen(shlex.split(command),
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
@@ -83,7 +82,7 @@ class MovieRunner(object):
         if (not name or
                 not pathid):
             log.error('Invalid request')
-            log.error('Filename: %s Pathid: %s' % (name, pathid))
+            log.error('Filename: {} Pathid: {}'.format(name, pathid))
             return
 
         values = {'path': pathid,

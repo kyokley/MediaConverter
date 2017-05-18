@@ -32,7 +32,7 @@ class File(object):
         if (not self.filename or
                 not self.pathid):
             log.error('Invalid request')
-            log.error('Filename: %s Pathid: %s' % (self.filename, self.pathid))
+            log.error('Filename: {} Pathid: {}'.format(self.filename, self.pathid))
             return
 
         values = {'path': self.pathid,

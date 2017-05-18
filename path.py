@@ -93,10 +93,10 @@ class Path(object):
         localpaths = set()
         for localpath in filepaths:
             if not os.path.exists(localpath):
-                log.error('%s does not exist. Continuing...' % localpath)
+                log.error('{} does not exist. Continuing...'.format(localpath))
                 continue
 
-            command = "ls '%s'" % localpath
+            command = "ls '{}'".format(localpath)
             p = subprocess.Popen(shlex.split(command),
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.STDOUT)
