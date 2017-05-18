@@ -30,7 +30,7 @@ class TvRunner(object):
         newPath.postTVShow()
         data = Path.getTVPathByLocalPathAndRemotePath(localPath, localPath)
         pathid = data['results'][0]['pk']
-        log.debug('Got path')
+        log.debug('Got path data for {}'.format(localPath))
 
         return pathid
 
