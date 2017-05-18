@@ -247,7 +247,7 @@ def _getFilesInDirectory(fullPath):
     tokens = res.split('\n')
     return set([x for x in tokens if x])
 
-def reencodeFilesInDirectory(fullPath, dryRun=False):
+def reencodeFilesInDirectory(fullPath, pathid, dryRun=False):
     tokens = _getFilesInDirectory(fullPath)
     tasks = []
 
@@ -256,6 +256,7 @@ def reencodeFilesInDirectory(fullPath, dryRun=False):
         if ext in MEDIA_FILE_EXTENSIONS:
             cleanPath = stripUnicode(token)
             tasks.append(makeFileStreamable.delay(cleanPath,
+                                                  pathid,
                                                   appendSuffix=True,
                                                   removeOriginal=True,
                                                   dryRun=dryRun))

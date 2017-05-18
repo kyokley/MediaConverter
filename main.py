@@ -10,13 +10,13 @@ from log import LogFile
 log = LogFile().getLogger()
 
 @app.task(name='main.main')
-def main():
+def main(dryRun=False):
     all_errors = []
     tvRunner = TvRunner()
-    tv_errors = tvRunner.run()
+    tv_errors = tvRunner.run(dryRun=dryRun)
 
     movieRunner = MovieRunner()
-    movie_errors = movieRunner.run()
+    movie_errors = movieRunner.run(dryRun=dryRun)
 
     postData({}, MEDIAVIEWER_INFER_SCRAPERS_URL)
 
@@ -36,4 +36,4 @@ def main():
     log.info('All done')
 
 if __name__ == '__main__':
-    main.delay()
+    main.delay(dryRun=False)

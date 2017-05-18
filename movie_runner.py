@@ -20,7 +20,7 @@ class MovieRunner(object):
     def _getLocalMoviePathsSetting(self):
         return LOCAL_MOVIE_PATHS
 
-    def postMovies(self):
+    def postMovies(self, dryRun=False):
         self.results = []
         for moviepath in self._getLocalMoviePathsSetting():
             if not os.path.exists(moviepath):
@@ -47,18 +47,19 @@ class MovieRunner(object):
                     self.results.append({'token': token,
                                          'pathid': pathid,
                                          'localpath': localpath,
-                                         'asyncResults': reencodeFilesInDirectory(localpath)})
+                                         'asyncResults': reencodeFilesInDirectory(localpath, pathid, dryRun=dryRun)})
 
             for result in self.results:
-                try:
-                    # We need to synchronize task completion here but don't actual care about the results
-                    [task.wait() for task in result.get('asyncResults')]
-                    log.info("Posting {path}".format(path=result.get('localpath')))
-                    self._postMovie(result.get('token'), result.get('pathid'))
-                except Exception, e:
-                    log.error("Error processing {}".format(result.get('localpath')))
-                    log.error(e)
-                    self.errors.append(e)
+                for task in result.get('asyncResults'):
+                    try:
+                        dest, pathid = task.wait()
+
+                        log.info("Finished recompressing {} for pathid = {}".format(dest, pathid))
+                    except Exception, e:
+                        log.error("Error processing {}".format(result.get('localpath')))
+                        log.error(e)
+                        self.errors.append(e)
+                self._postMovie(result.get('token'), result.get('pathid'))
 
     @staticmethod
     def _getLocalMoviePaths(moviepath):
@@ -73,8 +74,8 @@ class MovieRunner(object):
         tokens = res.split('\n')
         return set([x for x in tokens if x])
 
-    def run(self):
-        self.postMovies()
+    def run(self, dryRun=False):
+        self.postMovies(dryRun=dryRun)
         log.debug('Done running movies')
         return self.errors
 

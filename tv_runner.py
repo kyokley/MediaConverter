@@ -47,7 +47,11 @@ class TvRunner(object):
 
         return fileSet
 
-    def updateFileRecords(self, path, localFileSet, remoteFileSet):
+    def updateFileRecords(self,
+                          path,
+                          localFileSet,
+                          remoteFileSet,
+                          dryRun=False):
         pathid = None
         tasks = []
         for localFile in localFileSet:
@@ -62,7 +66,7 @@ class TvRunner(object):
                                                 pathid,
                                                 appendSuffix=True,
                                                 removeOriginal=True,
-                                                dryRun=False)
+                                                dryRun=dryRun)
                 tasks.append(task)
         return tasks
 
@@ -83,7 +87,7 @@ class TvRunner(object):
         log.debug(localFileSet)
         return localFileSet
 
-    def run(self):
+    def run(self, dryRun=False):
         log.debug('Attempting to get paths')
         self.loadPaths()
         log.debug('Got paths')
@@ -104,7 +108,10 @@ class TvRunner(object):
             remoteFileSet = self.buildRemoteFileSetForPathIDs(pathIDs)
             log.debug('Done building remote file set for {}'.format(path))
 
-            tasks.extend(self.updateFileRecords(path, localFileSet, remoteFileSet))
+            tasks.extend(self.updateFileRecords(path,
+                                                localFileSet,
+                                                remoteFileSet,
+                                                dryRun=dryRun))
 
         for task in tasks:
             try:
