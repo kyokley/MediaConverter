@@ -12,11 +12,11 @@ log = LogFile().getLogger()
 @app.task(name='main.main')
 def main(dryRun=False):
     all_errors = []
-    tvRunner = TvRunner()
-    tv_errors = tvRunner.run(dryRun=dryRun)
+    tvRunner = TvRunner(dryRun=dryRun)
+    tv_errors = tvRunner.run()
 
-    movieRunner = MovieRunner()
-    movie_errors = movieRunner.run(dryRun=dryRun)
+    movieRunner = MovieRunner(dryRun=dryRun)
+    movie_errors = movieRunner.run()
 
     postData({}, MEDIAVIEWER_INFER_SCRAPERS_URL)
 
@@ -36,4 +36,4 @@ def main(dryRun=False):
     log.info('All done')
 
 if __name__ == '__main__':
-    main.delay(dryRun=False)
+    main(dryRun=False)

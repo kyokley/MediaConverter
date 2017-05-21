@@ -16,9 +16,10 @@ FIND_FAIL_STRING = 'No such file or directory'
 IGNORED_FILE_EXTENSIONS = ('.vtt', '.srt')
 
 class TvRunner(object):
-    def __init__(self):
+    def __init__(self, dryRun=False):
         self.paths = dict()
         self.errors = []
+        self.dryRun = dryRun
 
     def loadPaths(self):
         self.paths = Path.getAllTVPaths()
@@ -66,7 +67,7 @@ class TvRunner(object):
                                                 pathid,
                                                 appendSuffix=True,
                                                 removeOriginal=True,
-                                                dryRun=dryRun)
+                                                dryRun=dryRun or self.dryRun)
                 tasks.append(task)
         return tasks
 
@@ -111,7 +112,7 @@ class TvRunner(object):
             tasks.extend(self.updateFileRecords(path,
                                                 localFileSet,
                                                 remoteFileSet,
-                                                dryRun=dryRun))
+                                                dryRun=dryRun or self.dryRun))
 
         for task in tasks:
             try:
