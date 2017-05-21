@@ -18,6 +18,7 @@ class TestMovieRunner(unittest.TestCase):
         self.movieRunner.run()
         self.assertEquals(1, mock_postMovies.call_count)
 
+    # TODO: Remove all these patch decorators
     @mock.patch('utils.requests.post')
     @mock.patch('movie_runner.os.path.exists')
     @mock.patch('path.Path.getMoviePathByLocalPathAndRemotePath')

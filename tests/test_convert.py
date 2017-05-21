@@ -140,14 +140,14 @@ class TestExtractSubtitleFromVideo(unittest.TestCase):
                                   '/tmp/test_dest.srt',
                                   )
 
-        self.mock_popen.assert_called_once_with([ENCODER,
+        self.mock_popen.assert_called_once_with((ENCODER,
                                                  '-hide_banner',
                                                  '-y',
                                                  '-i',
                                                  self.source,
                                                  '-map',
                                                  '0:2',
-                                                 '/tmp/test_dest.srt'],
+                                                 '/tmp/test_dest.srt'),
                                                 stdin=PIPE,
                                                 stdout=PIPE,
                                                 stderr=PIPE)
@@ -163,14 +163,14 @@ class TestExtractSubtitleFromVideo(unittest.TestCase):
                           self.stream_identifier,
                           )
 
-        self.mock_popen.assert_called_once_with([ENCODER,
+        self.mock_popen.assert_called_once_with((ENCODER,
                                                  '-hide_banner',
                                                  '-y',
                                                  '-i',
                                                  self.source,
                                                  '-map',
                                                  '0:2',
-                                                 '/tmp/test_dest.srt'],
+                                                 '/tmp/test_dest.srt'),
                                                 stdin=PIPE,
                                                 stdout=PIPE,
                                                 stderr=PIPE)
@@ -203,8 +203,8 @@ class TestConvertSrtToVtt(unittest.TestCase):
         expected = '/path/to/file.vtt'
         actual = _convertSrtToVtt(self.srt_filename)
 
-        self.mock_popen.assert_called_once_with(['srt-vtt',
-                                                 '/path/to/file.srt'],
+        self.mock_popen.assert_called_once_with(('srt-vtt',
+                                                 '/path/to/file.srt'),
                                                 stdin=PIPE,
                                                 stdout=PIPE,
                                                 stderr=PIPE)
@@ -220,8 +220,8 @@ class TestConvertSrtToVtt(unittest.TestCase):
                           self.srt_filename,
                           )
 
-        self.mock_popen.assert_called_once_with(['srt-vtt',
-                                                 '/path/to/file.srt'],
+        self.mock_popen.assert_called_once_with(('srt-vtt',
+                                                 '/path/to/file.srt'),
                                                 stdin=PIPE,
                                                 stdout=PIPE,
                                                 stderr=PIPE)
@@ -285,7 +285,7 @@ class TestMoveSubtitleFile(unittest.TestCase):
         self.assertFalse(self.mock_move.called)
         self.assertFalse(self.mock_remove.called)
 
-@mock.patch('convert.MEDIAVIEWER_SUFFIX', '%s.suffix.mp4')
+@mock.patch('convert.MEDIAVIEWER_SUFFIX', '{}.suffix.mp4')
 class TestOverwriteExistingFile(unittest.TestCase):
     def setUp(self):
         self.log_patcher = mock.patch('convert.log')
@@ -449,18 +449,21 @@ class TestMakeFileStreamable(unittest.TestCase):
         dryRunSentinel = object()
         appendSuffixSentinel = object()
         removeOriginalSentinel = object()
+        pathidSentinel = object()
+
         res = makeFileStreamable('/tmp/this.is.a.file.mkv',
+                                 pathidSentinel,
                                  dryRun=dryRunSentinel,
                                  appendSuffix=appendSuffixSentinel,
                                  removeOriginal=removeOriginalSentinel)
-        self.assertEqual(res, 'the_final_destination')
+        self.assertEqual(res, ('the_final_destination', pathidSentinel))
         self.mock_realpath.assert_called_once_with('/tmp/this.is.a.file.mkv')
         self.mock_encode.assert_called_once_with('orig_filename',
-                                                 'tmpfile.mp4',
+                                                 'tmp-this.is.a.file.mkv',
                                                  dryRun=dryRunSentinel)
-        self.mock_fixMetaData.assert_called_once_with('tmpfile.mp4',
+        self.mock_fixMetaData.assert_called_once_with('tmp-this.is.a.file.mkv',
                                                       dryRun=dryRunSentinel)
-        self.mock_overwriteExistingFile.assert_called_once_with('tmpfile.mp4',
+        self.mock_overwriteExistingFile.assert_called_once_with('tmp-this.is.a.file.mkv',
                                                                 'orig_filename',
                                                                 dryRun=dryRunSentinel,
                                                                 appendSuffix=appendSuffixSentinel,
@@ -496,10 +499,11 @@ class TestEncode(unittest.TestCase):
 
         encode(source, dest, dryRun=dryRunSentinel)
 
-        self.mock_checkVideoEncoding.assert_called_once_with(source)
+        self.mock_checkVideoEncoding.assert_called_once_with(source, dryRun=dryRunSentinel)
         self.mock_handleSubtitles.assert_called_once_with(source,
                                                           dest,
-                                                          self.mock_sres)
+                                                          self.mock_sres,
+                                                          dryRun=dryRunSentinel)
         self.mock_reencodeVideo.assert_called_once_with(source,
                                                         dest,
                                                         self.mock_vres,
