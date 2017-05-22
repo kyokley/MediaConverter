@@ -12,26 +12,46 @@ class TestTvRunner(unittest.TestCase):
     def setUp(self):
         self.tvRunner = TvRunner()
 
-    @mock.patch('tv_runner.Path')
-    def test_loadPaths(self, mock_path):
+        self.Path_patcher = mock.patch('tv_runner.Path')
+        self.mock_Path = self.Path_patcher.start()
+
+        self.File_patcher = mock.patch('tv_runner.File')
+        self.mock_File = self.File_patcher.start()
+
+        self.basename_patcher = mock.patch('tv_runner.os.path.basename')
+        self.mock_basename = self.basename_patcher.start()
+
+        self.getsize_patcher = mock.patch('tv_runner.os.path.getsize')
+        self.mock_getsize = self.getsize_patcher.start()
+
+        self.exists_patcher = mock.patch('tv_runner.os.path.exists')
+        self.mock_exists = self.exists_patcher.start()
+
+        self.getOrCreateRemotePath_patcher = mock.patch('tv_runner.TvRunner.getOrCreateRemotePath')
+        self.mock_getOrCreateRemotePath = self.getOrCreateRemotePath_patcher.start()
+
+        self.makeFileStreamable_patcher = mock.patch('tv_runner.makeFileStreamable')
+        self.mock_makeFileStreamable = self.makeFileStreamable_patcher.start()
+
+        self.File_patcher = mock.patch('tv_runner.File')
+        self.mock_File = self.File_patcher.start()
+
+    def tearDown(self):
+        self.File_patcher.stop()
+        self.makeFileStreamable_patcher.stop()
+        self.getOrCreateRemotePath_patcher.stop()
+        self.exists_patcher.stop()
+        self.getsize_patcher.stop()
+        self.basename_patcher.stop()
+        self.Path_patcher.stop()
+
+    def test_loadPaths(self):
         fake_paths = [object() for i in xrange(3)]
-        mock_path.getAllTVPaths.return_value = fake_paths
+        self.mock_Path.getAllTVPaths.return_value = fake_paths
         self.tvRunner.loadPaths()
         self.assertEquals(fake_paths, self.tvRunner.paths)
 
-    @mock.patch('tv_runner.Path')
-    def test_getOrCreateRemotePath(self, mock_path):
-        expectedPathID = 123
-        testData = {'results': [{'pk': expectedPathID}]}
-        testPath = 'test path'
-
-        mock_path.getTVPathByLocalPathAndRemotePath.return_value = testData
-
-        actualPathID = self.tvRunner.getOrCreateRemotePath(testPath)
-        self.assertEquals(expectedPathID, actualPathID)
-
-    @mock.patch('tv_runner.File')
-    def test_buildRemoteFileSetForPathIDs(self, mock_file):
+    def test_buildRemoteFileSetForPathIDs(self):
         testData = {-1: ['invalid'],
                     1: ['test1'],
                     12: ['test12'],
@@ -41,7 +61,7 @@ class TestTvRunner(unittest.TestCase):
                            'test12',
                            'test123',
                            ])
-        mock_file.getTVFileSet = lambda x: testData.get(x)
+        self.mock_File.getTVFileSet = lambda x: testData.get(x)
 
         actualSet = self.tvRunner.buildRemoteFileSetForPathIDs([-1,
                                                                 1,
@@ -49,23 +69,11 @@ class TestTvRunner(unittest.TestCase):
                                                                 123])
         self.assertEquals(expectedSet, actualSet)
 
-    @mock.patch('tv_runner.os.path.basename')
-    @mock.patch('tv_runner.os.path.getsize')
-    @mock.patch('tv_runner.os.path.exists')
-    @mock.patch('tv_runner.TvRunner.getOrCreateRemotePath')
-    @mock.patch('tv_runner.makeFileStreamable')
-    @mock.patch('tv_runner.File')
-    def test_updateFileRecords(self,
-                               mock_file,
-                               mock_makeFileStreamable,
-                               mock_getOrCreateRemotePath,
-                               mock_os_path_exists,
-                               mock_os_path_getsize,
-                               mock_os_path_basename):
-        mock_getOrCreateRemotePath.return_value = 1
-        mock_os_path_exists.return_value = True
-        mock_os_path_getsize.return_value = 1
-        mock_os_path_basename.return_value = 'basename'
+    def test_updateFileRecords(self):
+        self.mock_getOrCreateRemotePath.return_value = 1
+        self.mock_exists.return_value = True
+        self.mock_getsize.return_value = 1
+        self.mock_basename.return_value = 'basename'
 
         test_path = '/a/local/path'
         test_localFileSet = set(['file1',
@@ -79,14 +87,11 @@ class TestTvRunner(unittest.TestCase):
                                  ])
 
         self.tvRunner.updateFileRecords(test_path, test_localFileSet, test_remoteFileSet)
-        mock_makeFileStreamable.assert_called_with('/a/local/path/newfile',
-                                                   appendSuffix=True,
-                                                   removeOriginal=True,
-                                                   dryRun=False)
-        mock_file.assert_called_with('basename',
-                                     1,
-                                     1,
-                                     True)
+        self.mock_makeFileStreamable.delay.assert_called_with('/a/local/path/newfile',
+                                                              1,
+                                                              appendSuffix=True,
+                                                              removeOriginal=True,
+                                                              dryRun=False)
 
     def test_run(self):
         test_data = {'asdf': [1],
@@ -117,12 +122,49 @@ class TestTvRunner(unittest.TestCase):
         self.tvRunner.updateFileRecords.assert_has_calls(
             [call('sdfg',
                   set(['paths', 'some']),
-                  set(['remote', 'some', 'paths'])),
+                  set(['remote', 'some', 'paths']),
+                  dryRun=False),
              call('asdf',
                   set(['paths', 'some']),
-                  set(['remote', 'some', 'paths']))],
+                  set(['remote', 'some', 'paths']),
+                  dryRun=False)],
             any_order=True)
         self.assertEqual(2, self.tvRunner.updateFileRecords.call_count)
+
+class TestTvRunnerGetOrCreateRemotePath(unittest.TestCase):
+    def setUp(self):
+        self.tvRunner = TvRunner()
+
+        self.Path_patcher = mock.patch('tv_runner.Path')
+        self.mock_Path = self.Path_patcher.start()
+
+        self.File_patcher = mock.patch('tv_runner.File')
+        self.mock_File = self.File_patcher.start()
+
+        self.basename_patcher = mock.patch('tv_runner.os.path.basename')
+        self.mock_basename = self.basename_patcher.start()
+
+        self.getsize_patcher = mock.patch('tv_runner.os.path.getsize')
+        self.mock_getsize = self.getsize_patcher.start()
+
+        self.exists_patcher = mock.patch('tv_runner.os.path.exists')
+        self.mock_exists = self.exists_patcher.start()
+
+        self.makeFileStreamable_patcher = mock.patch('tv_runner.makeFileStreamable')
+        self.mock_makeFileStreamable = self.makeFileStreamable_patcher.start()
+
+        self.File_patcher = mock.patch('tv_runner.File')
+        self.mock_File = self.File_patcher.start()
+
+    def test_getOrCreateRemotePath(self):
+        expectedPathID = 123
+        testData = {'results': [{'pk': expectedPathID}]}
+        testPath = 'test path'
+
+        self.mock_Path.getTVPathByLocalPathAndRemotePath.return_value = testData
+
+        actualPathID = self.tvRunner.getOrCreateRemotePath(testPath)
+        self.assertEquals(expectedPathID, actualPathID)
 
 class TestBuildLocalFileSetFunctional(unittest.TestCase):
     def setUp(self):
