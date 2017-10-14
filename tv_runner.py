@@ -94,7 +94,8 @@ class TvRunner(object):
                         send_email(subject, message)
                     raise
 
-    def buildLocalFileSet(self, path):
+    @staticmethod
+    def buildLocalFileSet(path):
         command = "find '%s' -maxdepth 1 -not -type d" % path
         p = subprocess.Popen(shlex.split(command),
                              stdout=subprocess.PIPE,
@@ -109,6 +110,17 @@ class TvRunner(object):
                                 if x and os.path.splitext(x)[1] not in IGNORED_FILE_EXTENSIONS])
         log.debug(localFileSet)
         return localFileSet
+
+    # TODO: Finish this method
+    def handleDirs(self, path):
+        paths = set()
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                paths.add(os.path.join(root, file))
+
+        for fullpath in paths:
+            pass
+
 
     def run(self):
         log.debug('Attempting to get paths')

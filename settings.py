@@ -40,6 +40,8 @@ MEDIA_FILE_EXTENSIONS = ('.mp4',
                          '.mkv',
                          )
 
+SUBTITLE_EXTENSIONS = ('.srt',)
+
 SERVER_NAME = '127.0.0.1'
 
 SEND_EMAIL = False

@@ -1,4 +1,6 @@
-import requests, os
+import requests
+import os
+
 from unidecode import unidecode
 import smtplib
 
@@ -11,6 +13,8 @@ from settings import (WAITER_USERNAME,
                       GMAIL_PASSWORD,
                       EMAIL_RECIPIENTS,
                       VERIFY_REQUESTS,
+                      MEDIA_FILE_EXTENSIONS,
+                      SUBTITLE_EXTENSIONS,
                       )
 
 class EncoderException(Exception):
@@ -62,3 +66,12 @@ def send_email(subject, body):
         log.debug('successfully sent the mail')
     except:
         log.error("failed to send mail")
+
+def file_ext(path):
+    return os.path.splitext(path)[-1]
+
+def is_valid_media_file(path):
+    return os.path.exists(path) and file_ext(path) in MEDIA_FILE_EXTENSIONS
+
+def is_valid_subtitle_file(path):
+    return os.path.exists(path) and file_ext(path) in SUBTITLE_EXTENSIONS
