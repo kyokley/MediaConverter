@@ -145,3 +145,43 @@ class TestBuildLocalFileSetFunctional(unittest.TestCase):
         expected = set([os.path.basename(x[1]) for x in files])
         actual = self.tv_runner.buildLocalFileSet(self.temp_dir)
         self.assertEqual(expected, actual)
+
+class TestHandlDirs(unittest.TestCase):
+    def setUp(self):
+        self.test_walk = [('Test.Dir.Path',
+                              ['Test.Dir.Path.S04E03.WEBRip.x264-MV'],
+                              ['Test.Dir.Path.S04E02.WEBRip.x264-MV.mp4']),
+                          ('Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV',
+                              ['Subs'],
+                              ['Test.Dir.Path.S04E03.WEBRip.x264-MV.mp4', 'info.txt']),
+                          ('Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV/Subs', [], ['2_Eng.srt'])]
+
+        self.walk_patcher = mock.patch('tv_runner.os.walk')
+        self.mock_walk = self.walk_patcher.start()
+        self.mock_walk.return_value = self.test_walk
+
+        self.exists_patcher = mock.patch('tv_runner.os.path.exists')
+        self.mock_exists = self.exists_patcher.start()
+        self.mock_exists.return_value = True
+
+        self.isdir_patcher = mock.patch('tv_runner.os.path.isdir')
+        self.mock_isdir = self.isdir_patcher.start()
+
+        self.rename_patcher = mock.patch('tv_runner.os.rename')
+        self.mock_rename = self.rename_patcher.start()
+
+        self.rmtree_patcher = mock.patch('tv_runner.shutil.rmtree')
+        self.mock_rmtree = self.rmtree_patcher.start()
+
+        self.tv_runner = TvRunner()
+
+    def tearDown(self):
+        self.walk_patcher.stop()
+        self.exists_patcher.stop()
+        self.isdir_patcher.stop()
+        self.rename_patcher.stop()
+        self.rmtree_patcher.stop()
+
+    def test_(self):
+        self.mock_isdir.side_effect = [False, True, True, True]
+        self.tv_runner.handleDirs('test.path')

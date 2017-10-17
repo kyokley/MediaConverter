@@ -2,20 +2,23 @@ import os
 import traceback
 import subprocess
 import shlex
+import shutil
 from file import File
 from path import Path
-from settings import SEND_EMAIL
+from settings import SEND_EMAIL, MEDIA_FILE_EXTENSIONS
 from convert import makeFileStreamable
 from utils import (stripUnicode,
                    EncoderException,
                    MissingPathException,
-                   send_email)
+                   send_email,
+                   )
 
 from log import LogFile
 log = LogFile().getLogger()
 
 FIND_FAIL_STRING = 'No such file or directory'
 IGNORED_FILE_EXTENSIONS = ('.vtt', '.srt')
+SUBTITLE_FILE = '2_Eng.srt'
 
 class TvRunner(object):
     def __init__(self):
@@ -113,13 +116,31 @@ class TvRunner(object):
 
     # TODO: Finish this method
     def handleDirs(self, path):
-        paths = set()
-        for root, dirs, files in os.walk(path):
-            for file in files:
-                paths.add(os.path.join(root, file))
+        if os.path.exists(path):
+            paths = []
+            dir_set = set()
+            for root, dirs, files in os.walk(path):
+                for file in files:
+                    paths.append(os.path.join(root, file))
 
-        for fullpath in paths:
-            pass
+            for fullpath in paths:
+                dirs = fullpath.split(os.path.sep)
+                top, episode, file = dirs[0], dirs[1], dirs[-1]
+                file_ext = os.path.splitext(file)[-1].lower()
+
+                if os.path.isdir(episode):
+                    dir_set.add(os.path.join(top, episode))
+
+                    if file == SUBTITLE_FILE:
+                        # Move subtitle to show directory and rename
+                        os.rename(fullpath, os.path.join(top, episode + '.srt'))
+
+                    elif file_ext in MEDIA_FILE_EXTENSIONS:
+                        # Move media file to show directory
+                        os.rename(fullpath, os.path.join(top, file))
+
+            for directory in dir_set:
+                shutil.rmtree(directory)
 
 
     def run(self):
@@ -128,6 +149,8 @@ class TvRunner(object):
         log.debug('Got paths')
         for path, pathIDs in self.paths.items():
             try:
+                log.debug('Handling directories in {}'.format(path))
+                self.handleDirs(path)
                 log.debug('Building local file set for %s' % path)
                 localFileSet = self.buildLocalFileSet(path)
                 log.debug('Done building local file set for %s' % path)
