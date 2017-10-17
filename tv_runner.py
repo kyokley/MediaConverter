@@ -114,7 +114,6 @@ class TvRunner(object):
         log.debug(localFileSet)
         return localFileSet
 
-    # TODO: Finish this method
     def handleDirs(self, path):
         if os.path.exists(path):
             paths = []
@@ -133,11 +132,13 @@ class TvRunner(object):
 
                     if file == SUBTITLE_FILE:
                         # Move subtitle to show directory and rename
-                        os.rename(fullpath, os.path.join(top, episode + '.srt'))
+                        new = os.path.join(top, episode + '.srt')
+                        os.rename(fullpath, new)
 
                     elif file_ext in MEDIA_FILE_EXTENSIONS:
                         # Move media file to show directory
-                        os.rename(fullpath, os.path.join(top, file))
+                        new = os.path.join(top, file)
+                        os.rename(fullpath, new)
 
             for directory in dir_set:
                 shutil.rmtree(directory)

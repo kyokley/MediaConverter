@@ -49,6 +49,7 @@ class TestTvRunner(unittest.TestCase):
                                                                 123])
         self.assertEquals(expectedSet, actualSet)
 
+    # TODO: Switch to using setUp/tearDown patching
     @mock.patch('tv_runner.os.path.basename')
     @mock.patch('tv_runner.os.path.getsize')
     @mock.patch('tv_runner.os.path.exists')
@@ -103,6 +104,8 @@ class TestTvRunner(unittest.TestCase):
 
         self.tvRunner.updateFileRecords = mock.MagicMock()
 
+        self.tvRunner.handleDirs = mock.MagicMock()
+
         self.tvRunner.run()
 
         self.tvRunner.buildLocalFileSet.assert_has_calls([call('sdfg'),
@@ -123,6 +126,9 @@ class TestTvRunner(unittest.TestCase):
                   set(['remote', 'some', 'paths']))],
             any_order=True)
         self.assertEqual(2, self.tvRunner.updateFileRecords.call_count)
+
+        self.tvRunner.handleDirs.assert_has_calls([call('sdfg'),
+                                                   call('asdf')])
 
 class TestBuildLocalFileSetFunctional(unittest.TestCase):
     def setUp(self):
@@ -166,6 +172,7 @@ class TestHandlDirs(unittest.TestCase):
 
         self.isdir_patcher = mock.patch('tv_runner.os.path.isdir')
         self.mock_isdir = self.isdir_patcher.start()
+        self.mock_isdir.side_effect = [False, True, True, True]
 
         self.rename_patcher = mock.patch('tv_runner.os.rename')
         self.mock_rename = self.rename_patcher.start()
@@ -182,6 +189,17 @@ class TestHandlDirs(unittest.TestCase):
         self.rename_patcher.stop()
         self.rmtree_patcher.stop()
 
-    def test_(self):
-        self.mock_isdir.side_effect = [False, True, True, True]
+    def test_path_does_not_exist(self):
+        self.mock_exists.return_value = False
         self.tv_runner.handleDirs('test.path')
+        self.assertFalse(self.mock_rename.called)
+        self.assertFalse(self.mock_rmtree.called)
+
+    def test_(self):
+        self.tv_runner.handleDirs('test.path')
+        self.mock_rename.assert_has_calls([mock.call('Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV/Test.Dir.Path.S04E03.WEBRip.x264-MV.mp4',
+                                                     'Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV.mp4'),
+                                           mock.call('Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV/Subs/2_Eng.srt',
+                                                     'Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV.srt'),
+                                           ])
+        self.mock_rmtree.assert_called_once_with('Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV')
