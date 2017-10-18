@@ -132,15 +132,18 @@ class TvRunner(object):
 
                     if file == SUBTITLE_FILE:
                         # Move subtitle to show directory and rename
+                        log.info('Found subtitle file in {}'.format(episode))
                         new = os.path.join(top, episode + '.srt')
                         os.rename(fullpath, new)
 
                     elif file_ext in MEDIA_FILE_EXTENSIONS:
                         # Move media file to show directory
+                        log.info('Found media file in {}'.format(episode))
                         new = os.path.join(top, file)
                         os.rename(fullpath, new)
 
             for directory in dir_set:
+                log.info('Deleting {}'.format(directory))
                 shutil.rmtree(directory)
 
 
