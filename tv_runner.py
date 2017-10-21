@@ -123,12 +123,13 @@ class TvRunner(object):
                     paths.append(os.path.join(root, file))
 
             for fullpath in paths:
-                dirs = fullpath.split(os.path.sep)
-                top, episode, file = dirs[0], dirs[1], dirs[-1]
+                dirs = fullpath.split(path)[1].split(os.path.sep)
+                top, episode, file = path, dirs[1], dirs[-1]
                 file_ext = os.path.splitext(file)[-1].lower()
 
-                if os.path.isdir(episode):
-                    dir_set.add(os.path.join(top, episode))
+                dir_path = os.path.join(top, episode)
+                if os.path.isdir(dir_path):
+                    dir_set.add(dir_path)
 
                     if file == SUBTITLE_FILE:
                         # Move subtitle to show directory and rename
