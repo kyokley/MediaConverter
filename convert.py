@@ -224,14 +224,15 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
 
 def _getFilesInDirectory(fullPath):
     command = "find '%s' -maxdepth 10 -not -type d" % fullPath
-    p = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE)
+    p = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE) # nosec
     res = p.communicate()[0]
     tokens = res.split('\n')
     return set([x for x in tokens if x])
 
 def reencodeFilesInDirectory(fullPath, dryRun=False):
     errors = list()
-    tokens = _getFilesInDirectory(fullPath)
+    cleanedFullPath = stripUnicode(fullPath)
+    tokens = _getFilesInDirectory(cleanedFullPath)
 
     for token in tokens:
         ext = os.path.splitext(token)[-1].lower()

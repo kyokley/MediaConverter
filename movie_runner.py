@@ -1,5 +1,5 @@
 import os
-import subprocess
+import subprocess #nosec
 import shlex
 from settings import (MEDIAVIEWER_MOVIE_FILE_URL,
                       LOCAL_MOVIE_PATHS,
@@ -61,7 +61,7 @@ class MovieRunner(object):
             return set()
 
         command = "ls '%s'" % moviepath
-        p = subprocess.Popen(shlex.split(command),
+        p = subprocess.Popen(shlex.split(command), # nosec
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
         res = p.communicate()[0]
