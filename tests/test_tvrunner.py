@@ -154,13 +154,13 @@ class TestBuildLocalFileSetFunctional(unittest.TestCase):
 
 class TestHandlDirs(unittest.TestCase):
     def setUp(self):
-        self.test_walk = [('Test.Dir.Path',
+        self.test_walk = [('/path/to/tv_path/Test.Dir.Path',
                               ['Test.Dir.Path.S04E03.WEBRip.x264-MV'],
                               ['Test.Dir.Path.S04E02.WEBRip.x264-MV.mp4']),
-                          ('Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV',
+                          ('/path/to/tv_path/Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV',
                               ['Subs'],
                               ['Test.Dir.Path.S04E03.WEBRip.x264-MV.mp4', 'info.txt']),
-                          ('Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV/Subs', [], ['2_Eng.srt'])]
+                          ('/path/to/tv_path/Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV/Subs', [], ['2_Eng.srt'])]
 
         self.walk_patcher = mock.patch('tv_runner.os.walk')
         self.mock_walk = self.walk_patcher.start()
@@ -191,15 +191,15 @@ class TestHandlDirs(unittest.TestCase):
 
     def test_path_does_not_exist(self):
         self.mock_exists.return_value = False
-        self.tv_runner.handleDirs('test.path')
+        self.tv_runner.handleDirs('/path/to/tv_path/Test.Dir.Path')
         self.assertFalse(self.mock_rename.called)
         self.assertFalse(self.mock_rmtree.called)
 
     def test_(self):
-        self.tv_runner.handleDirs('test.path')
-        self.mock_rename.assert_has_calls([mock.call('Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV/Test.Dir.Path.S04E03.WEBRip.x264-MV.mp4',
-                                                     'Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV.mp4'),
-                                           mock.call('Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV/Subs/2_Eng.srt',
-                                                     'Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV.srt'),
+        self.tv_runner.handleDirs('/path/to/tv_path/Test.Dir.Path')
+        self.mock_rename.assert_has_calls([mock.call('/path/to/tv_path/Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV/Test.Dir.Path.S04E03.WEBRip.x264-MV.mp4',
+                                                     '/path/to/tv_path/Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV.mp4'),
+                                           mock.call('/path/to/tv_path/Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV/Subs/2_Eng.srt',
+                                                     '/path/to/tv_path/Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV.srt'),
                                            ])
-        self.mock_rmtree.assert_called_once_with('Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV')
+        self.mock_rmtree.assert_called_once_with('/path/to/tv_path/Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV')
