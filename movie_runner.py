@@ -5,7 +5,7 @@ from settings import (MEDIAVIEWER_MOVIE_FILE_URL,
                       LOCAL_MOVIE_PATHS,
                       )
 from convert import reencodeFilesInDirectory
-from utils import postData
+from utils import postData, stripUnicode
 from path import Path
 from file import File
 
@@ -26,6 +26,7 @@ class MovieRunner(object):
                 self.errors.append('%s does not exist. Continuing...' % moviepath)
                 continue
 
+            moviepath = stripUnicode(moviepath)
             path = Path(moviepath, moviepath)
             path.postMovie()
             data = Path.getMoviePathByLocalPathAndRemotePath(moviepath, moviepath)
