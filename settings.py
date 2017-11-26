@@ -38,6 +38,8 @@ MEDIA_FILE_EXTENSIONS = ('.mp4',
                          '.avi',
                          '.mpeg',
                          '.mkv',
+                         '.m4v',
+                         '.mpg',
                          )
 
 SUBTITLE_EXTENSIONS = ('.srt',)
