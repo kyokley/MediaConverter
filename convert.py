@@ -1,18 +1,20 @@
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE #nosec
 import os, shutil
 import shlex
 from re import search
 from settings import (MEDIAVIEWER_SUFFIX,
                       ENCODER,
-                      MEDIA_FILE_EXTENSIONS,
                       )
-from utils import stripUnicode, EncoderException
+from utils import (stripUnicode,
+                   EncoderException,
+                   is_valid_media_file,
+                   )
 
 from log import LogFile
 log = LogFile().getLogger()
 
 def checkVideoEncoding(source):
-    ffmpeg = Popen((ENCODER, '-hide_banner', "-i", source), stderr=PIPE)
+    ffmpeg = Popen((ENCODER, '-hide_banner', "-i", source), stderr=PIPE) #nosec
     output = ffmpeg.communicate()[1]
 
     # Can't check returncode here since we always get back 1
@@ -27,7 +29,7 @@ def checkVideoEncoding(source):
 
 def fixMetaData(source, dryRun=False):
     if not dryRun:
-        process = Popen(("qtfaststart", source), stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        process = Popen(("qtfaststart", source), stdin=PIPE, stdout=PIPE, stderr=PIPE) #nosec
         process.communicate()
 
 def _extractSubtitles(source, dest, stream_identifier):
@@ -57,7 +59,7 @@ def _extractSubtitleFromVideo(source,
                                   srt_filename]
     log.debug('Extracting using following command:')
     log.debug(' '.join(subtitle_command))
-    process = Popen(subtitle_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    process = Popen(subtitle_command, stdin=PIPE, stdout=PIPE, stderr=PIPE) #nosec
     out, err = process.communicate()
     if process.returncode != 0:
         log.error(err)
@@ -73,7 +75,7 @@ def _convertSrtToVtt(srt_filename):
                        srt_filename]
     log.debug('Extracting using following command:')
     log.debug(' '.join(srt_vtt_command))
-    process = Popen(srt_vtt_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    process = Popen(srt_vtt_command, stdin=PIPE, stdout=PIPE, stderr=PIPE) #nosec
     out, err = process.communicate()
     if process.returncode != 0:
         log.error(err)
@@ -151,7 +153,7 @@ def _reencodeVideo(source, dest, vres, ares, dryRun=False):
 
     log.info(command)
     if not dryRun:
-        process = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        process = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE) #nosec
         process.communicate()
 
         if process.returncode != 0:
@@ -235,8 +237,7 @@ def reencodeFilesInDirectory(fullPath, dryRun=False):
     tokens = _getFilesInDirectory(cleanedFullPath)
 
     for token in tokens:
-        ext = os.path.splitext(token)[-1].lower()
-        if ext in MEDIA_FILE_EXTENSIONS:
+        if is_valid_media_file(token):
             try:
                 cleanPath = stripUnicode(token)
                 makeFileStreamable(cleanPath,
