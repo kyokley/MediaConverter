@@ -52,7 +52,6 @@ def stripUnicode(filename, path=None):
         return strippedFilename
 
 def send_email(subject, body):
-    # Prepare actual message
     log.info('sending error email')
     message = """\From: %s\nTo: %s\nSubject: %s\n\n%s
     """ % (GMAIL_USER, ", ".join(EMAIL_RECIPIENTS), subject, body)
@@ -71,7 +70,7 @@ def file_ext(path):
     return os.path.splitext(path)[-1]
 
 def is_valid_media_file(path):
-    return os.path.exists(path) and file_ext(path) in MEDIA_FILE_EXTENSIONS
+    return os.path.exists(path) and file_ext(path).lower() in MEDIA_FILE_EXTENSIONS
 
 def is_valid_subtitle_file(path):
-    return os.path.exists(path) and file_ext(path) in SUBTITLE_EXTENSIONS
+    return os.path.exists(path) and file_ext(path).lower() in SUBTITLE_EXTENSIONS
