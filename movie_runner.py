@@ -61,13 +61,7 @@ class MovieRunner(object):
         if not os.path.exists(moviepath):
             return set()
 
-        command = "ls '%s'" % moviepath
-        p = subprocess.Popen(shlex.split(command), # nosec
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
-        res = p.communicate()[0]
-        tokens = res.split('\n')
-        return set([x for x in tokens if x])
+        return set(os.listdir(moviepath))
 
     def run(self):
         self.postMovies()
