@@ -1,6 +1,4 @@
 import os
-import subprocess #nosec
-import shlex
 from settings import (MEDIAVIEWER_MOVIE_FILE_URL,
                       LOCAL_MOVIE_PATHS,
                       )
