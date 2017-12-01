@@ -81,7 +81,7 @@ class Path(object):
         localpaths = set()
         for localpath in filepaths:
             if not os.path.exists(localpath):
-                log.error('%s does not exist. Continuing...' % localpath)
+                log.error('{} does not exist. Continuing...'.format(localpath))
                 continue
 
             res = set([os.path.join(localpath, path) for path in os.listdir(localpath) if path])
