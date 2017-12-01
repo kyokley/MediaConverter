@@ -68,21 +68,11 @@ class Path(object):
         return cls._getPaths(getMovies=True)
 
     @classmethod
-    def _getLocalMoviePathsSetting(cls):
-        '''Useful for testing'''
-        return LOCAL_MOVIE_PATHS
-
-    @classmethod
-    def _getLocalTVShowsPathsSetting(cls):
-        '''Useful for testing'''
-        return LOCAL_TV_SHOWS_PATHS
-
-    @classmethod
     def _getLocalPaths(cls, getMovies=False):
         if getMovies:
-            filepaths = cls._getLocalMoviePathsSetting()
+            filepaths = LOCAL_MOVIE_PATHS
         else:
-            filepaths = cls._getLocalTVShowsPathsSetting()
+            filepaths = LOCAL_TV_SHOWS_PATHS
 
         return cls._buildLocalPaths(filepaths)
 
