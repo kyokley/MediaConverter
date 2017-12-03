@@ -1,11 +1,14 @@
 import os
 import traceback
-import subprocess
+import subprocess # nosec
 import shlex
 import shutil
 from file import File
 from path import Path
-from settings import SEND_EMAIL, MEDIA_FILE_EXTENSIONS
+from settings import (SEND_EMAIL,
+                      MEDIA_FILE_EXTENSIONS,
+                      SUBTITLE_FILES,
+                      )
 from convert import makeFileStreamable
 from utils import (stripUnicode,
                    EncoderException,
@@ -18,7 +21,6 @@ log = LogFile().getLogger()
 
 FIND_FAIL_STRING = 'No such file or directory'
 IGNORED_FILE_EXTENSIONS = ('.vtt', '.srt')
-SUBTITLE_FILE = '2_Eng.srt'
 
 class TvRunner(object):
     def __init__(self):
@@ -100,7 +102,7 @@ class TvRunner(object):
     @staticmethod
     def buildLocalFileSet(path):
         command = "find '%s' -maxdepth 1 -not -type d" % path
-        p = subprocess.Popen(shlex.split(command),
+        p = subprocess.Popen(shlex.split(command), # nosec
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
         local_files = p.communicate()[0]
@@ -131,7 +133,7 @@ class TvRunner(object):
                 if os.path.isdir(dir_path):
                     dir_set.add(dir_path)
 
-                    if file == SUBTITLE_FILE:
+                    if file in SUBTITLE_FILES:
                         # Move subtitle to show directory and rename
                         log.info('Found subtitle file in {}'.format(episode))
                         new = os.path.join(top, episode + '.srt')

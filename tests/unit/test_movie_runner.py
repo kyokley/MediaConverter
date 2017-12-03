@@ -1,7 +1,4 @@
 import mock
-import tempfile
-import shutil
-import os
 from mock import call
 import unittest
 
@@ -18,6 +15,7 @@ class TestMovieRunner(unittest.TestCase):
         self.movieRunner.run()
         self.assertEquals(1, mock_postMovies.call_count)
 
+    @mock.patch('movie_runner.MovieRunner.promoteSubtitles')
     @mock.patch('utils.requests.post')
     @mock.patch('movie_runner.os.path.exists')
     @mock.patch('path.Path.getMoviePathByLocalPathAndRemotePath')
@@ -32,7 +30,8 @@ class TestMovieRunner(unittest.TestCase):
                         mock_requests,
                         mock_getMoviePathByLocalPathAndRemotePath,
                         mock_exists,
-                        mock_requestsPost):
+                        mock_requestsPost,
+                        mock_promoteSubtitles):
         def gen_test_data(num):
             return [dict(results=[dict(pk=i)]) for i in xrange(1, num + 1)]
 
@@ -59,23 +58,6 @@ class TestMovieRunner(unittest.TestCase):
                                                         any_order=True)
         self.assertEqual(1, mock_reencodeFilesInDirectory.call_count)
 
-class TestgetLocalMoviePathsFunctional(unittest.TestCase):
-    def setUp(self):
-        self.temp_dir = tempfile.mkdtemp()
-        self.movieRunner = MovieRunner()
-
-    def tearDown(self):
-        shutil.rmtree(self.temp_dir)
-
-    def test_path_does_not_exist(self):
-        path_name = os.path.join(self.temp_dir, 'test_file')
-        expected = set()
-        actual = self.movieRunner._getLocalMoviePaths(path_name)
-        self.assertEqual(expected, actual)
-
-    def test_path_exists(self):
-        files = set([tempfile.mkstemp(dir=self.temp_dir)[1]
-                    for i in xrange(3)])
-        expected = set([os.path.basename(x) for x in files])
-        actual = self.movieRunner._getLocalMoviePaths(self.temp_dir)
-        self.assertEqual(expected, actual)
+        mock_promoteSubtitles.assert_has_calls([call('/path/to/movies/movie2')],
+                                                        any_order=True)
+        self.assertEqual(1, mock_promoteSubtitles.call_count)

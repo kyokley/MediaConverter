@@ -95,11 +95,17 @@ def encode(source, dest, dryRun=False):
 def _handleSubtitles(source, dest, sres):
     dirname = os.path.dirname(source)
     english_srt_path = os.path.join(dirname, 'English.srt')
+    eng_srt_path = os.path.join(dirname, '2_Eng.srt')
     file_srt_path = os.path.splitext(source)[0] + '.srt'
-    if os.path.exists(english_srt_path):
-        log.info('English.srt found in directory. Attempting to convert.')
+
+    english_srt_path_exists = os.path.exists(english_srt_path)
+    eng_srt_path_exists = os.path.exists(eng_srt_path)
+
+    if english_srt_path_exists or eng_srt_path_exists:
+        srt_path = english_srt_path if english_srt_path_exists else eng_srt_path
+        log.info('{} found in directory. Attempting to convert.'.format(os.path.basename(srt_path)))
         dest_path = '%s.vtt' % os.path.splitext(dest)[0]
-        vtt_filename = _convertSrtToVtt(english_srt_path)
+        vtt_filename = _convertSrtToVtt(srt_path)
         _moveSubtitleFile(vtt_filename,
                           dest_path)
     elif os.path.exists(file_srt_path):

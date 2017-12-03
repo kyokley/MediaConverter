@@ -539,7 +539,9 @@ class TestHandleSubtitles(unittest.TestCase):
 
         _handleSubtitles(self.source, self.dest, self.sres)
 
-        self.mock_exists.assert_called_once_with('/path/to/English.srt')
+        self.mock_exists.assert_has_calls([mock.call('/path/to/English.srt'),
+                                           mock.call('/path/to/2_Eng.srt'),
+                                           ])
         self.mock_convertSrtToVtt.assert_called_once_with('/path/to/English.srt')
         self.mock_moveSubtitleFile.assert_called_once_with('/path/to/English.vtt',
                                                            'tmpfile.vtt')
@@ -547,7 +549,7 @@ class TestHandleSubtitles(unittest.TestCase):
         self.assertFalse(self.sres.groups.called)
 
     def test_FileSrtExists(self):
-        self.mock_exists.side_effect = [False, True]
+        self.mock_exists.side_effect = [False, False, True]
         self.mock_convertSrtToVtt.return_value = '/path/to/file.vtt'
 
         _handleSubtitles(self.source, self.dest, self.sres)

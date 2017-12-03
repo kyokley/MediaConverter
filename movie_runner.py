@@ -1,6 +1,7 @@
 import os
 from settings import (MEDIAVIEWER_MOVIE_FILE_URL,
                       LOCAL_MOVIE_PATHS,
+                      SUBTITLE_FILES,
                       )
 from convert import reencodeFilesInDirectory
 from utils import postData, stripUnicode
@@ -42,6 +43,7 @@ class MovieRunner(object):
                     log.info("Found %s" % localpath)
                     log.info("Starting re-encoding of %s..." % localpath)
                     try:
+                        self.promoteSubtitles(localpath)
                         errors = reencodeFilesInDirectory(localpath)
 
                         if errors:
@@ -53,6 +55,20 @@ class MovieRunner(object):
                         raise
                     log.info("Posting %s" % (localpath,))
                     self._postMovie(token, pathid)
+
+    @staticmethod
+    def promoteSubtitles(localpath):
+        path = None
+        if os.path.exists(localpath):
+            for root, dirs, files in os.walk(localpath):
+                for file in files:
+                    if file in SUBTITLE_FILES:
+                        path = os.path.join(root, file)
+                        break
+
+            if path and path != os.path.join(localpath, file):
+                dest = os.path.join(localpath, file)
+                os.rename(path, dest)
 
     @staticmethod
     def _getLocalMoviePaths(moviepath):
