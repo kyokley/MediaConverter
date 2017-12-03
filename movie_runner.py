@@ -4,7 +4,7 @@ from settings import (MEDIAVIEWER_MOVIE_FILE_URL,
                       SUBTITLE_FILES,
                       )
 from convert import reencodeFilesInDirectory
-from utils import postData, stripUnicode
+from utils import postData
 from path import Path
 from file import File
 
@@ -16,16 +16,12 @@ class MovieRunner(object):
         self.movies = set()
         self.errors = []
 
-    def _getLocalMoviePathsSetting(self):
-        return LOCAL_MOVIE_PATHS
-
     def postMovies(self):
-        for moviepath in self._getLocalMoviePathsSetting():
+        for moviepath in LOCAL_MOVIE_PATHS:
             if not os.path.exists(moviepath):
                 self.errors.append('%s does not exist. Continuing...' % moviepath)
                 continue
 
-            moviepath = stripUnicode(moviepath)
             path = Path(moviepath, moviepath)
             path.postMovie()
             data = Path.getMoviePathByLocalPathAndRemotePath(moviepath, moviepath)
@@ -49,9 +45,9 @@ class MovieRunner(object):
                         if errors:
                             self.errors.extend(errors)
                             continue
-                    except Exception, e:
+                    except Exception as e:
                         log.error("Error processing %s" % localpath)
-                        log.error(e)
+                        log.error(str(e))
                         raise
                     log.info("Posting %s" % (localpath,))
                     self._postMovie(token, pathid)
