@@ -119,8 +119,6 @@ class TestPostMovies(unittest.TestCase):
         self.mock_reencodeFilesInDirectory.assert_called_once_with('/path/to/movies/movie2')
         self.mock_promoteSubtitles.assert_called_once_with('/path/to/movies/movie2')
 
-
-
 class TestRun(unittest.TestCase):
     def setUp(self):
         self.postMovies_patcher = mock.patch('movie_runner.MovieRunner.postMovies')
@@ -144,3 +142,96 @@ class TestRun(unittest.TestCase):
         self.assertEqual(expected, actual)
         self.mock_postMovies.assert_called_once_with()
         self.mock_debug.assert_called_once_with('Done running movies')
+
+class TestPromoteSubtitles(unittest.TestCase):
+    def setUp(self):
+        self.SUBTITLE_FILES_patcher = mock.patch('movie_runner.SUBTITLE_FILES',
+                                                 ('English.srt', '2_Eng.srt'))
+        self.SUBTITLE_FILES_patcher.start()
+
+        self.exists_patcher = mock.patch('movie_runner.os.path.exists')
+        self.mock_exists = self.exists_patcher.start()
+
+        self.walk_patcher = mock.patch('movie_runner.os.walk')
+        self.mock_walk = self.walk_patcher.start()
+
+        self.rename_patcher = mock.patch('movie_runner.os.rename')
+        self.mock_rename = self.rename_patcher.start()
+
+        self.mock_walk.return_value = [('/path/to/movies/test_movie',
+                                        ['Subs'],
+                                        ['file1.mp4']),
+                                       ('/path/to/movies/test_movie/Subs',
+                                        [],
+                                        ['2_Eng.srt']),
+                                       ]
+
+        self.mock_exists.return_value = True
+
+    def tearDown(self):
+        self.SUBTITLE_FILES_patcher.stop()
+        self.rename_patcher.stop()
+        self.walk_patcher.stop()
+        self.exists_patcher.stop()
+
+    def test_path_does_not_exist(self):
+        self.mock_exists.return_value = False
+
+        expected = None
+        actual = MovieRunner.promoteSubtitles('/path/to/movies/test_movie')
+
+        self.assertEqual(expected, actual)
+        self.assertFalse(self.mock_walk.called)
+        self.assertFalse(self.mock_rename.called)
+
+    def test_2_Eng_exists_at_top_level(self):
+        self.mock_walk.return_value = [('/path/to/movies/test_movie',
+                                        [],
+                                        ['file1.mp4', '2_Eng.srt']),
+                                       ]
+
+        expected = None
+        actual = MovieRunner.promoteSubtitles('/path/to/movies/test_movie')
+
+        self.assertEqual(expected, actual)
+        self.mock_walk.assert_called_once_with('/path/to/movies/test_movie')
+        self.assertFalse(self.mock_rename.called)
+
+    def test_English_exists_at_top_level(self):
+        self.mock_walk.return_value = [('/path/to/movies/test_movie',
+                                        [],
+                                        ['file1.mp4', 'English.srt']),
+                                       ]
+
+        expected = None
+        actual = MovieRunner.promoteSubtitles('/path/to/movies/test_movie')
+
+        self.assertEqual(expected, actual)
+        self.mock_walk.assert_called_once_with('/path/to/movies/test_movie')
+        self.assertFalse(self.mock_rename.called)
+
+    def test_rename_2_Eng(self):
+        expected = None
+        actual = MovieRunner.promoteSubtitles('/path/to/movies/test_movie')
+
+        self.assertEqual(expected, actual)
+        self.mock_walk.assert_called_once_with('/path/to/movies/test_movie')
+        self.mock_rename.assert_called_once_with('/path/to/movies/test_movie/Subs/2_Eng.srt',
+                                                 '/path/to/movies/test_movie/2_Eng.srt')
+
+    def test_rename_English(self):
+        self.mock_walk.return_value = [('/path/to/movies/test_movie',
+                                        ['Subs'],
+                                        ['file1.mp4']),
+                                       ('/path/to/movies/test_movie/Subs',
+                                        [],
+                                        ['English.srt']),
+                                       ]
+
+        expected = None
+        actual = MovieRunner.promoteSubtitles('/path/to/movies/test_movie')
+
+        self.assertEqual(expected, actual)
+        self.mock_walk.assert_called_once_with('/path/to/movies/test_movie')
+        self.mock_rename.assert_called_once_with('/path/to/movies/test_movie/Subs/English.srt',
+                                                 '/path/to/movies/test_movie/English.srt')
