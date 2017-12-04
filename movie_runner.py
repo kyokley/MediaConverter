@@ -19,7 +19,7 @@ class MovieRunner(object):
     def postMovies(self):
         for moviepath in LOCAL_MOVIE_PATHS:
             if not os.path.exists(moviepath):
-                self.errors.append('%s does not exist. Continuing...' % moviepath)
+                self.errors.append('{} does not exist. Continuing...'.format(moviepath))
                 continue
 
             path = Path(moviepath, moviepath)
@@ -36,8 +36,8 @@ class MovieRunner(object):
             for token in tokens:
                 localpath = os.path.join(moviepath, token)
                 if localpath not in fileset:
-                    log.info("Found %s" % localpath)
-                    log.info("Starting re-encoding of %s..." % localpath)
+                    log.info("Found {}".format(localpath))
+                    log.info("Starting re-encoding of {}...".format(localpath))
                     try:
                         self.promoteSubtitles(localpath)
                         errors = reencodeFilesInDirectory(localpath)
@@ -46,10 +46,10 @@ class MovieRunner(object):
                             self.errors.extend(errors)
                             continue
                     except Exception as e:
-                        log.error("Error processing %s" % localpath)
+                        log.error("Error processing {}".format(localpath))
                         log.error(str(e))
                         raise
-                    log.info("Posting %s" % (localpath,))
+                    log.info("Posting {}".format(localpath))
                     self._postMovie(token, pathid)
 
     @staticmethod
@@ -82,7 +82,7 @@ class MovieRunner(object):
         if (not name or
                 not pathid):
             log.error('Invalid request')
-            log.error('Filename: %s Pathid: %s' % (name, pathid))
+            log.error('Filename: {} Pathid: {}'.format(name, pathid))
             return
 
         values = {'path': pathid,

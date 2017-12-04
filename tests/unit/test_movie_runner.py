@@ -235,3 +235,86 @@ class TestPromoteSubtitles(unittest.TestCase):
         self.mock_walk.assert_called_once_with('/path/to/movies/test_movie')
         self.mock_rename.assert_called_once_with('/path/to/movies/test_movie/Subs/English.srt',
                                                  '/path/to/movies/test_movie/English.srt')
+
+class TestGetLocalMoviePaths(unittest.TestCase):
+    def setUp(self):
+        self.exists_patcher = mock.patch('movie_runner.os.path.exists')
+        self.mock_exists = self.exists_patcher.start()
+
+        self.listdir_patcher = mock.patch('movie_runner.os.listdir')
+        self.mock_listdir = self.listdir_patcher.start()
+
+        self.mock_exists.return_value = True
+
+    def tearDown(self):
+        self.listdir_patcher.stop()
+        self.exists_patcher.stop()
+
+    def test_path_does_not_exist(self):
+        self.mock_exists.return_value = False
+
+        expected = set()
+        actual = MovieRunner._getLocalMoviePaths('test_path')
+
+        self.assertEqual(expected, actual)
+        self.mock_exists.assert_called_once_with('test_path')
+        self.assertFalse(self.mock_listdir.called)
+
+    def test_path_exists(self):
+        expected = set(self.mock_listdir.return_value)
+        actual = MovieRunner._getLocalMoviePaths('test_path')
+
+        self.assertEqual(expected, actual)
+        self.mock_exists.assert_called_once_with('test_path')
+        self.mock_listdir.assert_called_once_with('test_path')
+
+class TestPostMovie(unittest.TestCase):
+    def setUp(self):
+        self.MEDIAVIEWER_MOVIE_FILE_URL_patcher = mock.patch('movie_runner.MEDIAVIEWER_MOVIE_FILE_URL', 'test_movie_file_url')
+        self.MEDIAVIEWER_MOVIE_FILE_URL_patcher.start()
+
+        self.postData_patcher = mock.patch('movie_runner.postData')
+        self.mock_postData = self.postData_patcher.start()
+
+        self.error_patcher = mock.patch('movie_runner.log.error')
+        self.mock_error = self.error_patcher.start()
+
+        self.movie_runner = MovieRunner()
+
+    def tearDown(self):
+        self.MEDIAVIEWER_MOVIE_FILE_URL_patcher.stop()
+        self.postData_patcher.stop()
+        self.error_patcher.stop()
+
+    def test_invalid_name(self):
+        expected = None
+        actual = self.movie_runner._postMovie(None, 123)
+
+        self.assertEqual(expected, actual)
+        self.mock_error.assert_has_calls([mock.call('Invalid request'),
+                                          mock.call('Filename: None Pathid: 123')])
+        self.assertFalse(self.mock_postData.called)
+
+    def test_invalid_pathid(self):
+        expected = None
+        actual = self.movie_runner._postMovie('test_name', 0)
+
+        self.assertEqual(expected, actual)
+        self.mock_error.assert_has_calls([mock.call('Invalid request'),
+                                          mock.call('Filename: test_name Pathid: 0')])
+        self.assertFalse(self.mock_postData.called)
+
+    def test_valid(self):
+        expected = None
+        actual = self.movie_runner._postMovie('test_name', 123)
+
+        self.assertEqual(expected, actual)
+        self.assertFalse(self.mock_error.called)
+        self.mock_postData.assert_called_once_with({'path': 123,
+                                                    'filename': 'test_name',
+                                                    'skip': 1,
+                                                    'size': 0,
+                                                    'finished': 1,
+                                                    'streamable': True,
+                                                    },
+                                                    'test_movie_file_url')
