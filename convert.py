@@ -168,34 +168,26 @@ def _reencodeVideo(source, dest, vres, ares, dryRun=False):
                             "30",
                             "-preset",
                             "slow",
-                            "-c:v",
-                            "libx264",
-                            "-c:a",
-                            "copy",
                             ])
-        else:
-            command.extend(["-c:v",
-                            "libx264",
-                            "-c:a",
-                            "copy",
-                            ])
+
+        command.extend(["-c:v",
+                        "libx264",
+                        "-c:a",
+                        "copy",
+                        ])
     else:
         if file_size > LARGE_FILE_SIZE:
             command.extend(["-crf",
                             "30",
                             "-preset",
                             "slow",
-                            "-c:v",
-                            "libx264",
-                            "-c:a",
-                            "libfdk_aac",
                             ])
-        else:
-            command.extend(["-c:v",
-                            "libx264",
-                            "-c:a",
-                            "libfdk_aac",
-                            ])
+
+        command.extend(["-c:v",
+                        "libx264",
+                        "-c:a",
+                        "libfdk_aac",
+                        ])
 
     command.append(dest)
     command = tuple(command)
