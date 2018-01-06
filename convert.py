@@ -1,5 +1,5 @@
-from subprocess import Popen, PIPE #nosec
-import os, shutil
+import os
+import shutil
 import shlex
 from re import search
 from settings import (MEDIAVIEWER_SUFFIX,
@@ -9,9 +9,12 @@ from utils import (stripUnicode,
                    EncoderException,
                    is_valid_media_file,
                    )
+from subprocess import Popen, PIPE #nosec
 
 from log import LogFile
 log = LogFile().getLogger()
+
+LARGE_FILE_SIZE = 1024 * 1024 * 1024 * 2 # 2 GB
 
 def checkVideoEncoding(source):
     ffmpeg = Popen((ENCODER, '-hide_banner', "-i", source), stderr=PIPE) #nosec
@@ -124,6 +127,8 @@ def _handleSubtitles(source, dest, sres):
                           )
 
 def _reencodeVideo(source, dest, vres, ares, dryRun=False):
+    file_size = os.path.getsize(source)
+
     command = [ENCODER,
                "-hide_banner",
                "-y",
@@ -132,27 +137,65 @@ def _reencodeVideo(source, dest, vres, ares, dryRun=False):
                ]
 
     if vres and ares:
-        command.extend(["-c",
-                        "copy",
-                        ])
+        if file_size > LARGE_FILE_SIZE:
+            command.extend(["-crf",
+                            "30",
+                            "-preset",
+                            "slow",
+                            ])
+        else:
+            command.extend(["-c",
+                            "copy",
+                            ])
     elif vres:
-        command.extend(["-c:v",
-                        "copy",
-                        "-c:a",
+        if file_size > LARGE_FILE_SIZE:
+            command.extend(["-crf",
+                            "30",
+                            "-preset",
+                            "slow",
+                            ])
+        else:
+            command.extend(["-c:v",
+                            "copy",
+                            ])
+
+        command.extend(["-c:a",
                         "libfdk_aac",
                         ])
     elif ares:
-        command.extend(["-c:v",
-                        "libx264",
-                        "-c:a",
-                        "copy",
-                        ])
+        if file_size > LARGE_FILE_SIZE:
+            command.extend(["-crf",
+                            "30",
+                            "-preset",
+                            "slow",
+                            "-c:v",
+                            "libx264",
+                            "-c:a",
+                            "copy",
+                            ])
+        else:
+            command.extend(["-c:v",
+                            "libx264",
+                            "-c:a",
+                            "copy",
+                            ])
     else:
-        command.extend(["-c:v",
-                        "libx264",
-                        "-c:a",
-                        "libfdk_aac",
-                        ])
+        if file_size > LARGE_FILE_SIZE:
+            command.extend(["-crf",
+                            "30",
+                            "-preset",
+                            "slow",
+                            "-c:v",
+                            "libx264",
+                            "-c:a",
+                            "libfdk_aac",
+                            ])
+        else:
+            command.extend(["-c:v",
+                            "libx264",
+                            "-c:a",
+                            "libfdk_aac",
+                            ])
 
     command.append(dest)
     command = tuple(command)
