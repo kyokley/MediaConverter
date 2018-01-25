@@ -22,6 +22,8 @@ log = LogFile().getLogger()
 FIND_FAIL_STRING = 'No such file or directory'
 IGNORED_FILE_EXTENSIONS = ('.vtt', '.srt')
 
+SMALL_FILE_SIZE = 1024 * 1024 * 10 # 10 MB
+
 class TvRunner(object):
     def __init__(self):
         self.paths = dict()
@@ -101,7 +103,7 @@ class TvRunner(object):
 
     @staticmethod
     def buildLocalFileSet(path):
-        command = "find '%s' -maxdepth 1 -not -type d" % path
+        command = "find '%s' -maxdepth 1 -size +%sc -not -type d" % (path, SMALL_FILE_SIZE)
         p = subprocess.Popen(shlex.split(command), # nosec
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
@@ -139,7 +141,7 @@ class TvRunner(object):
                         new = os.path.join(top, episode + '.srt')
                         os.rename(fullpath, new)
 
-                    elif file_ext in MEDIA_FILE_EXTENSIONS:
+                    elif file_ext in MEDIA_FILE_EXTENSIONS and os.path.size(fullpath) > SMALL_FILE_SIZE: # TODO: Test me
                         # Move media file to show directory
                         log.info('Found media file in {}'.format(episode))
                         new = os.path.join(top, file)
