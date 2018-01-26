@@ -132,11 +132,15 @@ class TestTvRunner(unittest.TestCase):
 
 class TestBuildLocalFileSetFunctional(unittest.TestCase):
     def setUp(self):
+        self.SMALL_FILE_SIZE_patcher = mock.patch('tv_runner.SMALL_FILE_SIZE', 201)
+        self.SMALL_FILE_SIZE_patcher.start()
+
         self.temp_dir = tempfile.mkdtemp()
 
         self.tv_runner = TvRunner()
 
     def tearDown(self):
+        self.SMALL_FILE_SIZE_patcher.stop()
         shutil.rmtree(self.temp_dir)
 
     def test_file_does_not_exist(self):
@@ -147,19 +151,27 @@ class TestBuildLocalFileSetFunctional(unittest.TestCase):
 
     def test_files_exist(self):
         files = [tempfile.mkstemp(dir=self.temp_dir)
-                    for i in xrange(3)]
-        expected = set([os.path.basename(x[1]) for x in files])
+                    for i in xrange(4)]
+
+        for i, file in enumerate(files):
+            with open(file[1], 'wb') as f:
+                f.write(os.urandom(i * 100))
+
+        expected = set([os.path.basename(x[1]) for x in files if os.path.getsize(x[1]) > 201])
         actual = self.tv_runner.buildLocalFileSet(self.temp_dir)
         self.assertEqual(expected, actual)
 
-class TestHandlDirs(unittest.TestCase):
+class TestHandleDirs(unittest.TestCase):
     def setUp(self):
+        self.SMALL_FILE_SIZE_patcher = mock.patch('tv_runner.SMALL_FILE_SIZE', 100)
+        self.SMALL_FILE_SIZE_patcher.start()
+
         self.test_walk = [('/path/to/tv_path/Test.Dir.Path',
                               ['Test.Dir.Path.S04E03.WEBRip.x264-MV'],
                               ['Test.Dir.Path.S04E02.WEBRip.x264-MV.mp4']),
                           ('/path/to/tv_path/Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV',
                               ['Subs'],
-                              ['Test.Dir.Path.S04E03.WEBRip.x264-MV.mp4', 'info.txt']),
+                              ['Test.Dir.Path.S04E03.WEBRip.x264-MV.mp4', 'info.txt', 'Small.mp4']),
                           ('/path/to/tv_path/Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV/Subs', [], ['2_Eng.srt'])]
 
         self.walk_patcher = mock.patch('tv_runner.os.walk')
@@ -172,7 +184,11 @@ class TestHandlDirs(unittest.TestCase):
 
         self.isdir_patcher = mock.patch('tv_runner.os.path.isdir')
         self.mock_isdir = self.isdir_patcher.start()
-        self.mock_isdir.side_effect = [False, True, True, True]
+        self.mock_isdir.side_effect = [False, True, True, True, True]
+
+        self.getsize_patcher = mock.patch('tv_runner.os.path.getsize')
+        self.mock_getsize = self.getsize_patcher.start()
+        self.mock_getsize.side_effect = [1000, 10]
 
         self.rename_patcher = mock.patch('tv_runner.os.rename')
         self.mock_rename = self.rename_patcher.start()
@@ -183,9 +199,11 @@ class TestHandlDirs(unittest.TestCase):
         self.tv_runner = TvRunner()
 
     def tearDown(self):
+        self.SMALL_FILE_SIZE_patcher.stop()
         self.walk_patcher.stop()
         self.exists_patcher.stop()
         self.isdir_patcher.stop()
+        self.getsize_patcher.stop()
         self.rename_patcher.stop()
         self.rmtree_patcher.stop()
 
@@ -195,7 +213,7 @@ class TestHandlDirs(unittest.TestCase):
         self.assertFalse(self.mock_rename.called)
         self.assertFalse(self.mock_rmtree.called)
 
-    def test_(self):
+    def test_handleDirs(self):
         self.tv_runner.handleDirs('/path/to/tv_path/Test.Dir.Path')
         self.mock_rename.assert_has_calls([mock.call('/path/to/tv_path/Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV/Test.Dir.Path.S04E03.WEBRip.x264-MV.mp4',
                                                      '/path/to/tv_path/Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV.mp4'),

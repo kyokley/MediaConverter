@@ -141,7 +141,7 @@ class TvRunner(object):
                         new = os.path.join(top, episode + '.srt')
                         os.rename(fullpath, new)
 
-                    elif file_ext in MEDIA_FILE_EXTENSIONS and os.path.size(fullpath) > SMALL_FILE_SIZE: # TODO: Test me
+                    elif file_ext in MEDIA_FILE_EXTENSIONS and os.path.getsize(fullpath) > SMALL_FILE_SIZE:
                         # Move media file to show directory
                         log.info('Found media file in {}'.format(episode))
                         new = os.path.join(top, file)
