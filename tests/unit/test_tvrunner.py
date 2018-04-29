@@ -186,3 +186,68 @@ class TestHandleDirs(unittest.TestCase):
                                                      '/path/to/tv_path/Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV.srt'),
                                            ])
         self.mock_rmtree.assert_called_once_with('/path/to/tv_path/Test.Dir.Path/Test.Dir.Path.S04E03.WEBRip.x264-MV')
+
+class TestSortUnsortedFiles(unittest.TestCase):
+    def setUp(self):
+        self.UNSORTED_PATH_patcher = mock.patch('tv_runner.UNSORTED_PATH', '/path/to/unsorted')
+        self.UNSORTED_PATH_patcher.start()
+
+        self.exists_patcher = mock.patch('tv_runner.os.path.exists')
+        self.mock_exists = self.exists_patcher.start()
+
+        self.listdir_patcher = mock.patch('tv_runner.os.listdir')
+        self.mock_listdir = self.listdir_patcher.start()
+
+        self.get_localpath_by_filename_patcher = mock.patch('tv_runner.get_localpath_by_filename')
+        self.mock_get_localpath_by_filename = self.get_localpath_by_filename_patcher.start()
+
+        self.rename_patcher = mock.patch('tv_runner.os.rename')
+        self.mock_rename = self.rename_patcher.start()
+
+        self.tv_runner = TvRunner()
+
+    def tearDown(self):
+        self.UNSORTED_PATH_patcher.stop()
+        self.exists_patcher.stop()
+        self.listdir_patcher.stop()
+        self.get_localpath_by_filename_patcher.stop()
+        self.rename_patcher.stop()
+
+    def test_unsorted_path_does_not_exist(self):
+        self.mock_exists.return_value = False
+
+        expected = None
+        actual = self.tv_runner._sort_unsorted_files()
+
+        self.assertEqual(expected, actual)
+        self.mock_exists.assert_called_once_with('/path/to/unsorted')
+        self.assertFalse(self.mock_listdir.called)
+        self.assertFalse(self.mock_get_localpath_by_filename.called)
+        self.assertFalse(self.mock_rename.called)
+
+    def test_no_localpath_for_filename(self):
+        self.mock_exists.return_value = True
+        self.mock_listdir.return_value = ['new.show.s02e10']
+        self.mock_get_localpath_by_filename.return_value = None
+
+        expected = None
+        actual = self.tv_runner._sort_unsorted_files()
+
+        self.assertEqual(expected, actual)
+        self.mock_exists.assert_called_once_with('/path/to/unsorted')
+        self.mock_get_localpath_by_filename.assert_called_once_with('new.show.s02e10')
+        self.assertFalse(self.mock_rename.called)
+
+    def test_localpath_for_filename(self):
+        self.mock_exists.return_value = True
+        self.mock_listdir.return_value = ['new.show.s02e10']
+        self.mock_get_localpath_by_filename.return_value = '/path/to/local/new.show'
+
+        expected = None
+        actual = self.tv_runner._sort_unsorted_files()
+
+        self.assertEqual(expected, actual)
+        self.mock_exists.assert_called_once_with('/path/to/unsorted')
+        self.mock_get_localpath_by_filename.assert_called_once_with('new.show.s02e10')
+        self.mock_rename.assert_called_once_with('/path/to/unsorted/new.show.s02e10',
+                                                 '/path/to/local/new.show/new.show.s02e10')
