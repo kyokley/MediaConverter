@@ -15,6 +15,7 @@ from settings import (WAITER_USERNAME,
                       VERIFY_REQUESTS,
                       MEDIA_FILE_EXTENSIONS,
                       SUBTITLE_EXTENSIONS,
+                      MEDIAVIEWER_INFER_SCRAPERS_URL,
                       )
 
 class EncoderException(Exception):
@@ -74,3 +75,18 @@ def is_valid_media_file(path):
 
 def is_valid_subtitle_file(path):
     return os.path.exists(path) and file_ext(path).lower() in SUBTITLE_EXTENSIONS
+
+def get_localpath_by_filename(filename):
+    resp = requests.get(MEDIAVIEWER_INFER_SCRAPERS_URL,
+                        params={'title': filename},
+                        auth=(WAITER_USERNAME, WAITER_PASSWORD),
+                        )
+
+    try:
+        resp.raise_for_status()
+    except:
+        log.warn('Unable to find path for {}'.format(filename))
+        return
+
+    data = resp.json()
+    return data['localpath']
