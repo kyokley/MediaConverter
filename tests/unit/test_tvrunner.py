@@ -245,6 +245,22 @@ class TestSortUnsortedFiles(unittest.TestCase):
         self.mock_get_localpath_by_filename.assert_called_once_with('new.show.s02e10')
         self.assertFalse(self.mock_rename.called)
 
+    def test_localpath_does_not_exist(self):
+        self.mock_exists.side_effect = [True, False]
+        self.mock_listdir.return_value = ['new.show.s02e10']
+        self.mock_get_localpath_by_filename.return_value = '/path/to/local/new.show'
+
+        expected = None
+        actual = self.tv_runner._sort_unsorted_files()
+
+        self.assertEqual(expected, actual)
+        self.mock_exists.assert_has_calls([mock.call('/path/to/unsorted'),
+                                           mock.call('/path/to/local/new.show'),
+                                           ])
+        self.mock_get_localpath_by_filename.assert_called_once_with('new.show.s02e10')
+        self.assertFalse(self.mock_rename.called)
+
+
     def test_localpath_for_filename(self):
         self.mock_exists.return_value = True
         self.mock_listdir.return_value = ['new.show.s02e10']
@@ -254,7 +270,9 @@ class TestSortUnsortedFiles(unittest.TestCase):
         actual = self.tv_runner._sort_unsorted_files()
 
         self.assertEqual(expected, actual)
-        self.mock_exists.assert_called_once_with('/path/to/unsorted')
+        self.mock_exists.assert_has_calls([mock.call('/path/to/unsorted'),
+                                           mock.call('/path/to/local/new.show'),
+                                           ])
         self.mock_get_localpath_by_filename.assert_called_once_with('new.show.s02e10')
         self.mock_rename.assert_called_once_with('/path/to/unsorted/new.show.s02e10',
                                                  '/path/to/local/new.show/new.show.s02e10')

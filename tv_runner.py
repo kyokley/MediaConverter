@@ -198,7 +198,7 @@ class TvRunner(object):
             src = os.path.join(UNSORTED_PATH, filename)
 
             localpath = get_localpath_by_filename(filename)
-            if not localpath:
+            if not localpath or not os.path.exists(localpath):
                 continue
 
             dst = os.path.join(localpath, filename)
