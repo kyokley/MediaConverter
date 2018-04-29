@@ -6,7 +6,13 @@ from tv_runner import TvRunner
 
 class TestTvRunner(unittest.TestCase):
     def setUp(self):
+        self._sort_unsorted_files_patcher = mock.patch('tv_runner.TvRunner._sort_unsorted_files')
+        self.mock_sort_unsorted_files = self._sort_unsorted_files_patcher.start()
+
         self.tvRunner = TvRunner()
+
+    def tearDown(self):
+        self._sort_unsorted_files_patcher.stop()
 
     @mock.patch('tv_runner.Path')
     def test_loadPaths(self, mock_path):
@@ -104,6 +110,7 @@ class TestTvRunner(unittest.TestCase):
 
         self.tvRunner.run()
 
+        self.mock_sort_unsorted_files.assert_called_once_with()
         self.tvRunner.buildLocalFileSet.assert_has_calls([call('sdfg'),
                                                           call('asdf')],
                                                           any_order=True)

@@ -157,6 +157,9 @@ class TvRunner(object):
 
 
     def run(self):
+        log.debug('Attempting to sort unsorted files')
+        self._sort_unsorted_files()
+
         log.debug('Attempting to get paths')
         self.loadPaths()
         log.debug('Got paths')
