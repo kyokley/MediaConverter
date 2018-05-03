@@ -196,8 +196,8 @@ class TestHandleDirs(unittest.TestCase):
 
 class TestSortUnsortedFiles(unittest.TestCase):
     def setUp(self):
-        self.UNSORTED_PATH_patcher = mock.patch('tv_runner.UNSORTED_PATH', '/path/to/unsorted')
-        self.UNSORTED_PATH_patcher.start()
+        self.UNSORTED_PATHS_patcher = mock.patch('tv_runner.UNSORTED_PATHS', ['/path/to/unsorted'])
+        self.UNSORTED_PATHS_patcher.start()
 
         self.exists_patcher = mock.patch('tv_runner.os.path.exists')
         self.mock_exists = self.exists_patcher.start()
@@ -214,7 +214,7 @@ class TestSortUnsortedFiles(unittest.TestCase):
         self.tv_runner = TvRunner()
 
     def tearDown(self):
-        self.UNSORTED_PATH_patcher.stop()
+        self.UNSORTED_PATHS_patcher.stop()
         self.exists_patcher.stop()
         self.listdir_patcher.stop()
         self.get_localpath_by_filename_patcher.stop()

@@ -3,14 +3,13 @@ import traceback
 import subprocess # nosec
 import shlex
 import shutil
-import requests
 
 from file import File
 from path import Path
 from settings import (SEND_EMAIL,
                       MEDIA_FILE_EXTENSIONS,
                       SUBTITLE_FILES,
-                      UNSORTED_PATH,
+                      UNSORTED_PATHS,
                       )
 from convert import makeFileStreamable
 from utils import (stripUnicode,
@@ -190,16 +189,17 @@ class TvRunner(object):
 
     @staticmethod
     def _sort_unsorted_files():
-        if not os.path.exists(UNSORTED_PATH):
-            log.debug('Unsorted file path {} does not exist'.format(UNSORTED_PATH))
-            return
+        for unsorted_path in UNSORTED_PATHS:
+            if not os.path.exists(unsorted_path):
+                log.debug('Unsorted file path {} does not exist'.format(unsorted_path))
+                return
 
-        for filename in os.listdir(UNSORTED_PATH):
-            src = os.path.join(UNSORTED_PATH, filename)
+            for filename in os.listdir(unsorted_path):
+                src = os.path.join(unsorted_path, filename)
 
-            localpath = get_localpath_by_filename(filename)
-            if not localpath or not os.path.exists(localpath):
-                continue
+                localpath = get_localpath_by_filename(filename)
+                if not localpath or not os.path.exists(localpath):
+                    continue
 
-            dst = os.path.join(localpath, filename)
-            os.rename(src, dst)
+                dst = os.path.join(localpath, filename)
+                os.rename(src, dst)

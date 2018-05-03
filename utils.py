@@ -86,6 +86,7 @@ def get_localpath_by_filename(filename):
         resp.raise_for_status()
     except:
         log.warn('Unable to find path for {}'.format(filename))
+        log.debug(resp.text)
         return
 
     data = resp.json()
