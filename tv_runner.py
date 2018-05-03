@@ -202,4 +202,4 @@ class TvRunner(object):
                     continue
 
                 dst = os.path.join(localpath, filename)
-                os.rename(src, dst)
+                shutil.move(src, dst)

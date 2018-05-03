@@ -208,8 +208,8 @@ class TestSortUnsortedFiles(unittest.TestCase):
         self.get_localpath_by_filename_patcher = mock.patch('tv_runner.get_localpath_by_filename')
         self.mock_get_localpath_by_filename = self.get_localpath_by_filename_patcher.start()
 
-        self.rename_patcher = mock.patch('tv_runner.os.rename')
-        self.mock_rename = self.rename_patcher.start()
+        self.move_patcher = mock.patch('tv_runner.shutil.move')
+        self.mock_move = self.move_patcher.start()
 
         self.tv_runner = TvRunner()
 
@@ -218,7 +218,7 @@ class TestSortUnsortedFiles(unittest.TestCase):
         self.exists_patcher.stop()
         self.listdir_patcher.stop()
         self.get_localpath_by_filename_patcher.stop()
-        self.rename_patcher.stop()
+        self.move_patcher.stop()
 
     def test_unsorted_path_does_not_exist(self):
         self.mock_exists.return_value = False
@@ -230,7 +230,7 @@ class TestSortUnsortedFiles(unittest.TestCase):
         self.mock_exists.assert_called_once_with('/path/to/unsorted')
         self.assertFalse(self.mock_listdir.called)
         self.assertFalse(self.mock_get_localpath_by_filename.called)
-        self.assertFalse(self.mock_rename.called)
+        self.assertFalse(self.mock_move.called)
 
     def test_no_localpath_for_filename(self):
         self.mock_exists.return_value = True
@@ -243,7 +243,7 @@ class TestSortUnsortedFiles(unittest.TestCase):
         self.assertEqual(expected, actual)
         self.mock_exists.assert_called_once_with('/path/to/unsorted')
         self.mock_get_localpath_by_filename.assert_called_once_with('new.show.s02e10')
-        self.assertFalse(self.mock_rename.called)
+        self.assertFalse(self.mock_move.called)
 
     def test_localpath_does_not_exist(self):
         self.mock_exists.side_effect = [True, False]
@@ -258,7 +258,7 @@ class TestSortUnsortedFiles(unittest.TestCase):
                                            mock.call('/path/to/local/new.show'),
                                            ])
         self.mock_get_localpath_by_filename.assert_called_once_with('new.show.s02e10')
-        self.assertFalse(self.mock_rename.called)
+        self.assertFalse(self.mock_move.called)
 
 
     def test_localpath_for_filename(self):
@@ -274,5 +274,5 @@ class TestSortUnsortedFiles(unittest.TestCase):
                                            mock.call('/path/to/local/new.show'),
                                            ])
         self.mock_get_localpath_by_filename.assert_called_once_with('new.show.s02e10')
-        self.mock_rename.assert_called_once_with('/path/to/unsorted/new.show.s02e10',
-                                                 '/path/to/local/new.show/new.show.s02e10')
+        self.mock_move.assert_called_once_with('/path/to/unsorted/new.show.s02e10',
+                                               '/path/to/local/new.show/new.show.s02e10')
