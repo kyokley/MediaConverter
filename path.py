@@ -1,7 +1,5 @@
 import requests
 import os
-import subprocess
-import shlex
 from settings import (SERVER_NAME,
                       MEDIAVIEWER_TV_PATH_URL,
                       MEDIAVIEWER_MOVIE_PATH_URL,
@@ -70,21 +68,11 @@ class Path(object):
         return cls._getPaths(getMovies=True)
 
     @classmethod
-    def _getLocalMoviePathsSetting(cls):
-        '''Useful for testing'''
-        return LOCAL_MOVIE_PATHS
-
-    @classmethod
-    def _getLocalTVShowsPathsSetting(cls):
-        '''Useful for testing'''
-        return LOCAL_TV_SHOWS_PATHS
-
-    @classmethod
     def _getLocalPaths(cls, getMovies=False):
         if getMovies:
-            filepaths = cls._getLocalMoviePathsSetting()
+            filepaths = LOCAL_MOVIE_PATHS
         else:
-            filepaths = cls._getLocalTVShowsPathsSetting()
+            filepaths = LOCAL_TV_SHOWS_PATHS
 
         return cls._buildLocalPaths(filepaths)
 
@@ -93,16 +81,10 @@ class Path(object):
         localpaths = set()
         for localpath in filepaths:
             if not os.path.exists(localpath):
-                log.error('%s does not exist. Continuing...' % localpath)
+                log.error('{} does not exist. Continuing...'.format(localpath))
                 continue
 
-            command = "ls '%s'" % localpath
-            p = subprocess.Popen(shlex.split(command),
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT)
-            res = p.communicate()[0]
-            res = res.split('\n')
-            res = set([os.path.join(localpath, path) for path in res if path])
+            res = set([os.path.join(localpath, path) for path in os.listdir(localpath) if path])
             localpaths.update(res)
         return localpaths
 

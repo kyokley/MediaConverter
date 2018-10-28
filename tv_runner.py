@@ -1,21 +1,31 @@
 import os
 import traceback
-import subprocess
+import subprocess # nosec
 import shlex
+import shutil
+
 from file import File
 from path import Path
-from settings import SEND_EMAIL
+from settings import (SEND_EMAIL,
+                      MEDIA_FILE_EXTENSIONS,
+                      SUBTITLE_FILES,
+                      UNSORTED_PATHS,
+                      )
 from convert import makeFileStreamable
 from utils import (stripUnicode,
                    EncoderException,
                    MissingPathException,
-                   send_email)
+                   send_email,
+                   get_localpath_by_filename,
+                   )
 
 from log import LogFile
 log = LogFile().getLogger()
 
 FIND_FAIL_STRING = 'No such file or directory'
 IGNORED_FILE_EXTENSIONS = ('.vtt', '.srt')
+
+SMALL_FILE_SIZE = 1024 * 1024 * 10 # 10 MB
 
 class TvRunner(object):
     def __init__(self):
@@ -94,9 +104,10 @@ class TvRunner(object):
                         send_email(subject, message)
                     raise
 
-    def buildLocalFileSet(self, path):
-        command = "find '%s' -maxdepth 1 -not -type d" % path
-        p = subprocess.Popen(shlex.split(command),
+    @staticmethod
+    def buildLocalFileSet(path):
+        command = "find '%s' -maxdepth 1 -size +%sc -not -type d" % (path, SMALL_FILE_SIZE)
+        p = subprocess.Popen(shlex.split(command), # nosec
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
         local_files = p.communicate()[0]
@@ -110,12 +121,51 @@ class TvRunner(object):
         log.debug(localFileSet)
         return localFileSet
 
+    def handleDirs(self, path):
+        if os.path.exists(path):
+            paths = []
+            dir_set = set()
+            for root, dirs, files in os.walk(path):
+                for file in files:
+                    paths.append(os.path.join(root, file))
+
+            for fullpath in paths:
+                dirs = fullpath.split(path)[1].split(os.path.sep)
+                top, episode, file = path, dirs[1], dirs[-1]
+                file_ext = os.path.splitext(file)[-1].lower()
+
+                dir_path = os.path.join(top, episode)
+                if os.path.isdir(dir_path):
+                    dir_set.add(dir_path)
+
+                    if file in SUBTITLE_FILES:
+                        # Move subtitle to show directory and rename
+                        log.info('Found subtitle file in {}'.format(episode))
+                        new = os.path.join(top, episode + '.srt')
+                        os.rename(fullpath, new)
+
+                    elif file_ext in MEDIA_FILE_EXTENSIONS and os.path.getsize(fullpath) > SMALL_FILE_SIZE:
+                        # Move media file to show directory
+                        log.info('Found media file in {}'.format(episode))
+                        new = os.path.join(top, file)
+                        os.rename(fullpath, new)
+
+            for directory in dir_set:
+                log.info('Deleting {}'.format(directory))
+                shutil.rmtree(directory)
+
+
     def run(self):
+        log.debug('Attempting to sort unsorted files')
+        self._sort_unsorted_files()
+
         log.debug('Attempting to get paths')
         self.loadPaths()
         log.debug('Got paths')
         for path, pathIDs in self.paths.items():
             try:
+                log.debug('Handling directories in {}'.format(path))
+                self.handleDirs(path)
                 log.debug('Building local file set for %s' % path)
                 localFileSet = self.buildLocalFileSet(path)
                 log.debug('Done building local file set for %s' % path)
@@ -136,3 +186,20 @@ class TvRunner(object):
                 log.error(error)
         log.debug('Done running tv shows')
         return self.errors
+
+    @staticmethod
+    def _sort_unsorted_files():
+        for unsorted_path in UNSORTED_PATHS:
+            if not os.path.exists(unsorted_path):
+                log.debug('Unsorted file path {} does not exist'.format(unsorted_path))
+                return
+
+            for filename in os.listdir(unsorted_path):
+                src = os.path.join(unsorted_path, filename)
+
+                localpath = get_localpath_by_filename(filename)
+                if not localpath or not os.path.exists(localpath):
+                    continue
+
+                dst = os.path.join(localpath, filename)
+                shutil.move(src, dst)

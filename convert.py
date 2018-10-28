@@ -1,18 +1,23 @@
-from subprocess import Popen, PIPE
-import os, shutil
+import os
+import shutil
 import shlex
 from re import search
 from settings import (MEDIAVIEWER_SUFFIX,
                       ENCODER,
-                      MEDIA_FILE_EXTENSIONS,
                       )
-from utils import stripUnicode, EncoderException
+from utils import (stripUnicode,
+                   EncoderException,
+                   is_valid_media_file,
+                   )
+from subprocess import Popen, PIPE #nosec
 
 from log import LogFile
 log = LogFile().getLogger()
 
+LARGE_FILE_SIZE = 1024 * 1024 * 1024 * 2 # 2 GB
+
 def checkVideoEncoding(source):
-    ffmpeg = Popen((ENCODER, '-hide_banner', "-i", source), stderr=PIPE)
+    ffmpeg = Popen((ENCODER, '-hide_banner', "-i", source), stderr=PIPE) #nosec
     output = ffmpeg.communicate()[1]
 
     # Can't check returncode here since we always get back 1
@@ -27,7 +32,7 @@ def checkVideoEncoding(source):
 
 def fixMetaData(source, dryRun=False):
     if not dryRun:
-        process = Popen(("qtfaststart", source), stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        process = Popen(("qtfaststart", source), stdin=PIPE, stdout=PIPE, stderr=PIPE) #nosec
         process.communicate()
 
 def _extractSubtitles(source, dest, stream_identifier):
@@ -57,7 +62,7 @@ def _extractSubtitleFromVideo(source,
                                   srt_filename]
     log.debug('Extracting using following command:')
     log.debug(' '.join(subtitle_command))
-    process = Popen(subtitle_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    process = Popen(subtitle_command, stdin=PIPE, stdout=PIPE, stderr=PIPE) #nosec
     out, err = process.communicate()
     if process.returncode != 0:
         log.error(err)
@@ -73,7 +78,7 @@ def _convertSrtToVtt(srt_filename):
                        srt_filename]
     log.debug('Extracting using following command:')
     log.debug(' '.join(srt_vtt_command))
-    process = Popen(srt_vtt_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    process = Popen(srt_vtt_command, stdin=PIPE, stdout=PIPE, stderr=PIPE) #nosec
     out, err = process.communicate()
     if process.returncode != 0:
         log.error(err)
@@ -93,11 +98,17 @@ def encode(source, dest, dryRun=False):
 def _handleSubtitles(source, dest, sres):
     dirname = os.path.dirname(source)
     english_srt_path = os.path.join(dirname, 'English.srt')
+    eng_srt_path = os.path.join(dirname, '2_Eng.srt')
     file_srt_path = os.path.splitext(source)[0] + '.srt'
-    if os.path.exists(english_srt_path):
-        log.info('English.srt found in directory. Attempting to convert.')
+
+    english_srt_path_exists = os.path.exists(english_srt_path)
+    eng_srt_path_exists = os.path.exists(eng_srt_path)
+
+    if english_srt_path_exists or eng_srt_path_exists:
+        srt_path = english_srt_path if english_srt_path_exists else eng_srt_path
+        log.info('{} found in directory. Attempting to convert.'.format(os.path.basename(srt_path)))
         dest_path = '%s.vtt' % os.path.splitext(dest)[0]
-        vtt_filename = _convertSrtToVtt(english_srt_path)
+        vtt_filename = _convertSrtToVtt(srt_path)
         _moveSubtitleFile(vtt_filename,
                           dest_path)
     elif os.path.exists(file_srt_path):
@@ -116,6 +127,8 @@ def _handleSubtitles(source, dest, sres):
                           )
 
 def _reencodeVideo(source, dest, vres, ares, dryRun=False):
+    file_size = os.path.getsize(source)
+
     command = [ENCODER,
                "-hide_banner",
                "-y",
@@ -124,22 +137,52 @@ def _reencodeVideo(source, dest, vres, ares, dryRun=False):
                ]
 
     if vres and ares:
-        command.extend(["-c",
-                        "copy",
-                        ])
+        if file_size > LARGE_FILE_SIZE:
+            command.extend(["-crf",
+                            "30",
+                            "-preset",
+                            "slow",
+                            ])
+        else:
+            command.extend(["-c",
+                            "copy",
+                            ])
     elif vres:
-        command.extend(["-c:v",
-                        "copy",
-                        "-c:a",
+        if file_size > LARGE_FILE_SIZE:
+            command.extend(["-crf",
+                            "30",
+                            "-preset",
+                            "slow",
+                            ])
+        else:
+            command.extend(["-c:v",
+                            "copy",
+                            ])
+
+        command.extend(["-c:a",
                         "libfdk_aac",
                         ])
     elif ares:
+        if file_size > LARGE_FILE_SIZE:
+            command.extend(["-crf",
+                            "30",
+                            "-preset",
+                            "slow",
+                            ])
+
         command.extend(["-c:v",
                         "libx264",
                         "-c:a",
                         "copy",
                         ])
     else:
+        if file_size > LARGE_FILE_SIZE:
+            command.extend(["-crf",
+                            "30",
+                            "-preset",
+                            "slow",
+                            ])
+
         command.extend(["-c:v",
                         "libx264",
                         "-c:a",
@@ -151,7 +194,7 @@ def _reencodeVideo(source, dest, vres, ares, dryRun=False):
 
     log.info(command)
     if not dryRun:
-        process = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        process = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE) #nosec
         process.communicate()
 
         if process.returncode != 0:
@@ -224,18 +267,18 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
 
 def _getFilesInDirectory(fullPath):
     command = "find '%s' -maxdepth 10 -not -type d" % fullPath
-    p = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE)
+    p = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE) # nosec
     res = p.communicate()[0]
     tokens = res.split('\n')
     return set([x for x in tokens if x])
 
 def reencodeFilesInDirectory(fullPath, dryRun=False):
     errors = list()
-    tokens = _getFilesInDirectory(fullPath)
+    cleanedFullPath = stripUnicode(fullPath)
+    tokens = _getFilesInDirectory(cleanedFullPath)
 
     for token in tokens:
-        ext = os.path.splitext(token)[-1].lower()
-        if ext in MEDIA_FILE_EXTENSIONS:
+        if is_valid_media_file(token):
             try:
                 cleanPath = stripUnicode(token)
                 makeFileStreamable(cleanPath,

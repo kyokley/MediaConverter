@@ -3,6 +3,7 @@ import mock
 import tempfile
 import os
 import shutil
+import shlex
 from subprocess import PIPE
 from settings import ENCODER
 from utils import EncoderException
@@ -17,6 +18,7 @@ from convert import (checkVideoEncoding,
                      makeFileStreamable,
                      encode,
                      _getFilesInDirectory,
+                     _reencodeVideo,
                      )
 
 class TestCheckVideoEncoding(unittest.TestCase):
@@ -539,15 +541,31 @@ class TestHandleSubtitles(unittest.TestCase):
 
         _handleSubtitles(self.source, self.dest, self.sres)
 
-        self.mock_exists.assert_called_once_with('/path/to/English.srt')
+        self.mock_exists.assert_has_calls([mock.call('/path/to/English.srt'),
+                                           mock.call('/path/to/2_Eng.srt'),
+                                           ])
         self.mock_convertSrtToVtt.assert_called_once_with('/path/to/English.srt')
         self.mock_moveSubtitleFile.assert_called_once_with('/path/to/English.vtt',
                                                            'tmpfile.vtt')
         self.assertFalse(self.mock_extractSubtitles.called)
         self.assertFalse(self.sres.groups.called)
 
-    def test_FileSrtExists(self):
+    def test_2_EngSrtExists(self):
         self.mock_exists.side_effect = [False, True]
+
+        _handleSubtitles(self.source, self.dest, self.sres)
+
+        self.mock_exists.assert_has_calls([mock.call('/path/to/English.srt'),
+                                           mock.call('/path/to/2_Eng.srt'),
+                                           ])
+        self.mock_convertSrtToVtt.assert_called_once_with('/path/to/2_Eng.srt')
+        self.mock_moveSubtitleFile.assert_called_once_with('/path/to/English.vtt',
+                                                           'tmpfile.vtt')
+        self.assertFalse(self.mock_extractSubtitles.called)
+        self.assertFalse(self.sres.groups.called)
+
+    def test_FileSrtExists(self):
+        self.mock_exists.side_effect = [False, False, True]
         self.mock_convertSrtToVtt.return_value = '/path/to/file.vtt'
 
         _handleSubtitles(self.source, self.dest, self.sres)
@@ -622,6 +640,122 @@ class TestGetFilesInDirectory(unittest.TestCase):
 
         actual = _getFilesInDirectory(self.temp_dir)
         self.assertEqual(expected, actual)
+
+class TestReencodeVideo(unittest.TestCase):
+    def setUp(self):
+        self.getsize_patcher = mock.patch('convert.os.path.getsize')
+        self.mock_getsize = self.getsize_patcher.start()
+
+        self.Popen_patcher = mock.patch('convert.Popen')
+        self.mock_Popen = self.Popen_patcher.start()
+        self.mock_Popen.return_value.returncode = 0
+
+        self.ENCODER_patcher = mock.patch('convert.ENCODER', 'test_encoder')
+        self.ENCODER_patcher.start()
+
+        self.mock_getsize.return_value = 1000
+
+    def tearDown(self):
+        self.getsize_patcher.stop()
+        self.Popen_patcher.stop()
+        self.ENCODER_patcher.stop()
+
+    def test_small_vres_ares(self):
+        expected = None
+        actual = _reencodeVideo('test_source',
+                                'test_dest',
+                                True,
+                                True)
+
+        self.assertEqual(expected, actual)
+        self.mock_Popen.assert_called_once_with(
+                tuple(shlex.split(
+                    'test_encoder -hide_banner -y -i test_source -c copy test_dest')),
+                stdin=PIPE,
+                stdout=PIPE,
+                stderr=PIPE)
+
+    def test_small_vres_no_ares(self):
+        expected = None
+        actual = _reencodeVideo('test_source',
+                                'test_dest',
+                                True,
+                                False)
+
+        self.assertEqual(expected, actual)
+        self.mock_Popen.assert_called_once_with(
+                tuple(shlex.split(
+                    'test_encoder -hide_banner -y -i test_source -c:v copy -c:a libfdk_aac test_dest')),
+                stdin=PIPE,
+                stdout=PIPE,
+                stderr=PIPE)
+
+    def test_small_no_vres_no_ares(self):
+        expected = None
+        actual = _reencodeVideo('test_source',
+                                'test_dest',
+                                False,
+                                False)
+
+        self.assertEqual(expected, actual)
+        self.mock_Popen.assert_called_once_with(
+                tuple(shlex.split(
+                    'test_encoder -hide_banner -y -i test_source -c:v libx264 -c:a libfdk_aac test_dest')),
+                stdin=PIPE,
+                stdout=PIPE,
+                stderr=PIPE)
+
+    def test_large_vres_ares(self):
+        self.mock_getsize.return_value = 1024 * 1024 * 1024 * 3
+
+        expected = None
+        actual = _reencodeVideo('test_source',
+                                'test_dest',
+                                True,
+                                True)
+
+        self.assertEqual(expected, actual)
+        self.mock_Popen.assert_called_once_with(
+                tuple(shlex.split(
+                    'test_encoder -hide_banner -y -i test_source -crf 30 -preset slow test_dest')),
+                stdin=PIPE,
+                stdout=PIPE,
+                stderr=PIPE)
+
+    def test_large_vres_no_ares(self):
+        self.mock_getsize.return_value = 1024 * 1024 * 1024 * 3
+
+        expected = None
+        actual = _reencodeVideo('test_source',
+                                'test_dest',
+                                True,
+                                False)
+
+        self.assertEqual(expected, actual)
+        self.mock_Popen.assert_called_once_with(
+                tuple(shlex.split(
+                    'test_encoder -hide_banner -y -i test_source -crf 30 -preset slow -c:a libfdk_aac test_dest')),
+                stdin=PIPE,
+                stdout=PIPE,
+                stderr=PIPE)
+
+    def test_large_no_vres_no_ares(self):
+        self.mock_getsize.return_value = 1024 * 1024 * 1024 * 3
+
+        expected = None
+        actual = _reencodeVideo('test_source',
+                                'test_dest',
+                                False,
+                                False)
+
+        self.assertEqual(expected, actual)
+        self.mock_Popen.assert_called_once_with(
+                tuple(shlex.split(
+                    'test_encoder -hide_banner -y -i test_source -crf 30 -preset slow -c:v libx264 -c:a libfdk_aac test_dest')),
+                stdin=PIPE,
+                stdout=PIPE,
+                stderr=PIPE)
+
 
 VALID_SAMPLE_OUTPUT = '''
 Input #0, matroska,webm, from '/tmp/test.mkv':

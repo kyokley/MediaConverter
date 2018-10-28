@@ -1,4 +1,6 @@
-import requests, os
+import requests
+import os
+
 from unidecode import unidecode
 import smtplib
 
@@ -11,6 +13,9 @@ from settings import (WAITER_USERNAME,
                       GMAIL_PASSWORD,
                       EMAIL_RECIPIENTS,
                       VERIFY_REQUESTS,
+                      MEDIA_FILE_EXTENSIONS,
+                      SUBTITLE_EXTENSIONS,
+                      MEDIAVIEWER_INFER_SCRAPERS_URL,
                       )
 
 class EncoderException(Exception):
@@ -31,7 +36,7 @@ def postData(values, url):
         raise
 
 def stripUnicode(filename, path=None):
-    strippedFilename = unidecode(filename.decode('utf-8'))
+    strippedFilename = unidecode(filename.decode('utf-8')).replace("'", '')
     if strippedFilename != filename:
         if path:
             currentDir = os.getcwd()
@@ -48,7 +53,6 @@ def stripUnicode(filename, path=None):
         return strippedFilename
 
 def send_email(subject, body):
-    # Prepare actual message
     log.info('sending error email')
     message = """\From: %s\nTo: %s\nSubject: %s\n\n%s
     """ % (GMAIL_USER, ", ".join(EMAIL_RECIPIENTS), subject, body)
@@ -62,3 +66,28 @@ def send_email(subject, body):
         log.debug('successfully sent the mail')
     except:
         log.error("failed to send mail")
+
+def file_ext(path):
+    return os.path.splitext(path)[-1]
+
+def is_valid_media_file(path):
+    return os.path.exists(path) and file_ext(path).lower() in MEDIA_FILE_EXTENSIONS
+
+def is_valid_subtitle_file(path):
+    return os.path.exists(path) and file_ext(path).lower() in SUBTITLE_EXTENSIONS
+
+def get_localpath_by_filename(filename):
+    resp = requests.get(MEDIAVIEWER_INFER_SCRAPERS_URL,
+                        params={'title': filename},
+                        auth=(WAITER_USERNAME, WAITER_PASSWORD),
+                        )
+
+    try:
+        resp.raise_for_status()
+    except:
+        log.warn('Unable to find path for {}'.format(filename))
+        log.debug(resp.text)
+        return
+
+    data = resp.json()
+    return data['localpath']

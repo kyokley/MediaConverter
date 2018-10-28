@@ -1,8 +1,7 @@
 import os
-import subprocess
-import shlex
 from settings import (MEDIAVIEWER_MOVIE_FILE_URL,
                       LOCAL_MOVIE_PATHS,
+                      SUBTITLE_FILES,
                       )
 from convert import reencodeFilesInDirectory
 from utils import postData
@@ -17,13 +16,10 @@ class MovieRunner(object):
         self.movies = set()
         self.errors = []
 
-    def _getLocalMoviePathsSetting(self):
-        return LOCAL_MOVIE_PATHS
-
     def postMovies(self):
-        for moviepath in self._getLocalMoviePathsSetting():
+        for moviepath in LOCAL_MOVIE_PATHS:
             if not os.path.exists(moviepath):
-                self.errors.append('%s does not exist. Continuing...' % moviepath)
+                self.errors.append('{} does not exist. Continuing...'.format(moviepath))
                 continue
 
             path = Path(moviepath, moviepath)
@@ -40,33 +36,42 @@ class MovieRunner(object):
             for token in tokens:
                 localpath = os.path.join(moviepath, token)
                 if localpath not in fileset:
-                    log.info("Found %s" % localpath)
-                    log.info("Starting re-encoding of %s..." % localpath)
+                    log.info("Found {}".format(localpath))
+                    log.info("Starting re-encoding of {}...".format(localpath))
                     try:
+                        self.promoteSubtitles(localpath)
                         errors = reencodeFilesInDirectory(localpath)
 
                         if errors:
                             self.errors.extend(errors)
                             continue
-                    except Exception, e:
-                        log.error("Error processing %s" % localpath)
-                        log.error(e)
+                    except Exception as e:
+                        log.error("Error processing {}".format(localpath))
+                        log.error(str(e))
                         raise
-                    log.info("Posting %s" % (localpath,))
+                    log.info("Posting {}".format(localpath))
                     self._postMovie(token, pathid)
+
+    @staticmethod
+    def promoteSubtitles(localpath):
+        path = None
+        if os.path.exists(localpath):
+            for root, dirs, files in os.walk(localpath):
+                for file in files:
+                    if file in SUBTITLE_FILES:
+                        path = os.path.join(root, file)
+                        break
+
+            if path and path != os.path.join(localpath, file):
+                dest = os.path.join(localpath, file)
+                os.rename(path, dest)
 
     @staticmethod
     def _getLocalMoviePaths(moviepath):
         if not os.path.exists(moviepath):
             return set()
 
-        command = "ls '%s'" % moviepath
-        p = subprocess.Popen(shlex.split(command),
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
-        res = p.communicate()[0]
-        tokens = res.split('\n')
-        return set([x for x in tokens if x])
+        return set(os.listdir(moviepath))
 
     def run(self):
         self.postMovies()
@@ -77,7 +82,7 @@ class MovieRunner(object):
         if (not name or
                 not pathid):
             log.error('Invalid request')
-            log.error('Filename: %s Pathid: %s' % (name, pathid))
+            log.error('Filename: {} Pathid: {}'.format(name, pathid))
             return
 
         values = {'path': pathid,
