@@ -12,7 +12,7 @@ log = LogFile().getLogger()
 
 app = Celery('tasks', broker='amqp://guest@localhost/%s' % CELERY_VHOST)
 
-@app.task(name='main.main')
+@app.task(name='main.main', serializer='json')
 def main():
     all_errors = []
     tvRunner = TvRunner()
