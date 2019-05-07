@@ -44,7 +44,7 @@ MEDIA_FILE_EXTENSIONS = ('.mp4',
                          )
 
 SUBTITLE_EXTENSIONS = ('.srt',)
-SUBTITLE_FILES = ('2_Eng.srt', 'English.srt')
+SUBTITLE_FILES = ('2_Eng.srt', 'English.srt', '2_English.srt')
 
 SERVER_NAME = '127.0.0.1'
 
