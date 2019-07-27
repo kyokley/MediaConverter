@@ -16,10 +16,21 @@ class TestTvRunner(unittest.TestCase):
 
     @mock.patch('tv_runner.Path')
     def test_loadPaths(self, mock_path):
-        fake_paths = [object() for i in xrange(3)]
+        fake_path = mock.MagicMock()
+        fake_pks = mock.MagicMock()
+        fake_paths = {fake_path: {'pks': fake_pks,
+                                  'finished': False,
+                                  },
+                      mock.MagicMock(): {'pks': mock.MagicMock(),
+                                         'finished': True,
+                                         },
+                      }
+
+        expected = {fake_path: fake_pks}
+
         mock_path.getAllTVPaths.return_value = fake_paths
         self.tvRunner.loadPaths()
-        self.assertEquals(fake_paths, self.tvRunner.paths)
+        self.assertEquals(expected, self.tvRunner.paths)
 
     @mock.patch('tv_runner.Path')
     def test_getOrCreateRemotePath(self, mock_path):

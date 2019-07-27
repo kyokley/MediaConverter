@@ -3,6 +3,7 @@ import mock
 
 from path import Path
 
+
 class TestPostMovie(unittest.TestCase):
     def setUp(self):
         self._post_patcher = mock.patch('path.Path._post')
@@ -20,6 +21,7 @@ class TestPostMovie(unittest.TestCase):
         self.assertEqual(expected, actual)
         self.mock_post.assert_called_once_with(useMovieURL=True)
 
+
 class TestPostTVShow(unittest.TestCase):
     def setUp(self):
         self._post_patcher = mock.patch('path.Path._post')
@@ -36,6 +38,7 @@ class TestPostTVShow(unittest.TestCase):
 
         self.assertEqual(expected, actual)
         self.mock_post.assert_called_once_with(useMovieURL=False)
+
 
 class TestPost(unittest.TestCase):
     def setUp(self):
@@ -85,6 +88,7 @@ class TestPost(unittest.TestCase):
         self.assertEqual(expected, actual)
         self.mock_postData.assert_called_once_with(expected_values, 'test_tv_url')
 
+
 class TestGetPaths(unittest.TestCase):
     def setUp(self):
         self.MEDIAVIEWER_MOVIE_PATH_URL_patcher = mock.patch('path.MEDIAVIEWER_MOVIE_PATH_URL', 'test_movie_url')
@@ -125,8 +129,9 @@ class TestGetPaths(unittest.TestCase):
         self.MEDIAVIEWER_MOVIE_PATH_URL_patcher.stop()
 
     def test_getMovies(self):
-        expected = {'some.local.path': set([123, 125]),
-                    'another.local.path': set([124])}
+        expected = {'some.local.path': {'pks': set([123, 125]), 'finished': False},
+                    'another.local.path': {'pks': set([124]), 'finished': False},
+                    }
         actual = self.path._getPaths(getMovies=True)
 
         self.assertEqual(expected, actual)
@@ -143,8 +148,9 @@ class TestGetPaths(unittest.TestCase):
                                        ])
 
     def test_getTVShows(self):
-        expected = {'some.local.path': set([123, 125]),
-                    'another.local.path': set([124])}
+        expected = {'some.local.path': {'pks': set([123, 125]), 'finished': False},
+                    'another.local.path': {'pks': set([124]), 'finished': False},
+                    }
         actual = self.path._getPaths(getMovies=False)
 
         self.assertEqual(expected, actual)
@@ -159,6 +165,7 @@ class TestGetPaths(unittest.TestCase):
                                         mock.call().raise_for_status(),
                                         mock.call().json(),
                                        ])
+
 
 class TestGetTVPaths(unittest.TestCase):
     def setUp(self):
@@ -177,6 +184,7 @@ class TestGetTVPaths(unittest.TestCase):
         self.assertEqual(expected, actual)
         self.mock_getPaths.assert_called_once_with(getMovies=False)
 
+
 class TestGetMoviePaths(unittest.TestCase):
     def setUp(self):
         self._getPaths_patcher = mock.patch('path.Path._getPaths')
@@ -193,6 +201,7 @@ class TestGetMoviePaths(unittest.TestCase):
 
         self.assertEqual(expected, actual)
         self.mock_getPaths.assert_called_once_with(getMovies=True)
+
 
 class TestGetLocalPaths(unittest.TestCase):
     def setUp(self):
@@ -223,6 +232,7 @@ class TestGetLocalPaths(unittest.TestCase):
 
         self.assertEqual(expected, actual)
         self.mock_buildLocalPaths.assert_called_once_with('test_local_tv_path')
+
 
 class TestBuildLocalPaths(unittest.TestCase):
     def setUp(self):
@@ -269,6 +279,7 @@ class TestBuildLocalPaths(unittest.TestCase):
                                             mock.call('file_path3'),
                                             ])
 
+
 class TestGetLocalTVAndMoviePaths(unittest.TestCase):
     def setUp(self):
         self._getLocalPaths_patcher = mock.patch('path.Path._getLocalPaths')
@@ -291,6 +302,7 @@ class TestGetLocalTVAndMoviePaths(unittest.TestCase):
         self.assertEqual(expected, actual)
         self.mock_getLocalPaths.assert_called_once_with(getMovies=True)
 
+
 class TestGetAllPaths(unittest.TestCase):
     def setUp(self):
         self._getPaths_patcher = mock.patch('path.Path._getPaths')
@@ -299,8 +311,8 @@ class TestGetAllPaths(unittest.TestCase):
         self._getLocalPaths_patcher = mock.patch('path.Path._getLocalPaths')
         self.mock_getLocalPaths = self._getLocalPaths_patcher.start()
 
-        self.mock_getPaths.return_value = {'test_path1': set([123, 124]),
-                                           'test_path2': set([100, 101]),
+        self.mock_getPaths.return_value = {'test_path1': {'pks': set([123, 124]), 'finished': False},
+                                           'test_path2': {'pks': set([100, 101]), 'finished': False},
                                            }
         self.mock_getLocalPaths.return_value = set(['test_path3', 'test_path4'])
 
@@ -309,10 +321,10 @@ class TestGetAllPaths(unittest.TestCase):
         self._getPaths_patcher.stop()
 
     def test_getMovies(self):
-        expected = {'test_path1': set([123, 124]),
-                    'test_path2': set([100, 101]),
-                    'test_path3': set([-1]),
-                    'test_path4': set([-1]),
+        expected = {'test_path1': {'pks': set([123, 124]), 'finished': False},
+                    'test_path2': {'pks': set([100, 101]), 'finished': False},
+                    'test_path3': {'pks': set([-1]), 'finished': False},
+                    'test_path4': {'pks': set([-1]), 'finished': False},
                     }
         actual = Path._getAllPaths(getMovies=True)
 
@@ -321,16 +333,17 @@ class TestGetAllPaths(unittest.TestCase):
         self.mock_getLocalPaths.assert_called_once_with(getMovies=True)
 
     def test_not_getMovies(self):
-        expected = {'test_path1': set([123, 124]),
-                    'test_path2': set([100, 101]),
-                    'test_path3': set([-1]),
-                    'test_path4': set([-1]),
+        expected = {'test_path1': {'pks': set([123, 124]), 'finished': False},
+                    'test_path2': {'pks': set([100, 101]), 'finished': False},
+                    'test_path3': {'pks': set([-1]), 'finished': False},
+                    'test_path4': {'pks': set([-1]), 'finished': False},
                     }
         actual = Path._getAllPaths(getMovies=False)
 
         self.assertEqual(expected, actual)
         self.mock_getPaths.assert_called_once_with(getMovies=False)
         self.mock_getLocalPaths.assert_called_once_with(getMovies=False)
+
 
 class TestGetAllMovieAndTVPaths(unittest.TestCase):
     def setUp(self):
@@ -353,6 +366,7 @@ class TestGetAllMovieAndTVPaths(unittest.TestCase):
 
         self.assertEqual(expected, actual)
         self.mock_getAllPaths.assert_called_once_with(getMovies=True)
+
 
 class TestGetPathByLocalPathAndRemotePath(unittest.TestCase):
     def setUp(self):
@@ -411,6 +425,7 @@ class TestGetPathByLocalPathAndRemotePath(unittest.TestCase):
                                               auth=('test_waiter_username', 'test_waiter_password'))
         self.mock_get.return_value.raise_for_status.assert_called_once_with()
         self.mock_get.return_value.json.assert_called_once_with()
+
 
 class TestGetMovieAndTVPathByLocalPathAndRemotePath(unittest.TestCase):
     def setUp(self):
