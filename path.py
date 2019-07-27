@@ -60,7 +60,8 @@ class Path(object):
             if data['results']:
                 for result in data['results']:
                     val = pathDict.setdefault(
-                        result['localpath'], {'pks': set(), 'finished': False})
+                        result['localpath'],
+                        {'pks': set(), 'finished': result['finished']})
                     val['pks'].add(result['pk'])
                     pathDict[result['localpath']] = val
         return pathDict

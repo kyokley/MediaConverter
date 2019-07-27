@@ -111,13 +111,19 @@ class TestGetPaths(unittest.TestCase):
 
         self.path = Path('/path/to/local', '/path/to/remote')
         self.mock_get.return_value.json.side_effect = [{'results': [{'localpath': 'some.local.path',
-                                                                     'pk': 123},
+                                                                     'pk': 123,
+                                                                     'finished': False,
+                                                                     },
                                                                     {'localpath': 'another.local.path',
-                                                                     'pk': 124},
+                                                                     'pk': 124,
+                                                                     'finished': False,
+                                                                     },
                                                                     ],
                                                         'next': 'next.url'},
                                                        {'results': [{'localpath': 'some.local.path',
-                                                                     'pk': 125}],
+                                                                     'pk': 125,
+                                                                     'finished': False,
+                                                                     }],
                                                         'next': None}]
 
     def tearDown(self):
