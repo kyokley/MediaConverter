@@ -25,7 +25,8 @@ log = LogFile().getLogger()
 FIND_FAIL_STRING = 'No such file or directory'
 IGNORED_FILE_EXTENSIONS = ('.vtt', '.srt')
 
-SMALL_FILE_SIZE = 1024 * 1024 * 10 # 10 MB
+SMALL_FILE_SIZE = 1024 * 1024 * 10  # 10 MB
+
 
 class TvRunner(object):
     def __init__(self):
@@ -33,7 +34,9 @@ class TvRunner(object):
         self.errors = []
 
     def loadPaths(self):
-        self.paths = Path.getAllTVPaths()
+        self.paths = {key: val['pks']
+                      for key, val in Path.getAllTVPaths().items()
+                      if not val['finished']}
 
     @staticmethod
     def getOrCreateRemotePath(localPath):
@@ -74,7 +77,7 @@ class TvRunner(object):
                                                       appendSuffix=True,
                                                       removeOriginal=True,
                                                       dryRun=False)
-                    except EncoderException, e:
+                    except EncoderException as e:
                         errorMsg = "Got a non-fatal encoding error attempting to make %s streamable" % fullPath
                         log.error(errorMsg)
                         log.error('Attempting to recover and continue')
@@ -89,7 +92,7 @@ class TvRunner(object):
                                        )
 
                         newFile.postTVFile()
-                except Exception, e:
+                except Exception as e:
                     errorMsg = "Something bad happened attempting to make %s streamable" % fullPath
                     log.error(errorMsg)
                     log.error(e)
@@ -154,7 +157,6 @@ class TvRunner(object):
                 log.info('Deleting {}'.format(directory))
                 shutil.rmtree(directory)
 
-
     def run(self):
         log.debug('Attempting to sort unsorted files')
         self._sort_unsorted_files()
@@ -169,7 +171,7 @@ class TvRunner(object):
                 log.debug('Building local file set for %s' % path)
                 localFileSet = self.buildLocalFileSet(path)
                 log.debug('Done building local file set for %s' % path)
-            except MissingPathException, e:
+            except MissingPathException as e:
                 log.error(e)
                 log.error('Continuing...')
                 continue

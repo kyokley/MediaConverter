@@ -20,7 +20,7 @@ LOCAL_TV_SHOWS_PATHS = ['tv_shows']
 UNSORTED_PATHS = ['unsorted']
 
 MEDIAVIEWER_MOVIE_PATH_URL = 'https://127.0.0.1:8001/mediaviewer/api/moviepath/'
-MEDIAVIEWER_TV_PATH_URL = 'https://127.0.0.1:8001/mediaviewer/api/tvpath/?finished=false'
+MEDIAVIEWER_TV_PATH_URL = 'https://127.0.0.1:8001/mediaviewer/api/tvpath/'
 
 MEDIAVIEWER_MOVIE_FILE_URL = 'https://127.0.0.1:8001/mediaviewer/api/movie/'
 MEDIAVIEWER_TV_FILE_URL = 'https://127.0.0.1:8001/mediaviewer/api/tv/'

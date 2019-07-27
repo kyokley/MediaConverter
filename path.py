@@ -14,6 +14,7 @@ from utils import postData
 from log import LogFile
 log = LogFile().getLogger()
 
+
 class Path(object):
     def __init__(self,
                  localpath,
@@ -50,13 +51,18 @@ class Path(object):
 
         data = {'next': url}
         while data['next']:
-            request = requests.get(data['next'], verify=VERIFY_REQUESTS, auth=(WAITER_USERNAME, WAITER_PASSWORD))
+            request = requests.get(data['next'],
+                                   verify=VERIFY_REQUESTS,
+                                   auth=(WAITER_USERNAME, WAITER_PASSWORD))
             request.raise_for_status()
             data = request.json()
 
             if data['results']:
                 for result in data['results']:
-                    pathDict.setdefault(result['localpath'], set()).add(result['pk'])
+                    val = pathDict.setdefault(
+                        result['localpath'], {'pks': set(), 'finished': False})
+                    val['pks'].add(result['pk'])
+                    pathDict[result['localpath']] = val
         return pathDict
 
     @classmethod
@@ -105,7 +111,10 @@ class Path(object):
         localPaths = cls._getLocalPaths(getMovies=getMovies)
 
         for path in localPaths:
-            allPaths.setdefault(path, set()).add(-1)
+            val = allPaths.setdefault(
+                path, {'pks': set(), 'finished': False})
+            val['pks'].add(-1)
+            allPaths[path] = val
         return allPaths
 
     @classmethod
