@@ -45,4 +45,4 @@ PKG_CONFIG_PATH="/usr/bin/pkg-config" ./configure \
 make
 sudo make install
 
-rm -rf /tmp/x265 /tmp/ffmpeg_sources $HOME/ffmpeg_build
+sudo rm -rf /tmp/x265 /tmp/ffmpeg_sources $HOME/ffmpeg_build
