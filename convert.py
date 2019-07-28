@@ -68,7 +68,7 @@ def _extractSubtitleFromVideo(source,
         log.error(err)
         try:
             os.remove(srt_filename)
-        except OSError, e:
+        except OSError as e:
             log.warn(e)
         raise EncoderException(err)
 
@@ -84,7 +84,7 @@ def _convertSrtToVtt(srt_filename):
         log.error(err)
         try:
             os.remove(vtt_filename)
-        except OSError, e:
+        except OSError as e:
             log.warn(e)
         raise EncoderException(err)
     return vtt_filename
@@ -211,14 +211,14 @@ def _moveSubtitleFile(source, dest, dryRun=False):
             try:
                 log.info('Moving subtitle from %s to %s' % (source_vtt_filename, dest_vtt_filename))
                 shutil.move(source_vtt_filename, dest_vtt_filename)
-            except Exception, e:
+            except Exception as e:
                 log.error(e)
                 raise
 
             try:
                 log.info('Removing old srt file %s' % srt_filename)
                 os.remove(srt_filename)
-            except OSError, e:
+            except OSError as e:
                 log.warn(e)
     else:
         log.warn('File not found: %s' % source_vtt_filename)
@@ -238,7 +238,7 @@ def overwriteExistingFile(source,
     if not dryRun:
         try:
             shutil.move(source, dest)
-        except Exception, e:
+        except Exception as e:
             log.error(e)
             raise
     else:
@@ -285,7 +285,7 @@ def reencodeFilesInDirectory(fullPath, dryRun=False):
                                    appendSuffix=True,
                                    removeOriginal=True,
                                    dryRun=dryRun)
-            except EncoderException, e:
+            except EncoderException as e:
                 log.error(e)
                 errors.append(cleanPath)
     return errors

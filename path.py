@@ -8,6 +8,7 @@ from settings import (SERVER_NAME,
                       LOCAL_TV_SHOWS_PATHS,
                       LOCAL_MOVIE_PATHS,
                       VERIFY_REQUESTS,
+                      BASE_PATH,
                       )
 from utils import postData
 
@@ -59,11 +60,15 @@ class Path(object):
 
             if data['results']:
                 for result in data['results']:
+                    localpath = result['localpath']
+                    if BASE_PATH not in localpath:
+                        localpath = os.path.join(BASE_PATH, localpath)
+
                     val = pathDict.setdefault(
-                        result['remotepath'],
+                        localpath,
                         {'pks': set(), 'finished': result['finished']})
                     val['pks'].add(result['pk'])
-                    pathDict[result['remotepath']] = val
+                    pathDict[localpath] = val
         return pathDict
 
     @classmethod

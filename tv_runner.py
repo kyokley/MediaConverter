@@ -64,48 +64,50 @@ class TvRunner(object):
 
     def updateFileRecords(self, path, localFileSet, remoteFileSet):
         pathid = None
-        for localFile in localFileSet:
-            if localFile and localFile not in remoteFileSet:
+        for localFile in localFileSet.difference(remoteFileSet):
+            if not localFile:
+                continue
+
+            try:
+                if not pathid:
+                    pathid = self.getOrCreateRemotePath(path)
+
+                log.debug("Attempting to add %s" % (localFile,))
+                fullPath = stripUnicode(localFile, path=path)
                 try:
-                    if not pathid:
-                        pathid = self.getOrCreateRemotePath(path)
-
-                    log.debug("Attempting to add %s" % (localFile,))
-                    fullPath = stripUnicode(localFile, path=path)
-                    try:
-                        fullPath = makeFileStreamable(fullPath,
-                                                      appendSuffix=True,
-                                                      removeOriginal=True,
-                                                      dryRun=False)
-                    except EncoderException as e:
-                        errorMsg = "Got a non-fatal encoding error attempting to make %s streamable" % fullPath
-                        log.error(errorMsg)
-                        log.error('Attempting to recover and continue')
-                        self.errors.append(errorMsg)
-                        continue
-
-                    if os.path.exists(fullPath):
-                        newFile = File(os.path.basename(fullPath),
-                                       pathid,
-                                       os.path.getsize(fullPath),
-                                       True,
-                                       )
-
-                        newFile.postTVFile()
-                except Exception as e:
-                    errorMsg = "Something bad happened attempting to make %s streamable" % fullPath
+                    fullPath = makeFileStreamable(fullPath,
+                                                  appendSuffix=True,
+                                                  removeOriginal=True,
+                                                  dryRun=False)
+                except EncoderException as e:
+                    errorMsg = "Got a non-fatal encoding error attempting to make %s streamable" % fullPath
                     log.error(errorMsg)
-                    log.error(e)
+                    log.error('Attempting to recover and continue')
+                    self.errors.append(errorMsg)
+                    continue
 
-                    if SEND_EMAIL:
-                        subject = 'MC: Got some errors'
-                        message = '''
-                        %s
-                        Got the following:
-                        %s
-                        ''' % (errorMsg, traceback.format_exc())
-                        send_email(subject, message)
-                    raise
+                if os.path.exists(fullPath):
+                    newFile = File(os.path.basename(fullPath),
+                                   pathid,
+                                   os.path.getsize(fullPath),
+                                   True,
+                                   )
+
+                    newFile.postTVFile()
+            except Exception as e:
+                errorMsg = "Something bad happened attempting to make %s streamable" % fullPath
+                log.error(errorMsg)
+                log.error(e)
+
+                if SEND_EMAIL:
+                    subject = 'MC: Got some errors'
+                    message = '''
+                    %s
+                    Got the following:
+                    %s
+                    ''' % (errorMsg, traceback.format_exc())
+                    send_email(subject, message)
+                raise
 
     @staticmethod
     def buildLocalFileSet(path):

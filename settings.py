@@ -18,6 +18,7 @@ WAITER_PASSWORD = 'password'
 LOCAL_MOVIE_PATHS = ['movies']
 LOCAL_TV_SHOWS_PATHS = ['tv_shows']
 UNSORTED_PATHS = ['unsorted']
+BASE_PATH = '/home/user'
 
 MEDIAVIEWER_MOVIE_PATH_URL = 'https://127.0.0.1:8001/mediaviewer/api/moviepath/'
 MEDIAVIEWER_TV_PATH_URL = 'https://127.0.0.1:8001/mediaviewer/api/tvpath/'
