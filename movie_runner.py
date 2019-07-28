@@ -28,8 +28,8 @@ class MovieRunner(object):
             pathid = data['results'][0]['pk']
 
             results = File.getMovieFileSet(pathid)
-            fileset = [os.path.join(moviepath, res)
-                           for res in results]
+            fileset = set([os.path.join(moviepath, res)
+                           for res in results])
 
             tokens = self._getLocalMoviePaths(moviepath)
 

@@ -249,6 +249,9 @@ def overwriteExistingFile(source,
     return dest
 
 def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal=True):
+    if MEDIAVIEWER_SUFFIX in filename:
+        raise Exception('File appears to already have been encoded. FAIL')
+
     orig = os.path.realpath(filename)
     new = "tmpfile.mp4"
 
