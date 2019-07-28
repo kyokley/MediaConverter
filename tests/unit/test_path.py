@@ -106,6 +106,9 @@ class TestGetPaths(unittest.TestCase):
         self.WAITER_PASSWORD_patcher = mock.patch('path.WAITER_PASSWORD', 'test_waiter_password')
         self.WAITER_PASSWORD_patcher.start()
 
+        self.BASE_PATH_patcher = mock.patch('path.BASE_PATH', '')
+        self.BASE_PATH_patcher.start()
+
         self.get_patcher = mock.patch('path.requests.get')
         self.mock_get = self.get_patcher.start()
 
@@ -136,6 +139,7 @@ class TestGetPaths(unittest.TestCase):
         self.VERIFY_REQUESTS_patcher.stop()
         self.MEDIAVIEWER_TV_PATH_URL_patcher.stop()
         self.MEDIAVIEWER_MOVIE_PATH_URL_patcher.stop()
+        self.BASE_PATH_patcher.stop()
 
     def test_getMovies(self):
         expected = {'some.local.path': {'pks': set([123, 125]), 'finished': False},

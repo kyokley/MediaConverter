@@ -122,7 +122,7 @@ class TvRunner(object):
 
         localFileSet = local_files.split('\n')
         localFileSet = set([os.path.basename(x) for x in localFileSet
-                                if x and os.path.splitext(x)[1] not in IGNORED_FILE_EXTENSIONS])
+                            if x and os.path.splitext(x)[1] not in IGNORED_FILE_EXTENSIONS])
         log.debug(localFileSet)
         return localFileSet
 
