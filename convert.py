@@ -1,6 +1,7 @@
 import os
 import shutil
 import shlex
+import sys
 from re import search
 from settings import (MEDIAVIEWER_SUFFIX,
                       ENCODER,
@@ -33,7 +34,11 @@ def checkVideoEncoding(source):
     vmatch = search("Video.*h264", output)
     amatch = search("Audio.*aac", output)
     smatch = search(r"(\d+).(\d+)\(eng.*Subtitle", output)
-    return (vmatch and 1 or 0, amatch and 1 or 0, smatch)
+    surround = search(r"Audio.*5\.1", output)
+    return (vmatch and 1 or 0,
+            amatch and 1 or 0,
+            smatch,
+            surround)
 
 
 def fixMetaData(source, dryRun=False):
@@ -109,10 +114,15 @@ def _convertSrtToVtt(srt_filename):
 
 
 def encode(source, dest, dryRun=False):
-    vres, ares, sres = checkVideoEncoding(source)
+    vres, ares, sres, surround = checkVideoEncoding(source)
 
     _handleSubtitles(source, dest, sres)
-    _reencodeVideo(source, dest, vres, ares, dryRun=dryRun)
+    _reencodeVideo(source,
+                   dest,
+                   vres,
+                   ares,
+                   surround,
+                   dryRun=dryRun)
 
 
 def _handleSubtitles(source, dest, sres):
@@ -152,7 +162,12 @@ def _handleSubtitles(source, dest, sres):
                           )
 
 
-def _reencodeVideo(source, dest, vres, ares, dryRun=False):
+def _reencodeVideo(source,
+                   dest,
+                   vres,
+                   ares,
+                   surround,
+                   dryRun=False):
     file_size = os.path.getsize(source)
 
     command = [ENCODER,
@@ -162,7 +177,7 @@ def _reencodeVideo(source, dest, vres, ares, dryRun=False):
                source,
                ]
 
-    if vres and ares:
+    if vres and (ares and not surround):
         if file_size > LARGE_FILE_SIZE:
             command.extend(["-crf",
                             "30",
@@ -188,6 +203,9 @@ def _reencodeVideo(source, dest, vres, ares, dryRun=False):
         command.extend(["-c:a",
                         "libfdk_aac",
                         ])
+
+        if surround:
+            command.extend(['-ac', '2'])
     elif ares:
         if file_size > LARGE_FILE_SIZE:
             command.extend(["-crf",
@@ -198,9 +216,19 @@ def _reencodeVideo(source, dest, vres, ares, dryRun=False):
 
         command.extend(["-c:v",
                         "libx264",
-                        "-c:a",
-                        "copy",
                         ])
+
+        if surround:
+            command.extend([
+                "-c:a",
+                "libfdk_aac",
+                '-ac', '2'
+            ])
+        else:
+            command.extend([
+                "-c:a",
+                "copy",
+            ])
     else:
         if file_size > LARGE_FILE_SIZE:
             command.extend(["-crf",
@@ -215,6 +243,9 @@ def _reencodeVideo(source, dest, vres, ares, dryRun=False):
                         "libfdk_aac",
                         ])
 
+        if surround:
+            command.extend(['-ac', '2'])
+
     command.append(dest)
     command = tuple(command)
 
@@ -227,7 +258,8 @@ def _reencodeVideo(source, dest, vres, ares, dryRun=False):
         process.communicate()
 
         if process.returncode != 0:
-            os.remove(dest)
+            if os.path.exists(dest):
+                os.remove(dest)
             raise EncoderException('Encoding failed')
 
 
@@ -337,3 +369,7 @@ def reencodeFilesInDirectory(fullPath, dryRun=False):
                 log.error(e)
                 errors.append(cleanPath)
     return errors
+
+
+if __name__ == '__main__':
+    encode(*sys.argv[1:])
