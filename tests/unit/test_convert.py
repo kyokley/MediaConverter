@@ -575,7 +575,7 @@ class TestHandleSubtitles(unittest.TestCase):
         self.sres.groups.return_value = (3, 4)
 
     def test_EnglishSrtExists(self):
-        self.mock_exists.side_effect = [True, False]
+        self.mock_exists.side_effect = [True, False, False]
 
         _handleSubtitles(self.source, self.dest, self.sres)
 
@@ -591,7 +591,7 @@ class TestHandleSubtitles(unittest.TestCase):
         self.assertFalse(self.sres.groups.called)
 
     def test_2_EngSrtExists(self):
-        self.mock_exists.side_effect = [False, True]
+        self.mock_exists.side_effect = [False, True, False]
 
         _handleSubtitles(self.source, self.dest, self.sres)
 
@@ -606,7 +606,7 @@ class TestHandleSubtitles(unittest.TestCase):
         self.assertFalse(self.sres.groups.called)
 
     def test_FileSrtExists(self):
-        self.mock_exists.side_effect = [False, False, True]
+        self.mock_exists.side_effect = [False, False, False, True]
         self.mock_convertSrtToVtt.return_value = '/path/to/file.vtt'
 
         _handleSubtitles(self.source, self.dest, self.sres)
