@@ -18,8 +18,6 @@ log = LogFile().getLogger()
 
 LARGE_FILE_SIZE = int(1024 * 1024 * 1024 * 1.25)  # 2 GB
 
-# ffmpeg -i Star.Wars.The.Last.Jedi.2017.720p.BluRay.H264.AAC-RARBG.mp4.ALFRED-ENCODED.mp4_bak -c:v copy -c:a libfdk_aac -b:a 192k -ac 2 star.wars.last.jedi.mp4
-
 
 def checkVideoEncoding(source):
     ffmpeg = Popen((ENCODER, '-hide_banner', "-i", source),
