@@ -9,15 +9,20 @@ from utils import (stripUnicode,
                    EncoderException,
                    is_valid_media_file,
                    )
-from subprocess import Popen, PIPE #nosec
+from subprocess import Popen, PIPE
 
 from log import LogFile
 log = LogFile().getLogger()
 
-LARGE_FILE_SIZE = 1024 * 1024 * 1024 * 2 # 2 GB
+
+LARGE_FILE_SIZE = 1024 * 1024 * 1024 * 2  # 2 GB
+
+# ffmpeg -i Star.Wars.The.Last.Jedi.2017.720p.BluRay.H264.AAC-RARBG.mp4.ALFRED-ENCODED.mp4_bak -c:v copy -c:a libfdk_aac -b:a 192k -ac 2 star.wars.last.jedi.mp4
+
 
 def checkVideoEncoding(source):
-    ffmpeg = Popen((ENCODER, '-hide_banner', "-i", source), stderr=PIPE) #nosec
+    ffmpeg = Popen((ENCODER, '-hide_banner', "-i", source),
+                   stderr=PIPE)  # nosec
     output = ffmpeg.communicate()[1]
 
     # Can't check returncode here since we always get back 1
@@ -27,13 +32,18 @@ def checkVideoEncoding(source):
 
     vmatch = search("Video.*h264", output)
     amatch = search("Audio.*aac", output)
-    smatch = search("(\d+).(\d+)\(eng.*Subtitle", output)
+    smatch = search(r"(\d+).(\d+)\(eng.*Subtitle", output)
     return (vmatch and 1 or 0, amatch and 1 or 0, smatch)
+
 
 def fixMetaData(source, dryRun=False):
     if not dryRun:
-        process = Popen(("qtfaststart", source), stdin=PIPE, stdout=PIPE, stderr=PIPE) #nosec
+        process = Popen(("qtfaststart", source),
+                        stdin=PIPE,
+                        stdout=PIPE,
+                        stderr=PIPE)  # nosec
         process.communicate()
+
 
 def _extractSubtitles(source, dest, stream_identifier):
     srt_filename = '%s.srt' % os.path.splitext(dest)[0]
@@ -45,6 +55,7 @@ def _extractSubtitles(source, dest, stream_identifier):
                               )
 
     _convertSrtToVtt(srt_filename)
+
 
 def _extractSubtitleFromVideo(source,
                               dest,
@@ -62,7 +73,10 @@ def _extractSubtitleFromVideo(source,
                                   srt_filename]
     log.debug('Extracting using following command:')
     log.debug(' '.join(subtitle_command))
-    process = Popen(subtitle_command, stdin=PIPE, stdout=PIPE, stderr=PIPE) #nosec
+    process = Popen(subtitle_command,
+                    stdin=PIPE,
+                    stdout=PIPE,
+                    stderr=PIPE)  # nosec
     out, err = process.communicate()
     if process.returncode != 0:
         log.error(err)
@@ -72,13 +86,17 @@ def _extractSubtitleFromVideo(source,
             log.warn(e)
         raise EncoderException(err)
 
+
 def _convertSrtToVtt(srt_filename):
     vtt_filename = '%s.vtt' % os.path.splitext(srt_filename)[0]
     srt_vtt_command = ['srt-vtt',
                        srt_filename]
     log.debug('Extracting using following command:')
     log.debug(' '.join(srt_vtt_command))
-    process = Popen(srt_vtt_command, stdin=PIPE, stdout=PIPE, stderr=PIPE) #nosec
+    process = Popen(srt_vtt_command,
+                    stdin=PIPE,
+                    stdout=PIPE,
+                    stderr=PIPE)  # nosec
     out, err = process.communicate()
     if process.returncode != 0:
         log.error(err)
@@ -89,11 +107,13 @@ def _convertSrtToVtt(srt_filename):
         raise EncoderException(err)
     return vtt_filename
 
+
 def encode(source, dest, dryRun=False):
     vres, ares, sres = checkVideoEncoding(source)
 
     _handleSubtitles(source, dest, sres)
     _reencodeVideo(source, dest, vres, ares, dryRun=dryRun)
+
 
 def _handleSubtitles(source, dest, sres):
     dirname = os.path.dirname(source)
@@ -105,14 +125,19 @@ def _handleSubtitles(source, dest, sres):
     eng_srt_path_exists = os.path.exists(eng_srt_path)
 
     if english_srt_path_exists or eng_srt_path_exists:
-        srt_path = english_srt_path if english_srt_path_exists else eng_srt_path
-        log.info('{} found in directory. Attempting to convert.'.format(os.path.basename(srt_path)))
+        srt_path = (english_srt_path
+                    if english_srt_path_exists else eng_srt_path)
+        log.info(
+            '{} found in directory. Attempting to convert.'.format(
+                os.path.basename(srt_path)))
         dest_path = '%s.vtt' % os.path.splitext(dest)[0]
         vtt_filename = _convertSrtToVtt(srt_path)
         _moveSubtitleFile(vtt_filename,
                           dest_path)
     elif os.path.exists(file_srt_path):
-        log.info('{} found in directory. Attempting to convert.'.format(file_srt_path))
+        log.info(
+            '{} found in directory. Attempting to convert.'.format(
+                file_srt_path))
         dest_path = '%s.vtt' % os.path.splitext(dest)[0]
         vtt_filename = _convertSrtToVtt(file_srt_path)
         _moveSubtitleFile(vtt_filename,
@@ -125,6 +150,7 @@ def _handleSubtitles(source, dest, sres):
                           dest,
                           stream_identifier,
                           )
+
 
 def _reencodeVideo(source, dest, vres, ares, dryRun=False):
     file_size = os.path.getsize(source)
@@ -194,12 +220,16 @@ def _reencodeVideo(source, dest, vres, ares, dryRun=False):
 
     log.info(command)
     if not dryRun:
-        process = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE) #nosec
+        process = Popen(command,
+                        stdin=PIPE,
+                        stdout=PIPE,
+                        stderr=PIPE)  # nosec
         process.communicate()
 
         if process.returncode != 0:
             os.remove(dest)
             raise EncoderException('Encoding failed')
+
 
 def _moveSubtitleFile(source, dest, dryRun=False):
     srt_filename = '%s.srt' % os.path.splitext(source)[0]
@@ -209,7 +239,9 @@ def _moveSubtitleFile(source, dest, dryRun=False):
         log.info('Found associated subtitle')
         if not dryRun:
             try:
-                log.info('Moving subtitle from %s to %s' % (source_vtt_filename, dest_vtt_filename))
+                log.info(
+                    'Moving subtitle from %s to %s' % (source_vtt_filename,
+                                                       dest_vtt_filename))
                 shutil.move(source_vtt_filename, dest_vtt_filename)
             except Exception as e:
                 log.error(e)
@@ -222,6 +254,7 @@ def _moveSubtitleFile(source, dest, dryRun=False):
                 log.warn(e)
     else:
         log.warn('File not found: %s' % source_vtt_filename)
+
 
 def overwriteExistingFile(source,
                           dest,
@@ -248,7 +281,11 @@ def overwriteExistingFile(source,
     log.info("Finished renaming file")
     return dest
 
-def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal=True):
+
+def makeFileStreamable(filename,
+                       dryRun=False,
+                       appendSuffix=True,
+                       removeOriginal=True):
     if MEDIAVIEWER_SUFFIX in filename:
         raise Exception('File appears to already have been encoded. FAIL')
 
@@ -263,17 +300,25 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
     fixMetaData(new, dryRun=dryRun)
     log.info("Finished fixing metadata")
 
-    dest = overwriteExistingFile(new, orig, dryRun=dryRun, appendSuffix=appendSuffix, removeOriginal=removeOriginal)
+    dest = overwriteExistingFile(new,
+                                 orig,
+                                 dryRun=dryRun,
+                                 appendSuffix=appendSuffix,
+                                 removeOriginal=removeOriginal)
 
     log.info("Done")
     return dest
 
+
 def _getFilesInDirectory(fullPath):
     command = "find '%s' -maxdepth 10 -not -type d" % fullPath
-    p = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE) # nosec
+    p = Popen(shlex.split(command),
+              stdout=PIPE,
+              stderr=PIPE)  # nosec
     res = p.communicate()[0]
     tokens = res.split('\n')
     return set([x for x in tokens if x])
+
 
 def reencodeFilesInDirectory(fullPath, dryRun=False):
     errors = list()
