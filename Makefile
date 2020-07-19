@@ -8,4 +8,5 @@ shell:
 	docker run --rm -it -v $$(pwd):/workspace kyokley/mediaconverter /bin/sh
 
 autoformat:
-	docker run --rm -it -v $$(pwd):/workspace kyokley/mediaconverter /bin/sh -c "git ls-files | grep '\.py$$' | xargs black"
+	docker run --rm -it -v $$(pwd):/workspace kyokley/mediaconverter /bin/sh -c "git ls-files | grep '\.py$$' | xargs black && \
+                                                                               git ls-files | grep '\.py$$' | xargs isort"
