@@ -42,6 +42,10 @@ CMD /bin/sh
 
 FROM base as dev
 RUN apk add --update --no-cache \
+        linux-headers \
+        musl-dev \
+        gcc \
+        git \
         curl
 
 RUN curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
