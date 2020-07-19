@@ -38,7 +38,7 @@ WORKDIR /workspace
 
 FROM base as prod
 COPY . /workspace
-CMD /bin/sh
+CMD celery -A main worker --loglevel=debug --concurrency=1
 
 FROM base as dev
 RUN apk add --update --no-cache \
