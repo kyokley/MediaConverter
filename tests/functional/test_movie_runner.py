@@ -5,6 +5,7 @@ import shutil
 
 from movie_runner import MovieRunner
 
+
 class TestgetLocalMoviePathsFunctional(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
@@ -21,8 +22,7 @@ class TestgetLocalMoviePathsFunctional(unittest.TestCase):
 
     def test_path_exists(self):
         files = set([tempfile.mkstemp(dir=self.temp_dir)[1]
-                    for i in xrange(3)])
+                    for i in range(3)])
         expected = set([os.path.basename(x) for x in files])
         actual = self.movieRunner._getLocalMoviePaths(self.temp_dir)
         self.assertEqual(expected, actual)
-

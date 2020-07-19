@@ -3,42 +3,54 @@ import unittest
 
 from movie_runner import MovieRunner
 
+
 def gen_data(num):
-    return [dict(results=[dict(pk=i)]) for i in xrange(1, num + 1)]
+    return [dict(results=[dict(pk=i)]) for i in range(1, num + 1)]
+
 
 class TestPostMovies(unittest.TestCase):
     def setUp(self):
-        self.LOCAL_MOVIE_PATHS_patcher = mock.patch('movie_runner.LOCAL_MOVIE_PATHS', ['/path/to/movies'])
+        self.LOCAL_MOVIE_PATHS_patcher = mock.patch(
+            'movie_runner.LOCAL_MOVIE_PATHS', ['/path/to/movies'])
         self.LOCAL_MOVIE_PATHS_patcher.start()
 
-        self.promoteSubtitles_patcher = mock.patch('movie_runner.MovieRunner.promoteSubtitles')
+        self.promoteSubtitles_patcher = mock.patch(
+            'movie_runner.MovieRunner.promoteSubtitles')
         self.mock_promoteSubtitles = self.promoteSubtitles_patcher.start()
 
         self.Path_patcher = mock.patch('movie_runner.Path')
         self.mock_Path = self.Path_patcher.start()
 
-        self.getMovieFileSet_patcher = mock.patch('movie_runner.File.getMovieFileSet')
+        self.getMovieFileSet_patcher = mock.patch(
+            'movie_runner.File.getMovieFileSet')
         self.mock_getMovieFileSet = self.getMovieFileSet_patcher.start()
 
         self.exists_patcher = mock.patch('movie_runner.os.path.exists')
         self.mock_exists = self.exists_patcher.start()
 
-        self.reencodeFilesInDirectory_patcher = mock.patch('movie_runner.reencodeFilesInDirectory')
-        self.mock_reencodeFilesInDirectory = self.reencodeFilesInDirectory_patcher.start()
+        self.reencodeFilesInDirectory_patcher = mock.patch(
+            'movie_runner.reencodeFilesInDirectory')
+        self.mock_reencodeFilesInDirectory = (
+            self.reencodeFilesInDirectory_patcher.start())
 
-        self._getLocalMoviePaths_patcher = mock.patch('movie_runner.MovieRunner._getLocalMoviePaths')
+        self._getLocalMoviePaths_patcher = mock.patch(
+            'movie_runner.MovieRunner._getLocalMoviePaths')
         self.mock_getLocalMoviePaths = self._getLocalMoviePaths_patcher.start()
 
         self.log_patcher = mock.patch('movie_runner.log')
         self.mock_log = self.log_patcher.start()
 
-        self._postMovie_patcher = mock.patch('movie_runner.MovieRunner._postMovie')
+        self._postMovie_patcher = mock.patch(
+            'movie_runner.MovieRunner._postMovie')
         self.mock_postMovie = self._postMovie_patcher.start()
 
         self.mock_exists.return_value = True
-        self.mock_Path.getMoviePathByLocalPathAndRemotePath.side_effect = gen_data(5)
+        self.mock_Path.getMoviePathByLocalPathAndRemotePath.side_effect = (
+            gen_data(5))
         self.mock_getMovieFileSet.return_value = set(['movie1', 'movie3'])
-        self.mock_getLocalMoviePaths.return_value = ['movie1', 'movie2', 'movie3']
+        self.mock_getLocalMoviePaths.return_value = ['movie1',
+                                                     'movie2',
+                                                     'movie3']
         self.mock_reencodeFilesInDirectory.return_value = None
 
         self.movieRunner = MovieRunner()
@@ -60,20 +72,26 @@ class TestPostMovies(unittest.TestCase):
         self.assertEqual(expected, actual)
         self.assertEqual(self.movieRunner.errors, [])
 
-        self.mock_Path.assert_called_once_with('/path/to/movies', '/path/to/movies')
+        self.mock_Path.assert_called_once_with(
+            '/path/to/movies', '/path/to/movies')
         self.mock_Path.return_value.postMovie.assert_called_once_with()
-        self.mock_Path.getMoviePathByLocalPathAndRemotePath.assert_called_once_with('/path/to/movies',
-                                                                                    '/path/to/movies')
+        (self.mock_Path
+         .getMoviePathByLocalPathAndRemotePath
+         .assert_called_once_with('/path/to/movies',
+                                  '/path/to/movies'))
 
-        self.mock_log.info.assert_has_calls([mock.call('Found /path/to/movies/movie2'),
-                                             mock.call('Starting re-encoding of /path/to/movies/movie2...'),
-                                             mock.call('Posting /path/to/movies/movie2'),
-                                             ])
+        self.mock_log.info.assert_has_calls([
+            mock.call('Found /path/to/movies/movie2'),
+            mock.call('Starting re-encoding of /path/to/movies/movie2...'),
+            mock.call('Posting /path/to/movies/movie2'),
+        ])
         self.assertFalse(self.mock_log.error.called)
 
         self.mock_postMovie.assert_called_once_with('movie2', 1)
-        self.mock_reencodeFilesInDirectory.assert_called_once_with('/path/to/movies/movie2')
-        self.mock_promoteSubtitles.assert_called_once_with('/path/to/movies/movie2')
+        self.mock_reencodeFilesInDirectory.assert_called_once_with(
+            '/path/to/movies/movie2')
+        self.mock_promoteSubtitles.assert_called_once_with(
+            '/path/to/movies/movie2')
 
     def test_reencodeErrors(self):
         self.mock_reencodeFilesInDirectory.return_value = ['test_error']
@@ -83,45 +101,61 @@ class TestPostMovies(unittest.TestCase):
         self.assertEqual(expected, actual)
         self.assertEqual(self.movieRunner.errors, ['test_error'])
 
-        self.mock_Path.assert_called_once_with('/path/to/movies', '/path/to/movies')
+        self.mock_Path.assert_called_once_with(
+            '/path/to/movies', '/path/to/movies')
         self.mock_Path.return_value.postMovie.assert_called_once_with()
-        self.mock_Path.getMoviePathByLocalPathAndRemotePath.assert_called_once_with('/path/to/movies',
-                                                                                    '/path/to/movies')
+        (self.mock_Path
+         .getMoviePathByLocalPathAndRemotePath
+         .assert_called_once_with('/path/to/movies',
+                                  '/path/to/movies'))
 
-        self.mock_log.info.assert_has_calls([mock.call('Found /path/to/movies/movie2'),
-                                             mock.call('Starting re-encoding of /path/to/movies/movie2...'),
-                                             ])
+        self.mock_log.info.assert_has_calls([
+            mock.call('Found /path/to/movies/movie2'),
+            mock.call('Starting re-encoding of /path/to/movies/movie2...'),
+        ])
         self.assertFalse(self.mock_log.error.called)
 
         self.assertFalse(self.mock_postMovie.called)
-        self.mock_reencodeFilesInDirectory.assert_called_once_with('/path/to/movies/movie2')
-        self.mock_promoteSubtitles.assert_called_once_with('/path/to/movies/movie2')
+        self.mock_reencodeFilesInDirectory.assert_called_once_with(
+            '/path/to/movies/movie2')
+        self.mock_promoteSubtitles.assert_called_once_with(
+            '/path/to/movies/movie2')
 
     def test_unhandledException(self):
-        self.mock_reencodeFilesInDirectory.side_effect = Exception('Oh no! Something bad happened')
+        self.mock_reencodeFilesInDirectory.side_effect = Exception(
+            'Oh no! Something bad happened')
 
         self.assertRaises(Exception,
                           self.movieRunner.postMovies)
 
-        self.mock_Path.assert_called_once_with('/path/to/movies', '/path/to/movies')
+        self.mock_Path.assert_called_once_with(
+            '/path/to/movies', '/path/to/movies')
         self.mock_Path.return_value.postMovie.assert_called_once_with()
-        self.mock_Path.getMoviePathByLocalPathAndRemotePath.assert_called_once_with('/path/to/movies',
-                                                                                    '/path/to/movies')
+        (self.mock_Path
+         .getMoviePathByLocalPathAndRemotePath
+         .assert_called_once_with('/path/to/movies',
+                                  '/path/to/movies'))
 
-        self.mock_log.info.assert_has_calls([mock.call('Found /path/to/movies/movie2'),
-                                             mock.call('Starting re-encoding of /path/to/movies/movie2...'),
-                                             ])
-        self.mock_log.error.assert_has_calls([mock.call('Error processing /path/to/movies/movie2'),
-                                              mock.call('Oh no! Something bad happened'),
-                                              ])
+        self.mock_log.info.assert_has_calls([
+            mock.call('Found /path/to/movies/movie2'),
+            mock.call('Starting re-encoding of /path/to/movies/movie2...'),
+        ])
+        self.mock_log.error.assert_has_calls([
+            mock.call('Error processing /path/to/movies/movie2'),
+            mock.call('Oh no! Something bad happened'),
+        ])
 
         self.assertFalse(self.mock_postMovie.called)
-        self.mock_reencodeFilesInDirectory.assert_called_once_with('/path/to/movies/movie2')
-        self.mock_promoteSubtitles.assert_called_once_with('/path/to/movies/movie2')
+        self.mock_reencodeFilesInDirectory.assert_called_once_with(
+            '/path/to/movies/movie2')
+        self.mock_promoteSubtitles.assert_called_once_with(
+            '/path/to/movies/movie2')
+
 
 class TestRun(unittest.TestCase):
     def setUp(self):
-        self.postMovies_patcher = mock.patch('movie_runner.MovieRunner.postMovies')
+        self.postMovies_patcher = mock.patch(
+            'movie_runner.MovieRunner.postMovies')
         self.mock_postMovies = self.postMovies_patcher.start()
 
         self.debug_patcher = mock.patch('movie_runner.log.debug')
@@ -142,6 +176,7 @@ class TestRun(unittest.TestCase):
         self.assertEqual(expected, actual)
         self.mock_postMovies.assert_called_once_with()
         self.mock_debug.assert_called_once_with('Done running movies')
+
 
 class TestPromoteSubtitles(unittest.TestCase):
     def setUp(self):
@@ -216,8 +251,9 @@ class TestPromoteSubtitles(unittest.TestCase):
 
         self.assertEqual(expected, actual)
         self.mock_walk.assert_called_once_with('/path/to/movies/test_movie')
-        self.mock_rename.assert_called_once_with('/path/to/movies/test_movie/Subs/2_Eng.srt',
-                                                 '/path/to/movies/test_movie/2_Eng.srt')
+        self.mock_rename.assert_called_once_with(
+            '/path/to/movies/test_movie/Subs/2_Eng.srt',
+            '/path/to/movies/test_movie/2_Eng.srt')
 
     def test_rename_English(self):
         self.mock_walk.return_value = [('/path/to/movies/test_movie',
@@ -233,8 +269,10 @@ class TestPromoteSubtitles(unittest.TestCase):
 
         self.assertEqual(expected, actual)
         self.mock_walk.assert_called_once_with('/path/to/movies/test_movie')
-        self.mock_rename.assert_called_once_with('/path/to/movies/test_movie/Subs/English.srt',
-                                                 '/path/to/movies/test_movie/English.srt')
+        self.mock_rename.assert_called_once_with(
+            '/path/to/movies/test_movie/Subs/English.srt',
+            '/path/to/movies/test_movie/English.srt')
+
 
 class TestGetLocalMoviePaths(unittest.TestCase):
     def setUp(self):
@@ -268,9 +306,11 @@ class TestGetLocalMoviePaths(unittest.TestCase):
         self.mock_exists.assert_called_once_with('test_path')
         self.mock_listdir.assert_called_once_with('test_path')
 
+
 class TestPostMovie(unittest.TestCase):
     def setUp(self):
-        self.MEDIAVIEWER_MOVIE_FILE_URL_patcher = mock.patch('movie_runner.MEDIAVIEWER_MOVIE_FILE_URL', 'test_movie_file_url')
+        self.MEDIAVIEWER_MOVIE_FILE_URL_patcher = mock.patch(
+            'movie_runner.MEDIAVIEWER_MOVIE_FILE_URL', 'test_movie_file_url')
         self.MEDIAVIEWER_MOVIE_FILE_URL_patcher.start()
 
         self.postData_patcher = mock.patch('movie_runner.postData')
@@ -291,8 +331,9 @@ class TestPostMovie(unittest.TestCase):
         actual = self.movie_runner._postMovie(None, 123)
 
         self.assertEqual(expected, actual)
-        self.mock_error.assert_has_calls([mock.call('Invalid request'),
-                                          mock.call('Filename: None Pathid: 123')])
+        self.mock_error.assert_has_calls([
+            mock.call('Invalid request'),
+            mock.call('Filename: None Pathid: 123')])
         self.assertFalse(self.mock_postData.called)
 
     def test_invalid_pathid(self):
@@ -300,8 +341,9 @@ class TestPostMovie(unittest.TestCase):
         actual = self.movie_runner._postMovie('test_name', 0)
 
         self.assertEqual(expected, actual)
-        self.mock_error.assert_has_calls([mock.call('Invalid request'),
-                                          mock.call('Filename: test_name Pathid: 0')])
+        self.mock_error.assert_has_calls([
+            mock.call('Invalid request'),
+            mock.call('Filename: test_name Pathid: 0')])
         self.assertFalse(self.mock_postData.called)
 
     def test_valid(self):
@@ -317,4 +359,4 @@ class TestPostMovie(unittest.TestCase):
                                                     'finished': 1,
                                                     'streamable': True,
                                                     },
-                                                    'test_movie_file_url')
+                                                   'test_movie_file_url')

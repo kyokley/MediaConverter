@@ -7,9 +7,11 @@ import shutil
 from tv_runner import TvRunner
 from utils import MissingPathException
 
+
 class TestBuildLocalFileSetFunctional(unittest.TestCase):
     def setUp(self):
-        self.SMALL_FILE_SIZE_patcher = mock.patch('tv_runner.SMALL_FILE_SIZE', 201)
+        self.SMALL_FILE_SIZE_patcher = mock.patch(
+            'tv_runner.SMALL_FILE_SIZE', 201)
         self.SMALL_FILE_SIZE_patcher.start()
 
         self.temp_dir = tempfile.mkdtemp()
@@ -28,13 +30,14 @@ class TestBuildLocalFileSetFunctional(unittest.TestCase):
 
     def test_files_exist(self):
         files = [tempfile.mkstemp(dir=self.temp_dir)
-                    for i in xrange(4)]
+                    for i in range(4)]
 
         for i, file in enumerate(files):
             with open(file[1], 'wb') as f:
                 f.write(os.urandom(i * 100))
 
-        expected = set([os.path.basename(x[1]) for x in files if os.path.getsize(x[1]) > 201])
+        expected = {
+            os.path.basename(x[1])
+            for x in files if os.path.getsize(x[1]) > 201}
         actual = self.tv_runner.buildLocalFileSet(self.temp_dir)
         self.assertEqual(expected, actual)
-

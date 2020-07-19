@@ -4,6 +4,7 @@ import mock
 from mock import call
 from tv_runner import TvRunner
 
+
 class TestTvRunner(unittest.TestCase):
     def setUp(self):
         self._sort_unsorted_files_patcher = mock.patch('tv_runner.TvRunner._sort_unsorted_files')
