@@ -1,15 +1,18 @@
 import os
-from settings import (MEDIAVIEWER_MOVIE_FILE_URL,
-                      LOCAL_MOVIE_PATHS,
-                      SUBTITLE_FILES,
-                      )
+from settings import (
+    MEDIAVIEWER_MOVIE_FILE_URL,
+    LOCAL_MOVIE_PATHS,
+    SUBTITLE_FILES,
+)
 from convert import reencodeFilesInDirectory
 from utils import postData
 from path import Path
 from file import File
 
 from log import LogFile
+
 log = LogFile().getLogger()
+
 
 class MovieRunner(object):
     def __init__(self):
@@ -19,17 +22,16 @@ class MovieRunner(object):
     def postMovies(self):
         for moviepath in LOCAL_MOVIE_PATHS:
             if not os.path.exists(moviepath):
-                self.errors.append('{} does not exist. Continuing...'.format(moviepath))
+                self.errors.append("{} does not exist. Continuing...".format(moviepath))
                 continue
 
             path = Path(moviepath, moviepath)
             path.postMovie()
             data = Path.getMoviePathByLocalPathAndRemotePath(moviepath, moviepath)
-            pathid = data['results'][0]['pk']
+            pathid = data["results"][0]["pk"]
 
             results = File.getMovieFileSet(pathid)
-            fileset = set([os.path.join(moviepath, res)
-                           for res in results])
+            fileset = set([os.path.join(moviepath, res) for res in results])
 
             tokens = self._getLocalMoviePaths(moviepath)
 
@@ -75,21 +77,21 @@ class MovieRunner(object):
 
     def run(self):
         self.postMovies()
-        log.debug('Done running movies')
+        log.debug("Done running movies")
         return self.errors
 
     def _postMovie(self, name, pathid):
-        if (not name or
-                not pathid):
-            log.error('Invalid request')
-            log.error('Filename: {} Pathid: {}'.format(name, pathid))
+        if not name or not pathid:
+            log.error("Invalid request")
+            log.error("Filename: {} Pathid: {}".format(name, pathid))
             return
 
-        values = {'path': pathid,
-                  'filename': name,
-                  'skip': 1,
-                  'size': 0,
-                  'finished': 1,
-                  'streamable': True,
-                  }
+        values = {
+            "path": pathid,
+            "filename": name,
+            "skip": 1,
+            "size": 0,
+            "finished": 1,
+            "streamable": True,
+        }
         postData(values, MEDIAVIEWER_MOVIE_FILE_URL)
