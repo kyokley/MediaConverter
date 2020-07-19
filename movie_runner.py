@@ -1,15 +1,11 @@
 import os
-from settings import (
-    MEDIAVIEWER_MOVIE_FILE_URL,
-    LOCAL_MOVIE_PATHS,
-    SUBTITLE_FILES,
-)
-from convert import reencodeFilesInDirectory
-from utils import postData
-from path import Path
-from file import File
 
+from convert import reencodeFilesInDirectory
+from file import File
 from log import LogFile
+from path import Path
+from settings import LOCAL_MOVIE_PATHS, MEDIAVIEWER_MOVIE_FILE_URL, SUBTITLE_FILES
+from utils import postData
 
 log = LogFile().getLogger()
 

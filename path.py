@@ -1,19 +1,20 @@
-import requests
 import os
-from settings import (
-    SERVER_NAME,
-    MEDIAVIEWER_TV_PATH_URL,
-    MEDIAVIEWER_MOVIE_PATH_URL,
-    WAITER_USERNAME,
-    WAITER_PASSWORD,
-    LOCAL_TV_SHOWS_PATHS,
-    LOCAL_MOVIE_PATHS,
-    VERIFY_REQUESTS,
-    BASE_PATH,
-)
-from utils import postData
+
+import requests
 
 from log import LogFile
+from settings import (
+    BASE_PATH,
+    LOCAL_MOVIE_PATHS,
+    LOCAL_TV_SHOWS_PATHS,
+    MEDIAVIEWER_MOVIE_PATH_URL,
+    MEDIAVIEWER_TV_PATH_URL,
+    SERVER_NAME,
+    VERIFY_REQUESTS,
+    WAITER_PASSWORD,
+    WAITER_USERNAME,
+)
+from utils import postData
 
 log = LogFile().getLogger()
 

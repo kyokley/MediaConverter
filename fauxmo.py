@@ -28,7 +28,7 @@ THE SOFTWARE.
 # TODO(semartin): investigate time.sleep usage in here...
 
 import email.utils
-import requests
+import logging
 import select
 import socket
 import struct
@@ -36,7 +36,8 @@ import sys
 import time
 import urllib
 import uuid
-import logging
+
+import requests
 
 # This XML is the minimum needed to define one of our virtual switches
 # to the Amazon Echo

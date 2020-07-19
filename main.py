@@ -1,14 +1,10 @@
-from tv_runner import TvRunner
-from movie_runner import MovieRunner
-from settings import (
-    MEDIAVIEWER_INFER_SCRAPERS_URL,
-    SEND_EMAIL,
-    CELERY_VHOST,
-)
-from utils import postData, send_email
 from celery import Celery
 
 from log import LogFile
+from movie_runner import MovieRunner
+from settings import CELERY_VHOST, MEDIAVIEWER_INFER_SCRAPERS_URL, SEND_EMAIL
+from tv_runner import TvRunner
+from utils import postData, send_email
 
 log = LogFile().getLogger()
 

@@ -1,27 +1,29 @@
-import pytest
-import unittest
-import mock
-import tempfile
 import os
-import shutil
 import shlex
+import shutil
+import tempfile
+import unittest
 from subprocess import PIPE
+
+import mock
+import pytest
+
+from convert import (
+    _convertSrtToVtt,
+    _extractSubtitleFromVideo,
+    _extractSubtitles,
+    _getFilesInDirectory,
+    _handleSubtitles,
+    _moveSubtitleFile,
+    _reencodeVideo,
+    checkVideoEncoding,
+    encode,
+    fixMetaData,
+    makeFileStreamable,
+    overwriteExistingFile,
+)
 from settings import ENCODER
 from utils import EncoderException
-from convert import (
-    checkVideoEncoding,
-    fixMetaData,
-    _extractSubtitles,
-    _extractSubtitleFromVideo,
-    _convertSrtToVtt,
-    _moveSubtitleFile,
-    _handleSubtitles,
-    overwriteExistingFile,
-    makeFileStreamable,
-    encode,
-    _getFilesInDirectory,
-    _reencodeVideo,
-)
 
 
 class TestCheckVideoEncoding:

@@ -1,21 +1,20 @@
-import requests
 import os
-
-from unidecode import unidecode
 import smtplib
 
-from log import LogFile
+import requests
+from unidecode import unidecode
 
+from log import LogFile
 from settings import (
-    WAITER_USERNAME,
-    WAITER_PASSWORD,
-    GMAIL_USER,
-    GMAIL_PASSWORD,
     EMAIL_RECIPIENTS,
-    VERIFY_REQUESTS,
+    GMAIL_PASSWORD,
+    GMAIL_USER,
     MEDIA_FILE_EXTENSIONS,
-    SUBTITLE_EXTENSIONS,
     MEDIAVIEWER_INFER_SCRAPERS_URL,
+    SUBTITLE_EXTENSIONS,
+    VERIFY_REQUESTS,
+    WAITER_PASSWORD,
+    WAITER_USERNAME,
 )
 
 log = LogFile().getLogger()

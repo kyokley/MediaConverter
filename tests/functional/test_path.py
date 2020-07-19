@@ -1,7 +1,7 @@
-import unittest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
+import unittest
 
 from path import Path
 

@@ -1,8 +1,9 @@
-from scapy.all import sniff, ARP, BOOTP, DHCP
-from main import main
 from datetime import datetime
 
+from scapy.all import ARP, BOOTP, DHCP, sniff
+
 from log import LogFile
+from main import main
 
 log = LogFile().getLogger()
 

@@ -1,16 +1,16 @@
 import requests
-from settings import (
-    MEDIAVIEWER_MOVIE_FILE_URL,
-    MEDIAVIEWER_TV_FILE_URL,
-    MEDIAVIEWER_TV_PATHFILES_URL,
-    MEDIAVIEWER_MOVIE_PATHFILES_URL,
-    WAITER_USERNAME,
-    WAITER_PASSWORD,
-    VERIFY_REQUESTS,
-)
-from utils import postData
 
 from log import LogFile
+from settings import (
+    MEDIAVIEWER_MOVIE_FILE_URL,
+    MEDIAVIEWER_MOVIE_PATHFILES_URL,
+    MEDIAVIEWER_TV_FILE_URL,
+    MEDIAVIEWER_TV_PATHFILES_URL,
+    VERIFY_REQUESTS,
+    WAITER_PASSWORD,
+    WAITER_USERNAME,
+)
+from utils import postData
 
 log = LogFile().getLogger()
 

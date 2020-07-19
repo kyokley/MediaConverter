@@ -1,8 +1,6 @@
+from flask import Flask, request
+
 from main import main
-from flask import (
-    Flask,
-    request,
-)
 from settings import ALEXA_AUTH, DEBUG
 
 app = Flask(__name__)

@@ -1,13 +1,14 @@
 import unittest
+
 import mock
 import requests
 
 from utils import (
-    stripUnicode,
-    is_valid_media_file,
-    is_valid_subtitle_file,
     file_ext,
     get_localpath_by_filename,
+    is_valid_media_file,
+    is_valid_subtitle_file,
+    stripUnicode,
 )
 
 

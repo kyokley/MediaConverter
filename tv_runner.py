@@ -1,27 +1,21 @@
 import os
-import traceback
-import subprocess  # nosec
 import shlex
 import shutil
+import subprocess  # nosec
+import traceback
 
-from file import File
-from path import Path
-from settings import (
-    SEND_EMAIL,
-    MEDIA_FILE_EXTENSIONS,
-    SUBTITLE_FILES,
-    UNSORTED_PATHS,
-)
 from convert import makeFileStreamable
+from file import File
+from log import LogFile
+from path import Path
+from settings import MEDIA_FILE_EXTENSIONS, SEND_EMAIL, SUBTITLE_FILES, UNSORTED_PATHS
 from utils import (
-    stripUnicode,
     EncoderException,
     MissingPathException,
-    send_email,
     get_localpath_by_filename,
+    send_email,
+    stripUnicode,
 )
-
-from log import LogFile
 
 log = LogFile().getLogger()
 

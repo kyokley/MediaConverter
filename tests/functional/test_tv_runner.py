@@ -1,8 +1,9 @@
-import unittest
-import mock
-import tempfile
 import os
 import shutil
+import tempfile
+import unittest
+
+import mock
 
 from tv_runner import TvRunner
 from utils import MissingPathException

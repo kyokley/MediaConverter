@@ -1,20 +1,13 @@
 import os
-import shutil
 import shlex
+import shutil
 import sys
 from re import search
-from settings import (
-    MEDIAVIEWER_SUFFIX,
-    ENCODER,
-)
-from utils import (
-    stripUnicode,
-    EncoderException,
-    is_valid_media_file,
-)
-from subprocess import Popen, PIPE
+from subprocess import PIPE, Popen
 
 from log import LogFile
+from settings import ENCODER, MEDIAVIEWER_SUFFIX
+from utils import EncoderException, is_valid_media_file, stripUnicode
 
 log = LogFile().getLogger()
 

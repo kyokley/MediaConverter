@@ -1,8 +1,8 @@
-import os
 import argparse
+import os
 import shutil
 from datetime import datetime
-from subprocess import Popen, PIPE
+from subprocess import PIPE, Popen
 
 ENCODER = "ffmpeg"  # or 'avconv'
 

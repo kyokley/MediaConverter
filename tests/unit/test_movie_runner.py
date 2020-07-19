@@ -1,5 +1,6 @@
-import mock
 import unittest
+
+import mock
 
 from movie_runner import MovieRunner
 
