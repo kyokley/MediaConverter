@@ -23,9 +23,9 @@ class TestFile(unittest.TestCase):
 
         mock_requests.get.return_value = mock_request
 
-        expectedSet = set(["file1", "file2", "file3",])
+        expectedSet = set(["file1", "file2", "file3"])
 
-        self.assertEquals(expectedSet, self.file.getTVFileSet(1))
+        self.assertEqual(expectedSet, self.file.getTVFileSet(1))
 
     @mock.patch("file.postData")
     def test_post(self, mock_postData):

@@ -107,7 +107,7 @@ def get_localpath_by_filename(filename):
     try:
         resp.raise_for_status()
     except Exception:
-        log.warn("Unable to find path for {}".format(filename))
+        log.warning("Unable to find path for {}".format(filename))
         log.debug(resp.text)
         return
 

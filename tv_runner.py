@@ -133,7 +133,7 @@ class TvRunner(object):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
-        local_files = p.communicate()[0]
+        local_files = p.communicate()[0].decode("utf-8")
 
         if FIND_FAIL_STRING in local_files:
             raise MissingPathException("Path not found: %s" % path)

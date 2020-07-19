@@ -1,3 +1,4 @@
+import pytest
 import unittest
 import mock
 import tempfile
@@ -23,15 +24,12 @@ from convert import (
 )
 
 
-class TestCheckVideoEncoding(unittest.TestCase):
-    def setUp(self):
-        self.popen_patcher = mock.patch("convert.Popen")
-        self.mock_popen = self.popen_patcher.start()
-        self.addCleanup(self.popen_patcher.stop)
+class TestCheckVideoEncoding:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_popen = mocker.patch("convert.Popen")
 
-        self.log_patcher = mock.patch("convert.log")
-        self.mock_log = self.log_patcher.start()
-        self.addCleanup(self.log_patcher.stop)
+        self.mock_log = mocker.patch("convert.log")
 
         self.process = mock.MagicMock()
         self.mock_popen.return_value = self.process
@@ -41,9 +39,8 @@ class TestCheckVideoEncoding(unittest.TestCase):
     def test_bad_call(self):
         self.process.communicate.return_value = ("stdout", INVALID_SAMPLE_OUTPUT)
 
-        self.assertRaises(
-            EncoderException, callableObj=checkVideoEncoding, source=self.source
-        )
+        with pytest.raises(EncoderException):
+            checkVideoEncoding(source=self.source)
 
         self.mock_popen.assert_called_once_with(
             (ENCODER, "-hide_banner", "-i", self.source), stderr=PIPE
@@ -54,9 +51,9 @@ class TestCheckVideoEncoding(unittest.TestCase):
         self.process.communicate.return_value = ("stdout", VALID_SAMPLE_OUTPUT)
 
         vres, ares, sres, surround = checkVideoEncoding(self.source)
-        self.assertEqual(vres, 1)
-        self.assertEqual(ares, 0)
-        self.assertFalse(sres is None)
+        assert vres == 1
+        assert ares == 0
+        assert sres is not None
 
 
 class TestFixMetaData(unittest.TestCase):

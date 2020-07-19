@@ -22,15 +22,15 @@ class TestTvRunner(unittest.TestCase):
         fake_path = mock.MagicMock()
         fake_pks = mock.MagicMock()
         fake_paths = {
-            fake_path: {"pks": fake_pks, "finished": False,},
-            mock.MagicMock(): {"pks": mock.MagicMock(), "finished": True,},
+            fake_path: {"pks": fake_pks, "finished": False},
+            mock.MagicMock(): {"pks": mock.MagicMock(), "finished": True},
         }
 
         expected = {fake_path: fake_pks}
 
         mock_path.getAllTVPaths.return_value = fake_paths
         self.tvRunner.loadPaths()
-        self.assertEquals(expected, self.tvRunner.paths)
+        self.assertEqual(expected, self.tvRunner.paths)
 
     @mock.patch("tv_runner.Path")
     def test_getOrCreateRemotePath(self, mock_path):
@@ -41,7 +41,7 @@ class TestTvRunner(unittest.TestCase):
         mock_path.getTVPathByLocalPathAndRemotePath.return_value = testData
 
         actualPathID = self.tvRunner.getOrCreateRemotePath(testPath)
-        self.assertEquals(expectedPathID, actualPathID)
+        self.assertEqual(expectedPathID, actualPathID)
 
     @mock.patch("tv_runner.File")
     def test_buildRemoteFileSetForPathIDs(self, mock_file):
@@ -51,11 +51,11 @@ class TestTvRunner(unittest.TestCase):
             12: ["test12"],
             123: ["test123"],
         }
-        expectedSet = set(["test1", "test12", "test123",])
+        expectedSet = set(["test1", "test12", "test123"])
         mock_file.getTVFileSet = lambda x: testData.get(x)
 
         actualSet = self.tvRunner.buildRemoteFileSetForPathIDs([-1, 1, 12, 123])
-        self.assertEquals(expectedSet, actualSet)
+        self.assertEqual(expectedSet, actualSet)
 
     # TODO: Switch to using setUp/tearDown patching
     @mock.patch("tv_runner.os.path.basename")
@@ -79,8 +79,8 @@ class TestTvRunner(unittest.TestCase):
         mock_os_path_basename.return_value = "basename"
 
         test_path = "/a/local/path"
-        test_localFileSet = set(["file1", "file2", "file3", "newfile",])
-        test_remoteFileSet = set(["file1", "file2", "file3",])
+        test_localFileSet = set(["file1", "file2", "file3", "newfile"])
+        test_remoteFileSet = set(["file1", "file2", "file3"])
 
         self.tvRunner.updateFileRecords(
             test_path, test_localFileSet, test_remoteFileSet
@@ -134,7 +134,9 @@ class TestTvRunner(unittest.TestCase):
         )
         self.assertEqual(2, self.tvRunner.updateFileRecords.call_count)
 
-        self.tvRunner.handleDirs.assert_has_calls([call("sdfg"), call("asdf")])
+        self.tvRunner.handleDirs.assert_has_calls(
+            [call("sdfg"), call("asdf")], any_order=True
+        )
 
 
 class TestHandleDirs(unittest.TestCase):
@@ -285,7 +287,7 @@ class TestSortUnsortedFiles(unittest.TestCase):
 
         self.assertEqual(expected, actual)
         self.mock_exists.assert_has_calls(
-            [mock.call("/path/to/unsorted"), mock.call("/path/to/local/new.show"),]
+            [mock.call("/path/to/unsorted"), mock.call("/path/to/local/new.show")]
         )
         self.mock_get_localpath_by_filename.assert_called_once_with("new.show.s02e10")
         self.assertFalse(self.mock_move.called)
@@ -300,7 +302,7 @@ class TestSortUnsortedFiles(unittest.TestCase):
 
         self.assertEqual(expected, actual)
         self.mock_exists.assert_has_calls(
-            [mock.call("/path/to/unsorted"), mock.call("/path/to/local/new.show"),]
+            [mock.call("/path/to/unsorted"), mock.call("/path/to/local/new.show")]
         )
         self.mock_get_localpath_by_filename.assert_called_once_with("new.show.s02e10")
         self.mock_move.assert_called_once_with(
