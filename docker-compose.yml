@@ -3,11 +3,6 @@ version: "3.6"
 services:
   rabbitmq:
     image: 'rabbitmq:3.6-management-alpine'
-    ports:
-      # The standard AMQP protocol port
-      - '5672:5672'
-      # HTTP management UI
-      - '15672:15672'
     environment:
       # The location of the RabbitMQ server.  "amqp" is the protocol;
       # "rabbitmq" is the hostname.  Note that there is not a guarantee
