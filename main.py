@@ -8,7 +8,7 @@ from utils import postData, send_email
 
 log = LogFile().getLogger()
 
-app = Celery("tasks", broker="amqp://guest@localhost/%s" % CELERY_VHOST)
+app = Celery("tasks", broker=f"amqp://guest@rabbitmq/{CELERY_VHOST}")
 
 
 @app.task(name="main.main", serializer="json")
