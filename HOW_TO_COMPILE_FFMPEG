@@ -1,9 +1,10 @@
-sudo aptitude install -y yasm \
+sudo apt install -y yasm \
                          cmake \
                          cmake-curses-gui \
                          libvorbis-dev \
                          libx264-dev \
                          libx265-dev \
+                         libnuma-dev \
                          libvpx-dev \
                          libass-dev \
                          libfdk-aac-dev \
@@ -12,7 +13,7 @@ sudo aptitude install -y yasm \
                          libtheora-dev
 
 cd /tmp
-hg clone https://bitbucket.org/multicoreware/x265
+git clone https://github.com/videolan/x265
 cd x265/build/linux
 ./make-Makefiles.bash
 make
@@ -28,8 +29,9 @@ PKG_CONFIG_PATH="/usr/bin/pkg-config" ./configure \
   --prefix="$HOME/ffmpeg_build" \
   --pkg-config-flags="--static" \
   --extra-cflags="-I$HOME/ffmpeg_build/include" \
-  --extra-ldflags="-L$HOME/ffmpeg_build/lib" \
+  --extra-ldflags="-L$HOME/ffmpeg_build/lib -L/usr/local/lib" \
   --bindir="/usr/local/bin" \
+  --enable-static \
   --enable-gpl \
   --enable-libass \
   --enable-libfdk-aac \
