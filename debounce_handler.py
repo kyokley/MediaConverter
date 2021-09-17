@@ -1,5 +1,6 @@
 import time
 
+
 class debounce_handler(object):
     """Use this handler to keep multiple Amazon Echo devices from reacting to
        the same voice command.
@@ -33,5 +34,3 @@ class debounce_handler(object):
 
         self.lastEcho = time.time()
         return False
-
-

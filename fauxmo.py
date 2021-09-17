@@ -162,15 +162,15 @@ class upnp_device(object):
         date_str = email.utils.formatdate(timeval=None, localtime=False, usegmt=True)
         location_url = self.root_url % {'ip_address' : self.ip_address, 'port' : self.port}
         message = ("HTTP/1.1 200 OK\r\n"
-                  "CACHE-CONTROL: max-age=86400\r\n"
-                  "DATE: %s\r\n"
-                  "EXT:\r\n"
-                  "LOCATION: %s\r\n"
-                  "OPT: \"http://schemas.upnp.org/upnp/1/0/\"; ns=01\r\n"
-                  "01-NLS: %s\r\n"
-                  "SERVER: %s\r\n"
-                  "ST: %s\r\n"
-                  "USN: uuid:%s::%s\r\n" % (date_str, location_url, self.uuid, self.server_version, search_target, self.persistent_uuid, search_target))
+                   "CACHE-CONTROL: max-age=86400\r\n"
+                   "DATE: %s\r\n"
+                   "EXT:\r\n"
+                   "LOCATION: %s\r\n"
+                   "OPT: \"http://schemas.upnp.org/upnp/1/0/\"; ns=01\r\n"
+                   "01-NLS: %s\r\n"
+                   "SERVER: %s\r\n"
+                   "ST: %s\r\n"
+                   "USN: uuid:%s::%s\r\n" % (date_str, location_url, self.uuid, self.server_version, search_target, self.persistent_uuid, search_target))
         if self.other_headers:
             for header in self.other_headers:
                 message += "%s\r\n" % header
@@ -277,27 +277,40 @@ class upnp_broadcast_responder(object):
         self.ip = '239.255.255.250'
         self.port = 1900
         try:
-            #This is needed to join a multicast group
-            self.mreq = struct.pack("4sl",socket.inet_aton(self.ip),socket.INADDR_ANY)
+            # This is needed to join a multicast group
+            self.mreq = struct.pack("4sl",
+                                    socket.inet_aton(self.ip),
+                                    socket.INADDR_ANY)
 
-            #Set up server socket
-            self.ssock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM,socket.IPPROTO_UDP)
-            self.ssock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+            # Set up server socket
+            self.ssock = socket.socket(socket.AF_INET,
+                                       socket.SOCK_DGRAM,
+                                       socket.IPPROTO_UDP)
+            self.ssock.setsockopt(socket.SOL_SOCKET,
+                                  socket.SO_REUSEADDR,
+                                  1)
 
             try:
-                self.ssock.bind(('',self.port))
-            except Exception, e:
-                dbg("WARNING: Failed to bind %s:%d: %s" , (self.ip,self.port,e))
+                self.ssock.bind(('',
+                                 self.port))
+            except Exception as e:
+                dbg("WARNING: Failed to bind %s:%d: %s",
+                    (self.ip,
+                     self.port,
+                     e))
                 ok = False
 
             try:
-                self.ssock.setsockopt(socket.IPPROTO_IP,socket.IP_ADD_MEMBERSHIP,self.mreq)
-            except Exception, e:
-                dbg('WARNING: Failed to join multicast group:',e)
+                self.ssock.setsockopt(socket.IPPROTO_IP,
+                                      socket.IP_ADD_MEMBERSHIP,
+                                      self.mreq)
+            except Exception as e:
+                dbg('WARNING: Failed to join multicast group:',
+                    e)
                 ok = False
 
-        except Exception, e:
-            dbg("Failed to initialize UPnP sockets:",e)
+        except Exception as e:
+            dbg("Failed to initialize UPnP sockets:", e)
             return False
         if ok:
             dbg("Listening for UPnP broadcasts")
@@ -315,8 +328,8 @@ class upnp_broadcast_responder(object):
             else:
                 pass
 
-    #Receive network data
-    def recvfrom(self,size):
+    # Receive network data
+    def recvfrom(self, size):
         if self.TIMEOUT:
             self.ssock.setblocking(0)
             ready = select.select([self.ssock], [], [], self.TIMEOUT)[0]
@@ -329,7 +342,7 @@ class upnp_broadcast_responder(object):
                 return self.ssock.recvfrom(size)
             else:
                 return False, False
-        except Exception, e:
+        except Exception as e:
             dbg(e)
             return False, False
 
@@ -350,11 +363,11 @@ class dummy_handler(object):
         self.name = name
 
     def on(self):
-        print self.name, "ON"
+        print(self.name, "ON")
         return True
 
     def off(self):
-        print self.name, "OFF"
+        print(self.name, "OFF")
         return True
 
 
@@ -370,6 +383,7 @@ class rest_api_handler(object):
     def off(self):
         r = requests.get(self.off_cmd)
         return r.status_code == 200
+
 
 if __name__ == "__main__":
     FAUXMOS = [
@@ -402,6 +416,6 @@ if __name__ == "__main__":
             # Allow time for a ctrl-c to stop the process
             p.poll(100)
             time.sleep(0.1)
-        except Exception, e:
+        except Exception as e:
             dbg(e)
             break

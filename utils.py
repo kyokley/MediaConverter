@@ -5,7 +5,6 @@ from unidecode import unidecode
 import smtplib
 
 from log import LogFile
-log = LogFile().getLogger()
 
 from settings import (WAITER_USERNAME,
                       WAITER_PASSWORD,
@@ -17,6 +16,9 @@ from settings import (WAITER_USERNAME,
                       SUBTITLE_EXTENSIONS,
                       MEDIAVIEWER_INFER_SCRAPERS_URL,
                       )
+
+log = LogFile().getLogger()
+
 
 class EncoderException(Exception):
     pass
@@ -31,7 +33,7 @@ def postData(values, url):
         request = requests.post(url, data=values, auth=(WAITER_USERNAME, WAITER_PASSWORD), verify=VERIFY_REQUESTS)
         request.raise_for_status()
         return request
-    except Exception, e:
+    except Exception as e:
         log.error(e)
         raise
 
@@ -52,9 +54,10 @@ def stripUnicode(filename, path=None):
     else:
         return strippedFilename
 
+
 def send_email(subject, body):
     log.info('sending error email')
-    message = """\From: %s\nTo: %s\nSubject: %s\n\n%s
+    message = """From: %s\nTo: %s\nSubject: %s\n\n%s
     """ % (GMAIL_USER, ", ".join(EMAIL_RECIPIENTS), subject, body)
     try:
         server = smtplib.SMTP("smtp.gmail.com", 587)

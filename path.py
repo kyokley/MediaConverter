@@ -136,7 +136,7 @@ class Path(object):
                                          localpath,
                                          remotepath,
                                          useMovieURL=False,
-                                        ):
+                                         ):
         payload = {'localpath': localpath, 'remotepath': remotepath}
         if useMovieURL:
             url = MEDIAVIEWER_MOVIE_PATH_URL

@@ -2,10 +2,12 @@ import logging
 from logging.handlers import RotatingFileHandler
 from settings import LOG_FILE_NAME
 
+
 class LogFile(object):
     logger = None
 
     _instance = None
+
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
             cls._instance = super(LogFile, cls).__new__(
@@ -28,5 +30,3 @@ class LogFile(object):
             cls.logger = log
 
         return cls.logger
-
-

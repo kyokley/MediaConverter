@@ -4,13 +4,16 @@ import shutil
 from datetime import datetime
 from subprocess import Popen, PIPE
 
-ENCODER = 'ffmpeg' # or 'avconv'
+ENCODER = 'ffmpeg'  # or 'avconv'
+
 
 class FileNotFound(Exception):
     pass
 
+
 class EncoderException(Exception):
     pass
+
 
 def recompress(filename, scale_down=False):
     if not os.path.exists(filename):
@@ -24,7 +27,7 @@ def recompress(filename, scale_down=False):
     command = [ENCODER,
                '-hide_banner',
                '-i',
-               filename,]
+               filename]
 
     if scale_down:
         command.extend(['-vf',
@@ -63,6 +66,7 @@ def recompress(filename, scale_down=False):
     shutil.move(tmp_filename, filename)
     print('Done moving {} to {}'.format(tmp_filename, filename))
 
+
 def recompress_multiple(filename, scale_down=False):
     if not os.path.exists(filename):
         raise FileNotFound('{} does not exist'.format(filename))
@@ -94,6 +98,7 @@ def main():
         recompress_multiple(args.sources, scale_down=args.scale_down)
     else:
         raise Exception('Invalid Input')
+
 
 if __name__ == '__main__':
     main()

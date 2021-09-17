@@ -11,6 +11,7 @@ from file import File
 from log import LogFile
 log = LogFile().getLogger()
 
+
 class MovieRunner(object):
     def __init__(self):
         self.movies = set()

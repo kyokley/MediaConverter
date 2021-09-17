@@ -12,6 +12,7 @@ from utils import postData
 from log import LogFile
 log = LogFile().getLogger()
 
+
 class File(object):
     def __init__(self,
                  filename,

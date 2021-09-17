@@ -10,9 +10,10 @@ DISCOVER_MESSAGE = ('message-type', 1)
 
 packets = []
 
+
 def arp_capture(pkt):
-    if ARP in pkt and pkt[ARP].op == 1: #who-has (request)
-        if pkt[ARP].psrc == '0.0.0.0': # nosec # ARP Probe
+    if ARP in pkt and pkt[ARP].op == 1:  # who-has (request)
+        if pkt[ARP].psrc == '0.0.0.0':  # nosec # ARP Probe
             if pkt[ARP].hwsrc == GATORADE:
                 log.debug('%s: Got a button press! Run the converter!' % datetime.now())
                 main.delay()
@@ -24,9 +25,11 @@ def arp_capture(pkt):
             log.debug('%s: Got a button press! Run the converter!' % datetime.now())
             main.delay()
 
+
 def dash():
     log.info('Starting up')
     sniff(prn=arp_capture, filter="arp or port 67", store=0)
+
 
 if __name__ == '__main__':
     dash()
