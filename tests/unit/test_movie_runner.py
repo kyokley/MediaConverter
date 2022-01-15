@@ -5,7 +5,7 @@ from movie_runner import MovieRunner
 
 
 def gen_data(num):
-    return [dict(results=[dict(pk=i)]) for i in xrange(1, num + 1)]
+    return [dict(results=[dict(pk=i)]) for i in range(1, num + 1)]
 
 
 class TestPostMovies(unittest.TestCase):

@@ -28,7 +28,7 @@ class TestBuildLocalFileSetFunctional(unittest.TestCase):
         )
 
     def test_files_exist(self):
-        files = [tempfile.mkstemp(dir=self.temp_dir) for i in xrange(4)]
+        files = [tempfile.mkstemp(dir=self.temp_dir) for i in range(4)]
 
         for i, file in enumerate(files):
             with open(file[1], "wb") as f:

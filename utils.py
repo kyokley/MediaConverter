@@ -47,7 +47,7 @@ def postData(values, url):
 
 
 def stripUnicode(filename, path=None):
-    strippedFilename = unidecode(filename.decode("utf-8")).replace("'", "")
+    strippedFilename = unidecode(filename).replace("'", "")
     if strippedFilename != filename:
         if path:
             currentDir = os.getcwd()

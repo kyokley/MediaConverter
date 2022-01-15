@@ -21,7 +21,7 @@ class TestgetLocalMoviePathsFunctional(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_path_exists(self):
-        files = set([tempfile.mkstemp(dir=self.temp_dir)[1] for i in xrange(3)])
+        files = set([tempfile.mkstemp(dir=self.temp_dir)[1] for i in range(3)])
         expected = set([os.path.basename(x) for x in files])
         actual = self.movieRunner._getLocalMoviePaths(self.temp_dir)
         self.assertEqual(expected, actual)

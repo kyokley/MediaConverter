@@ -21,7 +21,7 @@ class TestGetLocalPathsFunctional(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_paths_exist(self):
-        files = set([tempfile.mkstemp(dir=self.temp_dir)[1] for i in xrange(3)])
+        files = set([tempfile.mkstemp(dir=self.temp_dir)[1] for i in range(3)])
         expected = files
         actual = self.path._buildLocalPaths([self.temp_dir])
         self.assertEqual(expected, actual)
