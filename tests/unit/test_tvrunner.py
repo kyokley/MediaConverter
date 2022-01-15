@@ -36,7 +36,7 @@ class TestTvRunner(unittest.TestCase):
 
         mock_path.getAllTVPaths.return_value = fake_paths
         self.tvRunner.loadPaths()
-        self.assertEquals(expected, self.tvRunner.paths)
+        self.assertEqual(expected, self.tvRunner.paths)
 
     @mock.patch("tv_runner.Path")
     def test_getOrCreateRemotePath(self, mock_path):
@@ -47,7 +47,7 @@ class TestTvRunner(unittest.TestCase):
         mock_path.getTVPathByLocalPathAndRemotePath.return_value = testData
 
         actualPathID = self.tvRunner.getOrCreateRemotePath(testPath)
-        self.assertEquals(expectedPathID, actualPathID)
+        self.assertEqual(expectedPathID, actualPathID)
 
     @mock.patch("tv_runner.File")
     def test_buildRemoteFileSetForPathIDs(self, mock_file):
@@ -67,7 +67,7 @@ class TestTvRunner(unittest.TestCase):
         mock_file.getTVFileSet = lambda x: testData.get(x)
 
         actualSet = self.tvRunner.buildRemoteFileSetForPathIDs([-1, 1, 12, 123])
-        self.assertEquals(expectedSet, actualSet)
+        self.assertEqual(expectedSet, actualSet)
 
     # TODO: Switch to using setUp/tearDown patching
     @mock.patch("tv_runner.os.path.basename")

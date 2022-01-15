@@ -82,7 +82,7 @@ def _extractSubtitleFromVideo(
         try:
             os.remove(srt_filename)
         except OSError as e:
-            log.warn(e)
+            log.warning(e)
         raise EncoderException(err)
 
 
@@ -98,7 +98,7 @@ def _convertSrtToVtt(srt_filename):
         try:
             os.remove(vtt_filename)
         except OSError as e:
-            log.warn(e)
+            log.warning(e)
         raise EncoderException(err)
     return vtt_filename
 
@@ -291,9 +291,9 @@ def _moveSubtitleFile(source, dest, dryRun=False):
                 log.info("Removing old srt file %s" % srt_filename)
                 os.remove(srt_filename)
             except OSError as e:
-                log.warn(e)
+                log.warning(e)
     else:
-        log.warn("File not found: %s" % source_vtt_filename)
+        log.warning("File not found: %s" % source_vtt_filename)
 
 
 def overwriteExistingFile(

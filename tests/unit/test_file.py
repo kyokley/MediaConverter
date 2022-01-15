@@ -31,7 +31,7 @@ class TestFile(unittest.TestCase):
             ]
         )
 
-        self.assertEquals(expectedSet, self.file.getTVFileSet(1))
+        self.assertEqual(expectedSet, self.file.getTVFileSet(1))
 
     @mock.patch("file.postData")
     def test_post(self, mock_postData):
