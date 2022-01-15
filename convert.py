@@ -351,7 +351,7 @@ def _getFilesInDirectory(fullPath):
     command = "find '%s' -maxdepth 10 -not -type d" % fullPath
     p = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE)  # nosec
     res = p.communicate()[0]
-    tokens = res.split("\n")
+    tokens = res.split(b"\n")
     return set([x for x in tokens if x])
 
 

@@ -25,7 +25,7 @@ from log import LogFile
 
 log = LogFile().getLogger()
 
-FIND_FAIL_STRING = "No such file or directory"
+FIND_FAIL_STRING = b"No such file or directory"
 IGNORED_FILE_EXTENSIONS = (".vtt", ".srt")
 
 SMALL_FILE_SIZE = 1024 * 1024 * 10  # 10 MB
@@ -138,7 +138,7 @@ class TvRunner(object):
         if FIND_FAIL_STRING in local_files:
             raise MissingPathException("Path not found: %s" % path)
 
-        localFileSet = local_files.split("\n")
+        localFileSet = local_files.split(b"\n")
         localFileSet = set(
             [
                 os.path.basename(x)

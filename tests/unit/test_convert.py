@@ -1,4 +1,5 @@
 import unittest
+import pytest
 import mock
 import tempfile
 import os
@@ -23,15 +24,12 @@ from convert import (
 )
 
 
-class TestCheckVideoEncoding(unittest.TestCase):
-    def setUp(self):
-        self.popen_patcher = mock.patch("convert.Popen")
-        self.mock_popen = self.popen_patcher.start()
-        self.addCleanup(self.popen_patcher.stop)
+class TestCheckVideoEncoding:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_popen = mocker.patch("convert.Popen")
 
-        self.log_patcher = mock.patch("convert.log")
-        self.mock_log = self.log_patcher.start()
-        self.addCleanup(self.log_patcher.stop)
+        self.mock_log = mocker.patch("convert.log")
 
         self.process = mock.MagicMock()
         self.mock_popen.return_value = self.process
@@ -41,9 +39,8 @@ class TestCheckVideoEncoding(unittest.TestCase):
     def test_bad_call(self):
         self.process.communicate.return_value = ("stdout", INVALID_SAMPLE_OUTPUT)
 
-        self.assertRaises(
-            EncoderException, callableObj=checkVideoEncoding, source=self.source
-        )
+        with pytest.raises(EncoderException):
+            checkVideoEncoding(source=self.source)
 
         self.mock_popen.assert_called_once_with(
             (ENCODER, "-hide_banner", "-i", self.source), stderr=PIPE
@@ -54,9 +51,9 @@ class TestCheckVideoEncoding(unittest.TestCase):
         self.process.communicate.return_value = ("stdout", VALID_SAMPLE_OUTPUT)
 
         vres, ares, sres, surround = checkVideoEncoding(self.source)
-        self.assertEqual(vres, 1)
-        self.assertEqual(ares, 0)
-        self.assertFalse(sres is None)
+        assert vres == 1
+        assert ares == 0
+        assert sres is not None
 
 
 class TestFixMetaData(unittest.TestCase):
@@ -653,39 +650,40 @@ class TestHandleSubtitles(unittest.TestCase):
         self.assertFalse(self.sres.groups.called)
 
 
-class TestGetFilesInDirectory(unittest.TestCase):
+class TestGetFilesInDirectory:
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
 
-    def tearDown(self):
+        yield
         shutil.rmtree(self.temp_dir)
 
     def test_path_does_not_exist(self):
         non_existent_path = os.path.join(self.temp_dir, "test_file")
         expected = set()
         actual = _getFilesInDirectory(non_existent_path)
-        self.assertEqual(expected, actual)
+        assert expected == actual
 
     def test_path_is_empty(self):
         expected = set()
         actual = _getFilesInDirectory(self.temp_dir)
-        self.assertEqual(expected, actual)
+        assert expected == actual
 
     def test_files_exist(self):
         files = [tempfile.mkstemp(dir=self.temp_dir) for i in range(3)]
-        expected = set([x[1] for x in files])
+        expected = set([x[1].encode('utf-8') for x in files])
         actual = _getFilesInDirectory(self.temp_dir)
-        self.assertEqual(expected, actual)
+        assert expected == actual
 
     def test_nested_files_exist(self):
         expected = set()
         dirs = [tempfile.mkdtemp(dir=self.temp_dir) for i in range(3)]
         for dir in dirs:
-            files = [tempfile.mkstemp(dir=dir)[1] for i in range(3)]
+            files = [tempfile.mkstemp(dir=dir)[1].encode('utf-8') for i in range(3)]
             expected.update(files)
 
         actual = _getFilesInDirectory(self.temp_dir)
-        self.assertEqual(expected, actual)
+        assert expected == actual
 
 
 class TestReencodeVideo(unittest.TestCase):

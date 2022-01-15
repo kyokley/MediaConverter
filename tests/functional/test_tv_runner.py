@@ -1,4 +1,4 @@
-import unittest
+import pytest
 import mock
 import tempfile
 import os
@@ -8,7 +8,8 @@ from tv_runner import TvRunner
 from utils import MissingPathException
 
 
-class TestBuildLocalFileSetFunctional(unittest.TestCase):
+class TestBuildLocalFileSetFunctional:
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.SMALL_FILE_SIZE_patcher = mock.patch("tv_runner.SMALL_FILE_SIZE", 201)
         self.SMALL_FILE_SIZE_patcher.start()
@@ -17,15 +18,14 @@ class TestBuildLocalFileSetFunctional(unittest.TestCase):
 
         self.tv_runner = TvRunner()
 
-    def tearDown(self):
+        yield
         self.SMALL_FILE_SIZE_patcher.stop()
         shutil.rmtree(self.temp_dir)
 
     def test_file_does_not_exist(self):
         path_name = os.path.join(self.temp_dir, "test_file")
-        self.assertRaises(
-            MissingPathException, self.tv_runner.buildLocalFileSet, path_name
-        )
+        with pytest.raises(MissingPathException):
+            self.tv_runner.buildLocalFileSet(path_name)
 
     def test_files_exist(self):
         files = [tempfile.mkstemp(dir=self.temp_dir) for i in range(4)]
@@ -35,7 +35,7 @@ class TestBuildLocalFileSetFunctional(unittest.TestCase):
                 f.write(os.urandom(i * 100))
 
         expected = set(
-            [os.path.basename(x[1]) for x in files if os.path.getsize(x[1]) > 201]
+            [os.path.basename(x[1]).encode('utf-8') for x in files if os.path.getsize(x[1]) > 201]
         )
         actual = self.tv_runner.buildLocalFileSet(self.temp_dir)
-        self.assertEqual(expected, actual)
+        assert expected == actual
