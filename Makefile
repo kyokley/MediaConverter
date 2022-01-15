@@ -10,5 +10,5 @@ shell: build-dev
 tests: build-dev
 	docker run --rm -it -v $$(pwd):/code kyokley/mediaconverter pytest
 
-autoformat:
-	docker-compose run --rm --no-deps kyokley/mediaconverter /venv/bin/black .
+autoformat: build-dev
+	docker run --rm -t -v $$(pwd):/code kyokley/mediaconverter /venv/bin/black .
