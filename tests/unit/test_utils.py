@@ -1,4 +1,5 @@
 import unittest
+import pytest
 import mock
 import requests
 
@@ -11,25 +12,13 @@ from utils import (
 )
 
 
-class TestStripUnicode(unittest.TestCase):
-    def setUp(self):
-        self.unidecode_patcher = mock.patch("utils.unidecode")
-        self.mock_unidecode = self.unidecode_patcher.start()
-
-        self.getcwd_patcher = mock.patch("utils.os.getcwd")
-        self.mock_getcwd = self.getcwd_patcher.start()
-
-        self.chdir_patcher = mock.patch("utils.os.chdir")
-        self.mock_chdir = self.chdir_patcher.start()
-
-        self.rename_patcher = mock.patch("utils.os.rename")
-        self.mock_rename = self.rename_patcher.start()
-
-    def tearDown(self):
-        self.unidecode_patcher.stop()
-        self.getcwd_patcher.stop()
-        self.chdir_patcher.stop()
-        self.rename_patcher.stop()
+class TestStripUnicode:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_unidecode = mocker.patch("utils.unidecode")
+        self.mock_getcwd = mocker.patch("utils.os.getcwd")
+        self.mock_chdir = mocker.patch("utils.os.chdir")
+        self.mock_rename = mocker.patch("utils.os.rename")
 
     def test_no_changes(self):
         self.mock_unidecode.return_value = "test_filename"
@@ -37,10 +26,10 @@ class TestStripUnicode(unittest.TestCase):
         expected = "test_filename"
         actual = stripUnicode("test_filename")
 
-        self.assertEqual(expected, actual)
-        self.assertFalse(self.mock_chdir.called)
-        self.assertFalse(self.mock_getcwd.called)
-        self.assertFalse(self.mock_rename.called)
+        assert expected == actual
+        assert not self.mock_chdir.called
+        assert not self.mock_getcwd.called
+        assert not self.mock_rename.called
 
     def test_with_changes(self):
         self.mock_unidecode.return_value = "test_stripped_filename"
@@ -48,9 +37,9 @@ class TestStripUnicode(unittest.TestCase):
         expected = "test_stripped_filename"
         actual = stripUnicode("test_filename")
 
-        self.assertEqual(expected, actual)
-        self.assertFalse(self.mock_getcwd.called)
-        self.assertFalse(self.mock_chdir.called)
+        assert expected == actual
+        assert not self.mock_getcwd.called
+        assert not self.mock_chdir.called
         self.mock_rename.assert_called_once_with(
             "test_filename", "test_stripped_filename"
         )
@@ -61,9 +50,9 @@ class TestStripUnicode(unittest.TestCase):
         expected = "its got an apostrophe"
         actual = stripUnicode("it's got an apostrophe")
 
-        self.assertEqual(expected, actual)
-        self.assertFalse(self.mock_getcwd.called)
-        self.assertFalse(self.mock_chdir.called)
+        assert expected == actual
+        assert not self.mock_getcwd.called
+        assert not self.mock_chdir.called
         self.mock_rename.assert_called_once_with(
             "it's got an apostrophe", "its got an apostrophe"
         )
@@ -74,7 +63,7 @@ class TestStripUnicode(unittest.TestCase):
         expected = "/new/path/test_stripped_filename"
         actual = stripUnicode("test_filename", path="/new/path")
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_chdir.assert_has_calls(
             [mock.call("/new/path"), mock.call(self.mock_getcwd.return_value)]
         )
