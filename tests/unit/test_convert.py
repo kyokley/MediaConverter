@@ -1,9 +1,5 @@
-import unittest
 import pytest
 import mock
-import tempfile
-import os
-import shutil
 import shlex
 from subprocess import PIPE
 from settings import ENCODER
@@ -19,7 +15,6 @@ from convert import (
     overwriteExistingFile,
     makeFileStreamable,
     encode,
-    _getFilesInDirectory,
     _reencodeVideo,
 )
 
@@ -56,11 +51,10 @@ class TestCheckVideoEncoding:
         assert sres is not None
 
 
-class TestFixMetaData(unittest.TestCase):
-    def setUp(self):
-        self.popen_patcher = mock.patch("convert.Popen")
-        self.mock_popen = self.popen_patcher.start()
-        self.addCleanup(self.popen_patcher.stop)
+class TestFixMetaData:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_popen = mocker.patch("convert.Popen")
 
         self.process = mock.MagicMock()
         self.mock_popen.return_value = self.process
@@ -69,8 +63,8 @@ class TestFixMetaData(unittest.TestCase):
     def test_dryRun(self):
         fixMetaData(self.source, dryRun=True)
 
-        self.assertFalse(self.mock_popen.called)
-        self.assertFalse(self.process.called)
+        assert not self.mock_popen.called
+        assert not self.process.called
 
     def test_noDryRun(self):
         fixMetaData(self.source, dryRun=False)
@@ -78,24 +72,19 @@ class TestFixMetaData(unittest.TestCase):
         self.mock_popen.assert_called_once_with(
             ("qtfaststart", self.source), stdin=PIPE, stdout=PIPE, stderr=PIPE
         )
-        self.assertTrue(self.process.communicate.called)
+        assert self.process.communicate.called
 
 
-class TestExtractSubtitles(unittest.TestCase):
-    def setUp(self):
-        self.extractSubtitleFromVideo_patcher = mock.patch(
+class TestExtractSubtitles:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_extractSubtitleFromVideo = mocker.patch(
             "convert._extractSubtitleFromVideo"
         )
-        self.mock_extractSubtitleFromVideo = (
-            self.extractSubtitleFromVideo_patcher.start()
-        )
-        self.addCleanup(self.extractSubtitleFromVideo_patcher.stop)
 
-        self.convertSrtToVtt_patcher = mock.patch("convert._convertSrtToVtt")
-        self.mock_convertSrtToVtt = self.convertSrtToVtt_patcher.start()
-        self.addCleanup(self.convertSrtToVtt_patcher.stop)
+        self.mock_convertSrtToVtt = mocker.patch("convert._convertSrtToVtt")
 
-    def test_(self):
+    def test_extract_subtitles(self):
         source = "/path/to/file.mp4"
         dest = "tmpfile.mp4"
         stream_identifier = "0:1"
@@ -110,19 +99,14 @@ class TestExtractSubtitles(unittest.TestCase):
         self.mock_convertSrtToVtt.assert_called_once_with(expected_srt)
 
 
-class TestExtractSubtitleFromVideo(unittest.TestCase):
-    def setUp(self):
-        self.popen_patcher = mock.patch("convert.Popen")
-        self.mock_popen = self.popen_patcher.start()
-        self.addCleanup(self.popen_patcher.stop)
+class TestExtractSubtitleFromVideo:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_popen = mocker.patch("convert.Popen")
 
-        self.log_patcher = mock.patch("convert.log")
-        self.mock_log = self.log_patcher.start()
-        self.addCleanup(self.log_patcher.stop)
+        self.mock_log = mocker.patch("convert.log")
 
-        self.remove_patcher = mock.patch("convert.os.remove")
-        self.mock_remove = self.remove_patcher.start()
-        self.addCleanup(self.remove_patcher.stop)
+        self.mock_remove = mocker.patch("convert.os.remove")
 
         self.process = mock.MagicMock()
         self.process.communicate.return_value = ("srt_stdout", "srt_stderr")
@@ -157,18 +141,17 @@ class TestExtractSubtitleFromVideo(unittest.TestCase):
             stdout=PIPE,
             stderr=PIPE,
         )
-        self.assertTrue(self.process.communicate.called)
+        assert self.process.communicate.called
 
     def test_subtitle_extract_failed(self):
         self.process.returncode = 1
 
-        self.assertRaises(
-            EncoderException,
-            _extractSubtitles,
-            self.source,
-            self.dest,
-            self.stream_identifier,
-        )
+        with pytest.raises(EncoderException):
+            _extractSubtitles(
+                self.source,
+                self.dest,
+                self.stream_identifier,
+            )
 
         self.mock_popen.assert_called_once_with(
             [
@@ -185,23 +168,18 @@ class TestExtractSubtitleFromVideo(unittest.TestCase):
             stdout=PIPE,
             stderr=PIPE,
         )
-        self.assertTrue(self.process.communicate.called)
-        self.assertTrue(self.mock_remove.called)
+        assert self.process.communicate.called
+        assert self.mock_remove.called
 
 
-class TestConvertSrtToVtt(unittest.TestCase):
-    def setUp(self):
-        self.popen_patcher = mock.patch("convert.Popen")
-        self.mock_popen = self.popen_patcher.start()
-        self.addCleanup(self.popen_patcher.stop)
+class TestConvertSrtToVtt:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_popen = mocker.patch("convert.Popen")
 
-        self.log_patcher = mock.patch("convert.log")
-        self.mock_log = self.log_patcher.start()
-        self.addCleanup(self.log_patcher.stop)
+        self.mock_log = mocker.patch("convert.log")
 
-        self.remove_patcher = mock.patch("convert.os.remove")
-        self.mock_remove = self.remove_patcher.start()
-        self.addCleanup(self.remove_patcher.stop)
+        self.mock_remove = mocker.patch("convert.os.remove")
 
         self.process = mock.MagicMock()
         self.process.communicate.return_value = ("vtt_stdout", "vtt_stderr")
@@ -219,17 +197,16 @@ class TestConvertSrtToVtt(unittest.TestCase):
             ["srt-vtt", "/path/to/file.srt"], stdin=PIPE, stdout=PIPE, stderr=PIPE
         )
         self.process.communicate.assert_called_once_with()
-        self.assertFalse(self.mock_remove.called)
-        self.assertEqual(expected, actual)
+        assert not self.mock_remove.called
+        assert expected == actual
 
     def test_vtt_extract_failed(self):
         self.process.returncode = 1
 
-        self.assertRaises(
-            EncoderException,
-            _convertSrtToVtt,
-            self.srt_filename,
-        )
+        with pytest.raises(EncoderException):
+            _convertSrtToVtt(
+                self.srt_filename
+            )
 
         self.mock_popen.assert_called_once_with(
             ["srt-vtt", "/path/to/file.srt"], stdin=PIPE, stdout=PIPE, stderr=PIPE
@@ -238,23 +215,16 @@ class TestConvertSrtToVtt(unittest.TestCase):
         self.mock_remove.assert_called_once_with("/path/to/file.vtt")
 
 
-class TestMoveSubtitleFile(unittest.TestCase):
-    def setUp(self):
-        self.log_patcher = mock.patch("convert.log")
-        self.mock_log = self.log_patcher.start()
-        self.addCleanup(self.log_patcher.stop)
+class TestMoveSubtitleFile:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_log = mocker.patch("convert.log")
 
-        self.exists_patcher = mock.patch("convert.os.path.exists")
-        self.mock_exists = self.exists_patcher.start()
-        self.addCleanup(self.exists_patcher.stop)
+        self.mock_exists = mocker.patch("convert.os.path.exists")
 
-        self.remove_patcher = mock.patch("convert.os.remove")
-        self.mock_remove = self.remove_patcher.start()
-        self.addCleanup(self.remove_patcher.stop)
+        self.mock_remove = mocker.patch("convert.os.remove")
 
-        self.move_patcher = mock.patch("convert.shutil.move")
-        self.mock_move = self.move_patcher.start()
-        self.addCleanup(self.move_patcher.stop)
+        self.mock_move = mocker.patch("convert.shutil.move")
 
         self.source = "tmpfile.mp4"
         self.dest = "/tmp/this.is.a.file.mp4"  # nosec
@@ -263,15 +233,15 @@ class TestMoveSubtitleFile(unittest.TestCase):
         self.mock_exists.return_value = False
         _moveSubtitleFile(self.source, self.dest, dryRun=False)
         self.mock_exists.assert_called_once_with("tmpfile.vtt")
-        self.assertFalse(self.mock_move.called)
-        self.assertFalse(self.mock_remove.called)
+        assert not self.mock_move.called
+        assert not self.mock_remove.called
 
     def test_subtitle_does_not_exist_dryRun(self):
         self.mock_exists.return_value = False
         _moveSubtitleFile(self.source, self.dest, dryRun=True)
         self.mock_exists.assert_called_once_with("tmpfile.vtt")
-        self.assertFalse(self.mock_move.called)
-        self.assertFalse(self.mock_remove.called)
+        assert not self.mock_move.called
+        assert not self.mock_remove.called
 
     def test_subtitle_exists_no_dryRun(self):
         self.mock_exists.return_value = True
@@ -287,32 +257,24 @@ class TestMoveSubtitleFile(unittest.TestCase):
         self.mock_exists.return_value = True
         _moveSubtitleFile(self.source, self.dest, dryRun=True)
         self.mock_exists.assert_called_once_with("tmpfile.vtt")
-        self.assertFalse(self.mock_move.called)
-        self.assertFalse(self.mock_remove.called)
+        assert not self.mock_move.called
+        assert not self.mock_remove.called
 
 
-@mock.patch("convert.MEDIAVIEWER_SUFFIX", "%s.suffix.mp4")
-class TestOverwriteExistingFile(unittest.TestCase):
-    def setUp(self):
-        self.log_patcher = mock.patch("convert.log")
-        self.mock_log = self.log_patcher.start()
-        self.addCleanup(self.log_patcher.stop)
+class TestOverwriteExistingFile:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        mocker.patch("convert.MEDIAVIEWER_SUFFIX", "%s.suffix.mp4")
 
-        self.exists_patcher = mock.patch("convert.os.path.exists")
-        self.mock_exists = self.exists_patcher.start()
-        self.addCleanup(self.exists_patcher.stop)
+        self.mock_log = mocker.patch("convert.log")
 
-        self.remove_patcher = mock.patch("convert.os.remove")
-        self.mock_remove = self.remove_patcher.start()
-        self.addCleanup(self.remove_patcher.stop)
+        self.mock_exists = mocker.patch("convert.os.path.exists")
 
-        self.move_patcher = mock.patch("convert.shutil.move")
-        self.mock_move = self.move_patcher.start()
-        self.addCleanup(self.move_patcher.stop)
+        self.mock_remove = mocker.patch("convert.os.remove")
 
-        self.moveSubtitleFile_patcher = mock.patch("convert._moveSubtitleFile")
-        self.mock_moveSubtitleFile = self.moveSubtitleFile_patcher.start()
-        self.addCleanup(self.moveSubtitleFile_patcher.stop)
+        self.mock_move = mocker.patch("convert.shutil.move")
+
+        self.mock_moveSubtitleFile = mocker.patch("convert._moveSubtitleFile")
 
         self.mock_exists.return_value = True
 
@@ -327,7 +289,7 @@ class TestOverwriteExistingFile(unittest.TestCase):
             dryRun=False,
             appendSuffix=False,
         )
-        self.assertFalse(self.mock_remove.called)
+        assert not self.mock_remove.called
         self.mock_move.assert_called_once_with(
             "tmpfile.mp4",
             "/tmp/this.is.a.file.mp4",  # nosec
@@ -335,7 +297,7 @@ class TestOverwriteExistingFile(unittest.TestCase):
         self.mock_moveSubtitleFile.assert_called_once_with(
             "tmpfile.mp4", "/tmp/this.is.a.file.mp4", dryRun=False
         )
-        self.assertEqual(res, "/tmp/this.is.a.file.mp4")
+        assert res == "/tmp/this.is.a.file.mp4"
 
     def test_removeOriginal_noDryRun_noSuffix(self):
         res = overwriteExistingFile(
@@ -350,7 +312,7 @@ class TestOverwriteExistingFile(unittest.TestCase):
         self.mock_moveSubtitleFile.assert_called_once_with(
             "tmpfile.mp4", "/tmp/this.is.a.file.mp4", dryRun=False
         )
-        self.assertEqual(res, "/tmp/this.is.a.file.mp4")
+        assert res == "/tmp/this.is.a.file.mp4"
 
     def test_keepOriginal_dryRun_noSuffix(self):
         res = overwriteExistingFile(
@@ -360,12 +322,12 @@ class TestOverwriteExistingFile(unittest.TestCase):
             dryRun=True,
             appendSuffix=False,
         )
-        self.assertFalse(self.mock_remove.called)
-        self.assertFalse(self.mock_move.called)
+        assert not self.mock_remove.called
+        assert not self.mock_move.called
         self.mock_moveSubtitleFile.assert_called_once_with(
             "tmpfile.mp4", "/tmp/this.is.a.file.mp4", dryRun=True
         )
-        self.assertEqual(res, "/tmp/this.is.a.file.mp4")
+        assert res == "/tmp/this.is.a.file.mp4"
 
     def test_removeOriginal_dryRun_noSuffix(self):
         res = overwriteExistingFile(
@@ -375,12 +337,12 @@ class TestOverwriteExistingFile(unittest.TestCase):
             dryRun=True,
             appendSuffix=False,
         )
-        self.assertFalse(self.mock_remove.called)
-        self.assertFalse(self.mock_move.called)
+        assert not self.mock_remove.called
+        assert not self.mock_move.called
         self.mock_moveSubtitleFile.assert_called_once_with(
             "tmpfile.mp4", "/tmp/this.is.a.file.mp4", dryRun=True
         )
-        self.assertEqual(res, "/tmp/this.is.a.file.mp4")
+        assert res == "/tmp/this.is.a.file.mp4"
 
     def test_keepOriginal_noDryRun_suffix(self):
         res = overwriteExistingFile(
@@ -390,14 +352,14 @@ class TestOverwriteExistingFile(unittest.TestCase):
             dryRun=False,
             appendSuffix=True,
         )
-        self.assertFalse(self.mock_remove.called)
+        assert not self.mock_remove.called
         self.mock_move.assert_called_once_with(
             "tmpfile.mp4", "/tmp/this.is.a.file.mp4.suffix.mp4"
         )
         self.mock_moveSubtitleFile.assert_called_once_with(
             "tmpfile.mp4", "/tmp/this.is.a.file.mp4.suffix.mp4", dryRun=False
         )
-        self.assertEqual(res, "/tmp/this.is.a.file.mp4.suffix.mp4")
+        assert res == "/tmp/this.is.a.file.mp4.suffix.mp4"
 
     def test_removeOriginal_noDryRun_suffix(self):
         res = overwriteExistingFile(
@@ -414,7 +376,7 @@ class TestOverwriteExistingFile(unittest.TestCase):
         self.mock_moveSubtitleFile.assert_called_once_with(
             "tmpfile.mp4", "/tmp/this.is.a.file.mp4.suffix.mp4", dryRun=False
         )
-        self.assertEqual(res, "/tmp/this.is.a.file.mp4.suffix.mp4")
+        assert res == "/tmp/this.is.a.file.mp4.suffix.mp4"
 
     def test_keepOriginal_dryRun_suffix(self):
         res = overwriteExistingFile(
@@ -424,12 +386,12 @@ class TestOverwriteExistingFile(unittest.TestCase):
             dryRun=True,
             appendSuffix=True,
         )
-        self.assertFalse(self.mock_remove.called)
-        self.assertFalse(self.mock_move.called)
+        assert not self.mock_remove.called
+        assert not self.mock_move.called
         self.mock_moveSubtitleFile.assert_called_once_with(
             "tmpfile.mp4", "/tmp/this.is.a.file.mp4.suffix.mp4", dryRun=True
         )
-        self.assertEqual(res, "/tmp/this.is.a.file.mp4.suffix.mp4")
+        assert res == "/tmp/this.is.a.file.mp4.suffix.mp4"
 
     def test_removeOriginal_dryRun_suffix(self):
         res = overwriteExistingFile(
@@ -439,37 +401,28 @@ class TestOverwriteExistingFile(unittest.TestCase):
             dryRun=True,
             appendSuffix=True,
         )
-        self.assertFalse(self.mock_remove.called)
-        self.assertFalse(self.mock_move.called)
+        assert not self.mock_remove.called
+        assert not self.mock_move.called
         self.mock_moveSubtitleFile.assert_called_once_with(
             "tmpfile.mp4", "/tmp/this.is.a.file.mp4.suffix.mp4", dryRun=True
         )
-        self.assertEqual(res, "/tmp/this.is.a.file.mp4.suffix.mp4")
+        assert res == "/tmp/this.is.a.file.mp4.suffix.mp4"
 
 
-class TestMakeFileStreamable(unittest.TestCase):
-    def setUp(self):
-        self.realpath_patcher = mock.patch("convert.os.path.realpath")
-        self.mock_realpath = self.realpath_patcher.start()
+class TestMakeFileStreamable:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_realpath = mocker.patch("convert.os.path.realpath")
         self.mock_realpath.return_value = "orig_filename"
-        self.addCleanup(self.realpath_patcher.stop)
 
-        self.log_patcher = mock.patch("convert.log")
-        self.mock_log = self.log_patcher.start()
-        self.addCleanup(self.log_patcher.stop)
+        self.mock_log = mocker.patch("convert.log")
 
-        self.encode_patcher = mock.patch("convert.encode")
-        self.mock_encode = self.encode_patcher.start()
-        self.addCleanup(self.encode_patcher.stop)
+        self.mock_encode = mocker.patch("convert.encode")
 
-        self.fixMetaData_patcher = mock.patch("convert.fixMetaData")
-        self.mock_fixMetaData = self.fixMetaData_patcher.start()
-        self.addCleanup(self.fixMetaData_patcher.stop)
+        self.mock_fixMetaData = mocker.patch("convert.fixMetaData")
 
-        self.overwriteExistingFile_patcher = mock.patch("convert.overwriteExistingFile")
-        self.mock_overwriteExistingFile = self.overwriteExistingFile_patcher.start()
+        self.mock_overwriteExistingFile = mocker.patch("convert.overwriteExistingFile")
         self.mock_overwriteExistingFile.return_value = "the_final_destination"
-        self.addCleanup(self.overwriteExistingFile_patcher.stop)
 
     def test_args_are_passed_along(self):
         dryRunSentinel = object()
@@ -481,7 +434,7 @@ class TestMakeFileStreamable(unittest.TestCase):
             appendSuffix=appendSuffixSentinel,
             removeOriginal=removeOriginalSentinel,
         )
-        self.assertEqual(res, "the_final_destination")
+        assert res == "the_final_destination"
         self.mock_realpath.assert_called_once_with("/tmp/this.is.a.file.mkv")
         self.mock_encode.assert_called_once_with(
             "orig_filename", "tmpfile.mp4", dryRun=dryRunSentinel
@@ -498,19 +451,14 @@ class TestMakeFileStreamable(unittest.TestCase):
         )
 
 
-class TestEncode(unittest.TestCase):
-    def setUp(self):
-        self.checkVideoEncoding_patcher = mock.patch("convert.checkVideoEncoding")
-        self.mock_checkVideoEncoding = self.checkVideoEncoding_patcher.start()
-        self.addCleanup(self.checkVideoEncoding_patcher.stop)
+class TestEncode:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_checkVideoEncoding = mocker.patch("convert.checkVideoEncoding")
 
-        self.handleSubtitle_patcher = mock.patch("convert._handleSubtitles")
-        self.mock_handleSubtitles = self.handleSubtitle_patcher.start()
-        self.addCleanup(self.handleSubtitle_patcher.stop)
+        self.mock_handleSubtitles = mocker.patch("convert._handleSubtitles")
 
-        self.reencodeVideo_patcher = mock.patch("convert._reencodeVideo")
-        self.mock_reencodeVideo = self.reencodeVideo_patcher.start()
-        self.addCleanup(self.reencodeVideo_patcher.stop)
+        self.mock_reencodeVideo = mocker.patch("convert._reencodeVideo")
 
         self.mock_vres = mock.MagicMock()
         self.mock_ares = mock.MagicMock()
@@ -544,28 +492,19 @@ class TestEncode(unittest.TestCase):
         )
 
 
-class TestHandleSubtitles(unittest.TestCase):
-    def setUp(self):
-        self.exists_patcher = mock.patch("convert.os.path.exists")
-        self.mock_exists = self.exists_patcher.start()
-        self.addCleanup(self.exists_patcher.stop)
+class TestHandleSubtitles:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_exists = mocker.patch("convert.os.path.exists")
 
-        self.log_patcher = mock.patch("convert.log")
-        self.mock_log = self.log_patcher.start()
-        self.addCleanup(self.log_patcher.stop)
+        self.mock_log = mocker.patch("convert.log")
 
-        self.convertSrtToVtt_patcher = mock.patch("convert._convertSrtToVtt")
-        self.mock_convertSrtToVtt = self.convertSrtToVtt_patcher.start()
-        self.addCleanup(self.convertSrtToVtt_patcher.stop)
+        self.mock_convertSrtToVtt = mocker.patch("convert._convertSrtToVtt")
         self.mock_convertSrtToVtt.return_value = "/path/to/English.vtt"
 
-        self.moveSubtitleFile_patcher = mock.patch("convert._moveSubtitleFile")
-        self.mock_moveSubtitleFile = self.moveSubtitleFile_patcher.start()
-        self.addCleanup(self.moveSubtitleFile_patcher.stop)
+        self.mock_moveSubtitleFile = mocker.patch("convert._moveSubtitleFile")
 
-        self.extractSubtitles_patcher = mock.patch("convert._extractSubtitles")
-        self.mock_extractSubtitles = self.extractSubtitles_patcher.start()
-        self.addCleanup(self.extractSubtitles_patcher.stop)
+        self.mock_extractSubtitles = mocker.patch("convert._extractSubtitles")
 
         self.source = "/path/to/file.mkv"
         self.dest = "tmpfile.mp4"
@@ -587,8 +526,8 @@ class TestHandleSubtitles(unittest.TestCase):
         self.mock_moveSubtitleFile.assert_called_once_with(
             "/path/to/English.vtt", "tmpfile.vtt"
         )
-        self.assertFalse(self.mock_extractSubtitles.called)
-        self.assertFalse(self.sres.groups.called)
+        assert not self.mock_extractSubtitles.called
+        assert not self.sres.groups.called
 
     def test_2_EngSrtExists(self):
         self.mock_exists.side_effect = [False, True, False]
@@ -605,8 +544,8 @@ class TestHandleSubtitles(unittest.TestCase):
         self.mock_moveSubtitleFile.assert_called_once_with(
             "/path/to/English.vtt", "tmpfile.vtt"
         )
-        self.assertFalse(self.mock_extractSubtitles.called)
-        self.assertFalse(self.sres.groups.called)
+        assert not self.mock_extractSubtitles.called
+        assert not self.sres.groups.called
 
     def test_FileSrtExists(self):
         self.mock_exists.side_effect = [False, False, False, True]
@@ -620,8 +559,8 @@ class TestHandleSubtitles(unittest.TestCase):
         self.mock_moveSubtitleFile.assert_called_once_with(
             "/path/to/file.vtt", "tmpfile.vtt"
         )
-        self.assertFalse(self.mock_extractSubtitles.called)
-        self.assertFalse(self.sres.groups.called)
+        assert not self.mock_extractSubtitles.called
+        assert not self.sres.groups.called
 
     def test_subtitleStreamInFile(self):
         self.mock_exists.return_value = False
@@ -630,8 +569,8 @@ class TestHandleSubtitles(unittest.TestCase):
 
         self.mock_exists.assert_any_call("/path/to/English.srt")
         self.mock_exists.assert_any_call("/path/to/file.srt")
-        self.assertFalse(self.mock_convertSrtToVtt.called)
-        self.assertFalse(self.mock_moveSubtitleFile.called)
+        assert not self.mock_convertSrtToVtt.called
+        assert not self.mock_moveSubtitleFile.called
         self.sres.groups.assert_called_once_with()
         self.mock_extractSubtitles.assert_called_once_with(
             self.source, self.dest, "3:4"
@@ -644,72 +583,29 @@ class TestHandleSubtitles(unittest.TestCase):
 
         self.mock_exists.assert_any_call("/path/to/English.srt")
         self.mock_exists.assert_any_call("/path/to/file.srt")
-        self.assertFalse(self.mock_convertSrtToVtt.called)
-        self.assertFalse(self.mock_moveSubtitleFile.called)
-        self.assertFalse(self.mock_extractSubtitles.called)
-        self.assertFalse(self.sres.groups.called)
+        assert not self.mock_convertSrtToVtt.called
+        assert not self.mock_moveSubtitleFile.called
+        assert not self.mock_extractSubtitles.called
+        assert not self.sres.groups.called
 
 
-class TestGetFilesInDirectory:
+class TestReencodeVideo:
     @pytest.fixture(autouse=True)
-    def setUp(self):
-        self.temp_dir = tempfile.mkdtemp()
+    def setUp(self, mocker):
+        self.mock_getsize = mocker.patch("convert.os.path.getsize")
 
-        yield
-        shutil.rmtree(self.temp_dir)
-
-    def test_path_does_not_exist(self):
-        non_existent_path = os.path.join(self.temp_dir, "test_file")
-        expected = set()
-        actual = _getFilesInDirectory(non_existent_path)
-        assert expected == actual
-
-    def test_path_is_empty(self):
-        expected = set()
-        actual = _getFilesInDirectory(self.temp_dir)
-        assert expected == actual
-
-    def test_files_exist(self):
-        files = [tempfile.mkstemp(dir=self.temp_dir) for i in range(3)]
-        expected = set([x[1].encode('utf-8') for x in files])
-        actual = _getFilesInDirectory(self.temp_dir)
-        assert expected == actual
-
-    def test_nested_files_exist(self):
-        expected = set()
-        dirs = [tempfile.mkdtemp(dir=self.temp_dir) for i in range(3)]
-        for dir in dirs:
-            files = [tempfile.mkstemp(dir=dir)[1].encode('utf-8') for i in range(3)]
-            expected.update(files)
-
-        actual = _getFilesInDirectory(self.temp_dir)
-        assert expected == actual
-
-
-class TestReencodeVideo(unittest.TestCase):
-    def setUp(self):
-        self.getsize_patcher = mock.patch("convert.os.path.getsize")
-        self.mock_getsize = self.getsize_patcher.start()
-
-        self.Popen_patcher = mock.patch("convert.Popen")
-        self.mock_Popen = self.Popen_patcher.start()
+        self.mock_Popen = mocker.patch("convert.Popen")
         self.mock_Popen.return_value.returncode = 0
 
-        self.ENCODER_patcher = mock.patch("convert.ENCODER", "test_encoder")
-        self.ENCODER_patcher.start()
+        mocker.patch("convert.ENCODER", "test_encoder")
 
         self.mock_getsize.return_value = 1000
-
-    def tearDown(self):
-        self.getsize_patcher.stop()
-        self.Popen_patcher.stop()
-        self.ENCODER_patcher.stop()
 
     def test_small_vres_ares(self):
         expected = None
         actual = _reencodeVideo("test_source", "test_dest", True, True, False)
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_Popen.assert_called_once_with(
             tuple(
                 shlex.split(
@@ -725,7 +621,7 @@ class TestReencodeVideo(unittest.TestCase):
         expected = None
         actual = _reencodeVideo("test_source", "test_dest", True, False, False)
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_Popen.assert_called_once_with(
             tuple(
                 shlex.split(
@@ -742,7 +638,7 @@ class TestReencodeVideo(unittest.TestCase):
         expected = None
         actual = _reencodeVideo("test_source", "test_dest", False, False, False)
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_Popen.assert_called_once_with(
             tuple(
                 shlex.split(
@@ -762,7 +658,7 @@ class TestReencodeVideo(unittest.TestCase):
         expected = None
         actual = _reencodeVideo("test_source", "test_dest", True, True, False)
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_Popen.assert_called_once_with(
             tuple(
                 shlex.split(
@@ -781,7 +677,7 @@ class TestReencodeVideo(unittest.TestCase):
         expected = None
         actual = _reencodeVideo("test_source", "test_dest", True, False, False)
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_Popen.assert_called_once_with(
             tuple(
                 shlex.split(
@@ -801,7 +697,7 @@ class TestReencodeVideo(unittest.TestCase):
         expected = None
         actual = _reencodeVideo("test_source", "test_dest", False, False, False)
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_Popen.assert_called_once_with(
             tuple(
                 shlex.split(
