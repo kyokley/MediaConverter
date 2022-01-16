@@ -4,7 +4,10 @@ import shutil
 import os
 
 from pathlib import Path
-from utils import (stripUnicode, is_valid_media_file)
+from utils import (stripUnicode,
+                   is_valid_media_file,
+                   is_valid_subtitle_file,
+                   )
 
 
 class CreateFileMixin:
@@ -92,3 +95,28 @@ class TestIsValidMediaFile(CreateFileMixin):
     def test_valid(self, ext):
         self._create_file(f"test_path.{ext}")
         assert is_valid_media_file(f"test_path.{ext}")
+
+
+class TestIsValidSubtitleFile(CreateFileMixin):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        self.current_dir = os.getcwd()
+        self.temp_dir = tempfile.mkdtemp()
+        os.chdir(self.temp_dir)
+
+        yield
+        shutil.rmtree(self.temp_dir)
+        os.chdir(self.current_dir)
+
+    def test_file_does_not_exist(self):
+        assert not is_valid_subtitle_file("test_path.srt")
+
+    def test_bad_extension(self):
+        self._create_file("test_path.txt")
+        assert not is_valid_subtitle_file("test_path.txt")
+
+    @pytest.mark.parametrize(
+        'ext', ('srt', 'SRT'))
+    def test_valid(self, ext):
+        self._create_file(f"test_path.{ext}")
+        assert is_valid_subtitle_file(f"test_path.{ext}")
