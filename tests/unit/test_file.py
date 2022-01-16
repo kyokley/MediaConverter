@@ -1,15 +1,17 @@
-import unittest
+import pytest
 import mock
 from file import File
 from settings import MEDIAVIEWER_TV_FILE_URL
 
 
-class TestFile(unittest.TestCase):
+class TestFile:
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.file = File("testfilename", 123, 234, True)
 
-    @mock.patch("file.requests")
-    def test_getFileSet(self, mock_requests):
+    def test_getFileSet(self, mocker):
+        mock_requests = mocker.patch("file.requests")
+
         test_data = {
             "next": None,
             "results": [
@@ -31,10 +33,10 @@ class TestFile(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(expectedSet, self.file.getTVFileSet(1))
+        assert expectedSet == self.file.getTVFileSet(1)
 
-    @mock.patch("file.postData")
-    def test_post(self, mock_postData):
+    def test_post(self, mocker):
+        mock_postData = mocker.patch("file.postData")
         expected = {
             "path": 123,
             "filename": "testfilename",
