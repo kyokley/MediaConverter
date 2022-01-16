@@ -1,24 +1,23 @@
 import unittest
+import pytest
 
 import mock
 from mock import call
 from tv_runner import TvRunner
 
 
-class TestTvRunner(unittest.TestCase):
-    def setUp(self):
-        self._sort_unsorted_files_patcher = mock.patch(
+class TestTvRunner:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_sort_unsorted_files = mocker.patch(
             "tv_runner.TvRunner._sort_unsorted_files"
         )
-        self.mock_sort_unsorted_files = self._sort_unsorted_files_patcher.start()
 
         self.tvRunner = TvRunner()
 
-    def tearDown(self):
-        self._sort_unsorted_files_patcher.stop()
+    def test_loadPaths(self, mocker):
+        mock_path = mocker.patch("tv_runner.Path")
 
-    @mock.patch("tv_runner.Path")
-    def test_loadPaths(self, mock_path):
         fake_path = mock.MagicMock()
         fake_pks = mock.MagicMock()
         fake_paths = {
@@ -36,10 +35,11 @@ class TestTvRunner(unittest.TestCase):
 
         mock_path.getAllTVPaths.return_value = fake_paths
         self.tvRunner.loadPaths()
-        self.assertEqual(expected, self.tvRunner.paths)
+        assert expected == self.tvRunner.paths
 
-    @mock.patch("tv_runner.Path")
-    def test_getOrCreateRemotePath(self, mock_path):
+    def test_getOrCreateRemotePath(self, mocker):
+        mock_path = mocker.patch("tv_runner.Path")
+
         expectedPathID = 123
         testData = {"results": [{"pk": expectedPathID}]}
         testPath = "test path"
@@ -47,10 +47,11 @@ class TestTvRunner(unittest.TestCase):
         mock_path.getTVPathByLocalPathAndRemotePath.return_value = testData
 
         actualPathID = self.tvRunner.getOrCreateRemotePath(testPath)
-        self.assertEqual(expectedPathID, actualPathID)
+        assert expectedPathID == actualPathID
 
-    @mock.patch("tv_runner.File")
-    def test_buildRemoteFileSetForPathIDs(self, mock_file):
+    def test_buildRemoteFileSetForPathIDs(self, mocker):
+        mock_file = mocker.patch("tv_runner.File")
+
         testData = {
             -1: ["invalid"],
             1: ["test1"],
@@ -67,24 +68,19 @@ class TestTvRunner(unittest.TestCase):
         mock_file.getTVFileSet = lambda x: testData.get(x)
 
         actualSet = self.tvRunner.buildRemoteFileSetForPathIDs([-1, 1, 12, 123])
-        self.assertEqual(expectedSet, actualSet)
+        assert expectedSet == actualSet
 
-    # TODO: Switch to using setUp/tearDown patching
-    @mock.patch("tv_runner.os.path.basename")
-    @mock.patch("tv_runner.os.path.getsize")
-    @mock.patch("tv_runner.os.path.exists")
-    @mock.patch("tv_runner.TvRunner.getOrCreateRemotePath")
-    @mock.patch("tv_runner.makeFileStreamable")
-    @mock.patch("tv_runner.File")
     def test_updateFileRecords(
         self,
-        mock_file,
-        mock_makeFileStreamable,
-        mock_getOrCreateRemotePath,
-        mock_os_path_exists,
-        mock_os_path_getsize,
-        mock_os_path_basename,
+        mocker
     ):
+        mock_file = mocker.patch("tv_runner.File")
+        mock_makeFileStreamable = mocker.patch("tv_runner.makeFileStreamable")
+        mock_getOrCreateRemotePath = mocker.patch("tv_runner.TvRunner.getOrCreateRemotePath")
+        mock_os_path_exists = mocker.patch("tv_runner.os.path.exists")
+        mock_os_path_getsize = mocker.patch("tv_runner.os.path.getsize")
+        mock_os_path_basename = mocker.patch("tv_runner.os.path.basename")
+
         mock_getOrCreateRemotePath.return_value = 1
         mock_os_path_exists.return_value = True
         mock_os_path_getsize.return_value = 1
@@ -144,11 +140,11 @@ class TestTvRunner(unittest.TestCase):
         self.tvRunner.buildLocalFileSet.assert_has_calls(
             [call("sdfg"), call("asdf")], any_order=True
         )
-        self.assertEqual(2, self.tvRunner.buildLocalFileSet.call_count)
+        assert 2 == self.tvRunner.buildLocalFileSet.call_count
         self.tvRunner.buildRemoteFileSetForPathIDs.assert_has_calls(
             [call([1]), call([12, 23])], any_order=True
         )
-        self.assertEqual(2, self.tvRunner.buildRemoteFileSetForPathIDs.call_count)
+        assert 2 == self.tvRunner.buildRemoteFileSetForPathIDs.call_count
 
         self.tvRunner.updateFileRecords.assert_has_calls(
             [
@@ -157,9 +153,9 @@ class TestTvRunner(unittest.TestCase):
             ],
             any_order=True,
         )
-        self.assertEqual(2, self.tvRunner.updateFileRecords.call_count)
+        assert 2 == self.tvRunner.updateFileRecords.call_count
 
-        self.tvRunner.handleDirs.assert_has_calls([call("sdfg"), call("asdf")])
+        self.tvRunner.handleDirs.assert_has_calls([call("asdf"), call("sdfg")])
 
 
 class TestHandleDirs(unittest.TestCase):
