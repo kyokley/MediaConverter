@@ -204,9 +204,7 @@ class TestConvertSrtToVtt:
         self.process.returncode = 1
 
         with pytest.raises(EncoderException):
-            _convertSrtToVtt(
-                self.srt_filename
-            )
+            _convertSrtToVtt(self.srt_filename)
 
         self.mock_popen.assert_called_once_with(
             ["srt-vtt", "/path/to/file.srt"], stdin=PIPE, stdout=PIPE, stderr=PIPE

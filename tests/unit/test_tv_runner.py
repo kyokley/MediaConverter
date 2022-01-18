@@ -69,13 +69,12 @@ class TestTvRunner:
         actualSet = self.tvRunner.buildRemoteFileSetForPathIDs([-1, 1, 12, 123])
         assert expectedSet == actualSet
 
-    def test_updateFileRecords(
-        self,
-        mocker
-    ):
+    def test_updateFileRecords(self, mocker):
         mock_file = mocker.patch("tv_runner.File")
         mock_makeFileStreamable = mocker.patch("tv_runner.makeFileStreamable")
-        mock_getOrCreateRemotePath = mocker.patch("tv_runner.TvRunner.getOrCreateRemotePath")
+        mock_getOrCreateRemotePath = mocker.patch(
+            "tv_runner.TvRunner.getOrCreateRemotePath"
+        )
         mock_os_path_exists = mocker.patch("tv_runner.os.path.exists")
         mock_os_path_getsize = mocker.patch("tv_runner.os.path.getsize")
         mock_os_path_basename = mocker.patch("tv_runner.os.path.basename")

@@ -29,7 +29,7 @@ class TestGetFilesInDirectory:
 
     def test_files_exist(self):
         files = [tempfile.mkstemp(dir=self.temp_dir) for i in range(3)]
-        expected = set([x[1].encode('utf-8') for x in files])
+        expected = set([x[1].encode("utf-8") for x in files])
         actual = _getFilesInDirectory(self.temp_dir)
         assert expected == actual
 
@@ -37,7 +37,7 @@ class TestGetFilesInDirectory:
         expected = set()
         dirs = [tempfile.mkdtemp(dir=self.temp_dir) for i in range(3)]
         for dir in dirs:
-            files = [tempfile.mkstemp(dir=dir)[1].encode('utf-8') for i in range(3)]
+            files = [tempfile.mkstemp(dir=dir)[1].encode("utf-8") for i in range(3)]
             expected.update(files)
 
         actual = _getFilesInDirectory(self.temp_dir)

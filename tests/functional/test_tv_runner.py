@@ -36,7 +36,11 @@ class TestBuildLocalFileSetFunctional:
                 f.write(os.urandom(i * 100))
 
         expected = set(
-            [os.path.basename(x[1]).encode('utf-8') for x in files if os.path.getsize(x[1]) > 201]
+            [
+                os.path.basename(x[1]).encode("utf-8")
+                for x in files
+                if os.path.getsize(x[1]) > 201
+            ]
         )
         actual = self.tv_runner.buildLocalFileSet(self.temp_dir)
         assert expected == actual
@@ -48,15 +52,13 @@ class TestSortUnsortedFiles:
         self.temp_dir = tempfile.mkdtemp()
         self.temp_dir_path = Path(self.temp_dir)
 
-        self.unsorted_path = self.temp_dir_path / 'unsorted'
+        self.unsorted_path = self.temp_dir_path / "unsorted"
         self.unsorted_path.mkdir()
 
-        self.local_path = self.temp_dir_path / 'local'
+        self.local_path = self.temp_dir_path / "local"
         self.local_path.mkdir()
 
-        mocker.patch(
-            "tv_runner.UNSORTED_PATHS", [str(self.unsorted_path)]
-        )
+        mocker.patch("tv_runner.UNSORTED_PATHS", [str(self.unsorted_path)])
 
         self.mock_get_localpath_by_filename = mocker.patch(
             "tv_runner.get_localpath_by_filename"
@@ -74,9 +76,9 @@ class TestSortUnsortedFiles:
 
     def test_no_localpath_for_filename(self):
         self.mock_get_localpath_by_filename.return_value = None
-        new_path = self.local_path / 'new.show.s02e10'
+        new_path = self.local_path / "new.show.s02e10"
 
-        unsorted_file_path = self.unsorted_path / 'new.show.s02e10'
+        unsorted_file_path = self.unsorted_path / "new.show.s02e10"
         unsorted_file_path.mkdir()
         assert self.tv_runner._sort_unsorted_files() is None
         assert unsorted_file_path.exists()
@@ -85,9 +87,9 @@ class TestSortUnsortedFiles:
     def test_localpath_does_not_exist(self):
         self.local_path.rmdir()
         self.mock_get_localpath_by_filename.return_value = str(self.local_path)
-        new_path = self.local_path / 'new.show.s02e10'
+        new_path = self.local_path / "new.show.s02e10"
 
-        unsorted_file_path = self.unsorted_path / 'new.show.s02e10'
+        unsorted_file_path = self.unsorted_path / "new.show.s02e10"
         unsorted_file_path.mkdir()
 
         assert self.tv_runner._sort_unsorted_files() is None
@@ -96,9 +98,9 @@ class TestSortUnsortedFiles:
 
     def test_localpath_for_filename(self):
         self.mock_get_localpath_by_filename.return_value = str(self.local_path)
-        new_path = self.local_path / 'new.show.s02e10'
+        new_path = self.local_path / "new.show.s02e10"
 
-        unsorted_file_path = self.unsorted_path / 'new.show.s02e10'
+        unsorted_file_path = self.unsorted_path / "new.show.s02e10"
         unsorted_file_path.mkdir()
         assert self.tv_runner._sort_unsorted_files() is None
         assert not unsorted_file_path.exists()
@@ -113,31 +115,33 @@ class TestHandleDirs:
         self.temp_dir = tempfile.mkdtemp()
         self.temp_dir_path = Path(self.temp_dir)
 
-        self.tv_dir = self.temp_dir_path / 'Test.Dir.Path'
+        self.tv_dir = self.temp_dir_path / "Test.Dir.Path"
         self.tv_dir.mkdir()
 
-        self.episode_dir = self.tv_dir / 'Test.Dir.Path.S04E01.WEBRip.x264-MV'
+        self.episode_dir = self.tv_dir / "Test.Dir.Path.S04E01.WEBRip.x264-MV"
         self.episode_dir.mkdir()
 
-        self.episode_file = self.episode_dir / 'Test.Dir.Path.S04E01.WEBRip.x264-MV.mp4'
-        with open(self.episode_file, 'w') as f:
+        self.episode_file = self.episode_dir / "Test.Dir.Path.S04E01.WEBRip.x264-MV.mp4"
+        with open(self.episode_file, "w") as f:
             f.seek(1500)
-            f.write('0')
+            f.write("0")
 
-        self.small_file = self.episode_dir / 'small.mp4'
-        with open(self.small_file, 'w') as f:
+        self.small_file = self.episode_dir / "small.mp4"
+        with open(self.small_file, "w") as f:
             f.seek(50)
-            f.write('0')
+            f.write("0")
 
-        self.sub_dir = self.episode_dir / 'Subs'
+        self.sub_dir = self.episode_dir / "Subs"
         self.sub_dir.mkdir()
 
-        self.sub_file = self.sub_dir / '2_Eng.srt'
+        self.sub_file = self.sub_dir / "2_Eng.srt"
         self.sub_file.touch()
 
-        self.expected_media_file = self.tv_dir / 'Test.Dir.Path.S04E01.WEBRip.x264-MV.mp4'
-        self.expected_sub_file = self.tv_dir / 'Test.Dir.Path.S04E01.WEBRip.x264-MV.srt'
-        self.non_existent_small_file = self.tv_dir / 'small.mp4'
+        self.expected_media_file = (
+            self.tv_dir / "Test.Dir.Path.S04E01.WEBRip.x264-MV.mp4"
+        )
+        self.expected_sub_file = self.tv_dir / "Test.Dir.Path.S04E01.WEBRip.x264-MV.srt"
+        self.non_existent_small_file = self.tv_dir / "small.mp4"
 
         self.tv_runner = TvRunner()
 

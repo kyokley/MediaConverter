@@ -19,17 +19,11 @@ class TestFileExt:
 class TestGetLocalpathByFilename:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker):
-        mocker.patch(
-            "utils.WAITER_USERNAME", "waiter_username"
-        )
+        mocker.patch("utils.WAITER_USERNAME", "waiter_username")
 
-        mocker.patch(
-            "utils.WAITER_PASSWORD", "waiter_password"
-        )
+        mocker.patch("utils.WAITER_PASSWORD", "waiter_password")
 
-        mocker.patch(
-            "utils.MEDIAVIEWER_INFER_SCRAPERS_URL", "test_url"
-        )
+        mocker.patch("utils.MEDIAVIEWER_INFER_SCRAPERS_URL", "test_url")
 
         self.mock_get = mocker.patch("utils.requests.get")
 

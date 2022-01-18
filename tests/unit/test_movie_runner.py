@@ -151,9 +151,7 @@ class TestRun:
 class TestPromoteSubtitles:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker):
-        mocker.patch(
-            "movie_runner.SUBTITLE_FILES", ("English.srt", "2_Eng.srt")
-        )
+        mocker.patch("movie_runner.SUBTITLE_FILES", ("English.srt", "2_Eng.srt"))
 
         self.mock_exists = mocker.patch("movie_runner.os.path.exists")
 
@@ -261,9 +259,7 @@ class TestGetLocalMoviePaths:
 class TestPostMovie:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker):
-        mocker.patch(
-            "movie_runner.MEDIAVIEWER_MOVIE_FILE_URL", "test_movie_file_url"
-        )
+        mocker.patch("movie_runner.MEDIAVIEWER_MOVIE_FILE_URL", "test_movie_file_url")
 
         self.mock_postData = mocker.patch("movie_runner.postData")
 

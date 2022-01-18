@@ -4,10 +4,11 @@ import shutil
 import os
 
 from pathlib import Path
-from utils import (stripUnicode,
-                   is_valid_media_file,
-                   is_valid_subtitle_file,
-                   )
+from utils import (
+    stripUnicode,
+    is_valid_media_file,
+    is_valid_subtitle_file,
+)
 
 
 class CreateFileMixin:
@@ -19,8 +20,8 @@ class CreateFileMixin:
             temp_path = temp_path / filename
         else:
             temp_path = Path(self.temp_dir) / filename
-        with open(temp_path, 'w') as f:
-            f.write('')
+        with open(temp_path, "w") as f:
+            f.write("")
 
 
 class TestStripUnicode(CreateFileMixin):
@@ -63,10 +64,10 @@ class TestStripUnicode(CreateFileMixin):
 
     def test_with_path(self):
         test_filename = "test_fi'lenameÐÆ"
-        self._create_file(test_filename, path='new_path')
+        self._create_file(test_filename, path="new_path")
 
         expected = f"{Path('new_path') / 'test_filenameDAE'}"
-        actual = stripUnicode(test_filename, path='new_path')
+        actual = stripUnicode(test_filename, path="new_path")
 
         assert expected == actual
 
@@ -90,8 +91,7 @@ class TestIsValidMediaFile(CreateFileMixin):
 
         assert not is_valid_media_file("test_path.txt")
 
-    @pytest.mark.parametrize(
-        'ext', ('mp4', 'MP4'))
+    @pytest.mark.parametrize("ext", ("mp4", "MP4"))
     def test_valid(self, ext):
         self._create_file(f"test_path.{ext}")
         assert is_valid_media_file(f"test_path.{ext}")
@@ -115,8 +115,7 @@ class TestIsValidSubtitleFile(CreateFileMixin):
         self._create_file("test_path.txt")
         assert not is_valid_subtitle_file("test_path.txt")
 
-    @pytest.mark.parametrize(
-        'ext', ('srt', 'SRT'))
+    @pytest.mark.parametrize("ext", ("srt", "SRT"))
     def test_valid(self, ext):
         self._create_file(f"test_path.{ext}")
         assert is_valid_subtitle_file(f"test_path.{ext}")
