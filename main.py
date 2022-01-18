@@ -1,3 +1,4 @@
+import os
 from tv_runner import TvRunner
 from movie_runner import MovieRunner
 from settings import (
@@ -12,7 +13,7 @@ from log import LogFile
 
 log = LogFile().getLogger()
 
-app = Celery("tasks", broker="amqp://guest@localhost/%s" % CELERY_VHOST)
+app = Celery("tasks", broker=f"{os.environ['BROKER']}/{CELERY_VHOST}")
 
 
 @app.task(name="main.main", serializer="json")

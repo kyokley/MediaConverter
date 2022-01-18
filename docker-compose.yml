@@ -1,0 +1,25 @@
+version: '3.6'
+
+services:
+  rabbitmq:
+    image: rabbitmq
+    ports:
+      - "5672:5672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=myuser
+      - RABBITMQ_DEFAULT_PASS=mypassword
+
+  mediaconverter:
+    build:
+      context: .
+      target: dev
+    depends_on:
+      - "rabbitmq"
+    tty: true
+    stdin_open: true
+    environment:
+      - BROKER=amqp://myuser:mypassword@rabbitmq:5672/
+    command:
+      bash -c "sleep 15 && /venv/bin/celery -A main worker --concurrency=1"
+    volumes:
+      - .:/code

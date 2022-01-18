@@ -75,6 +75,8 @@ COPY poetry.lock pyproject.toml /code/
 
 RUN $POETRY_VENV/bin/pip install poetry && $POETRY_VENV/bin/poetry install --no-dev
 
+CMD ["/venv/bin/celery", "-A", "main", "worker", "--loglevel=info", "--concurrency=1"]
+
 
 # ********************* Begin Prod Image ******************
 FROM base AS prod
