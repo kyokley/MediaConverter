@@ -4,8 +4,8 @@ services:
   rabbitmq:
     image: rabbitmq
     environment:
-      - RABBITMQ_DEFAULT_USER=myuser
-      - RABBITMQ_DEFAULT_PASS=mypassword
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
 
   mediaconverter:
     build:
@@ -16,7 +16,7 @@ services:
     tty: true
     stdin_open: true
     environment:
-      - BROKER=amqp://myuser:mypassword@rabbitmq:5672/
+      - BROKER=amqp://user:password@rabbitmq:5672/
     command:
       bash -c "sleep 15 && /venv/bin/celery -A main worker --concurrency=1"
     volumes:
