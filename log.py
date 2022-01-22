@@ -1,5 +1,6 @@
 import logging
 from logging.handlers import RotatingFileHandler
+from logging import StreamHandler
 from settings import LOG_FILE_NAME
 
 
@@ -29,6 +30,10 @@ class LogFile(object):
             )
             rfh.setFormatter(formatter)
             log.addHandler(rfh)
+
+            sth = StreamHandler()
+            sth.setFormatter(formatter)
+            log.addHandler(sth)
             cls.logger = log
 
         return cls.logger
