@@ -14,9 +14,9 @@ from utils import (
 )
 from subprocess import Popen, PIPE
 
-from log import LogFile
+import logging
 
-log = LogFile().getLogger()
+log = logging.getLogger(__name__)
 
 
 LARGE_FILE_SIZE = int(1024 * 1024 * 1024 * 1.25)  # 2 GB
@@ -307,7 +307,7 @@ def overwriteExistingFile(
         if removeOriginal and os.path.exists(dest):
             os.remove(dest)
 
-    dest = appendSuffix and MEDIAVIEWER_SUFFIX % dest or dest
+    dest = appendSuffix and f'{dest}.{MEDIAVIEWER_SUFFIX}' or dest
 
     log.info("Renaming file %s to %s" % (source, dest))
     if not dryRun:

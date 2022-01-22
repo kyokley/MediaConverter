@@ -1,4 +1,6 @@
 import os
+import logging
+
 from tv_runner import TvRunner
 from movie_runner import MovieRunner
 from settings import (
@@ -9,9 +11,7 @@ from settings import (
 from utils import postData, send_email
 from celery import Celery
 
-from log import LogFile
-
-log = LogFile().getLogger()
+log = logging.getLogger(__name__)
 
 app = Celery("tasks", broker=f"{os.environ['BROKER']}/{CELERY_VHOST}")
 

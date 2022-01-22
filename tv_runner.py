@@ -21,9 +21,9 @@ from utils import (
     get_localpath_by_filename,
 )
 
-from log import LogFile
+import logging
 
-log = LogFile().getLogger()
+log = logging.getLogger(__name__)
 
 FIND_FAIL_STRING = b"No such file or directory"
 IGNORED_FILE_EXTENSIONS = (".vtt", ".srt")

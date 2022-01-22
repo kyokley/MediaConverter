@@ -1,14 +1,6 @@
-import os
+import logging
 
-DEBUG = False
-
-CWD = os.getcwd()
-LOG_DIR = os.path.join(CWD, "logs")
-try:
-    os.makedirs(LOG_DIR)
-except OSError:
-    pass
-LOG_FILE_NAME = os.path.join(LOG_DIR, "converterLog")
+logging.getLogger().setLevel(level=logging.DEBUG)
 
 CELERY_VHOST = ""
 
@@ -36,7 +28,7 @@ MEDIAVIEWER_UNSTREAMABLE_FILE_URL = (
 )
 MEDIAVIEWER_INFER_SCRAPERS_URL = "https://127.0.0.1:8001/mediaviewer/api/inferscrapers/"
 
-MEDIAVIEWER_SUFFIX = "%s.mv-encoded.mp4"
+MEDIAVIEWER_SUFFIX = "mv-encoded.mp4"
 
 ENCODER = "ffmpeg"  # or 'avconv'
 

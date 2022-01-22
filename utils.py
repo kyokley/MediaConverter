@@ -4,7 +4,7 @@ import os
 from unidecode import unidecode
 import smtplib
 
-from log import LogFile
+import logging
 
 from settings import (
     WAITER_USERNAME,
@@ -18,7 +18,7 @@ from settings import (
     MEDIAVIEWER_INFER_SCRAPERS_URL,
 )
 
-log = LogFile().getLogger()
+log = logging.getLogger(__name__)
 
 
 class EncoderException(Exception):

@@ -13,9 +13,9 @@ from settings import (
 )
 from utils import postData
 
-from log import LogFile
+import logging
 
-log = LogFile().getLogger()
+log = logging.getLogger(__name__)
 
 
 class Path(object):

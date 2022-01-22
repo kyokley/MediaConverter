@@ -40,7 +40,7 @@ class TestCheckVideoEncoding:
         self.mock_popen.assert_called_once_with(
             (ENCODER, "-hide_banner", "-i", self.source), stderr=PIPE
         )
-        self.mock_log.error.assert_called_once_with(INVALID_SAMPLE_OUTPUT)
+        self.mock_log.error.assert_called_once_with(INVALID_SAMPLE_OUTPUT.decode())
 
     def test_good_call(self):
         self.process.communicate.return_value = ("stdout", VALID_SAMPLE_OUTPUT)
@@ -262,7 +262,7 @@ class TestMoveSubtitleFile:
 class TestOverwriteExistingFile:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker):
-        mocker.patch("convert.MEDIAVIEWER_SUFFIX", "%s.suffix.mp4")
+        mocker.patch("convert.MEDIAVIEWER_SUFFIX", "suffix.mp4")
 
         self.mock_log = mocker.patch("convert.log")
 
@@ -710,7 +710,7 @@ class TestReencodeVideo:
         )
 
 
-VALID_SAMPLE_OUTPUT = """
+VALID_SAMPLE_OUTPUT = b"""
 Input #0, matroska,webm, from '/tmp/test.mkv':
   Metadata:
     title           : Test
@@ -819,7 +819,7 @@ Input #0, matroska,webm, from '/tmp/test.mkv':
 At least one output file must be specified
 """
 
-INVALID_SAMPLE_OUTPUT = """
+INVALID_SAMPLE_OUTPUT = b"""
 Input #0, matroska,webm, from '/tmp/test.mkv':
   Metadata:
     title           : Test

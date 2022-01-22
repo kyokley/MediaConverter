@@ -9,9 +9,9 @@ from utils import postData
 from path import Path
 from file import File
 
-from log import LogFile
+import logging
 
-log = LogFile().getLogger()
+log = logging.getLogger(__name__)
 
 
 class MovieRunner(object):
