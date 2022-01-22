@@ -38,7 +38,7 @@ MEDIAVIEWER_INFER_SCRAPERS_URL = "https://127.0.0.1:8001/mediaviewer/api/infersc
 
 MEDIAVIEWER_SUFFIX = "%s.mv-encoded.mp4"
 
-ENCODER = "avconv"  # or 'ffmpeg'
+ENCODER = "ffmpeg"  # or 'avconv'
 
 MEDIA_FILE_EXTENSIONS = (
     ".mp4",

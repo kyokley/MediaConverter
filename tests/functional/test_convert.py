@@ -3,8 +3,11 @@ import tempfile
 import shutil
 import os
 
+
+from settings import MEDIAVIEWER_SUFFIX
 from convert import (
     _getFilesInDirectory,
+    makeFileStreamable,
 )
 
 
@@ -42,3 +45,23 @@ class TestGetFilesInDirectory:
 
         actual = _getFilesInDirectory(self.temp_dir)
         assert expected == actual
+
+
+class TestMakeFileStreamable:
+    @pytest.fixture(autouse=True)
+    def setUp(self, streamable_file_path):
+        self.streamable_file_path = streamable_file_path
+
+    def test_makeFileStreamable(self):
+        expected_new_file_path = self.streamable_file_path.parent / (MEDIAVIEWER_SUFFIX % self.streamable_file_path.name)
+
+        makeFileStreamable(str(self.streamable_file_path))
+        assert expected_new_file_path.exists()
+        assert not self.streamable_file_path.exists()
+
+    def test_dryRun(self):
+        expected_new_file_path = self.streamable_file_path.parent / (MEDIAVIEWER_SUFFIX % self.streamable_file_path.name)
+
+        makeFileStreamable(str(self.streamable_file_path), dryRun=True)
+        assert not expected_new_file_path.exists()
+        assert self.streamable_file_path.exists()

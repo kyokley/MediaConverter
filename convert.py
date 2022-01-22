@@ -24,15 +24,15 @@ LARGE_FILE_SIZE = int(1024 * 1024 * 1024 * 1.25)  # 2 GB
 
 def checkVideoEncoding(source):
     ffmpeg = Popen((ENCODER, "-hide_banner", "-i", source), stderr=PIPE)  # nosec
-    output = ffmpeg.communicate()[1]
+    output = ffmpeg.communicate()[1].decode('utf-8')
 
     # Can't check returncode here since we always get back 1
     if "At least one output file must be specified" != output.split("\n")[-2]:
         log.error(output)
         raise EncoderException(output)
 
-    vmatch = search("Video.*h264", output)
-    amatch = search("Audio.*aac", output)
+    vmatch = search(r"Video.*h264", output)
+    amatch = search(r"Audio.*aac", output)
     smatch = search(r"(\d+).(\d+)\(eng.*Subtitle", output)
     surround = search(r"Audio.*5\.1", output)
     return (vmatch and 1 or 0, amatch and 1 or 0, smatch, surround)
