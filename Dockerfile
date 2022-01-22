@@ -21,6 +21,7 @@ RUN sed -i -e's/ main/ main contrib non-free/g' /etc/apt/sources.list && \
         nasm \
         cmake \
         cmake-curses-gui \
+        libavcodec-dev \
         libvorbis-dev \
         libx264-dev \
         libx265-dev \
