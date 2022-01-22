@@ -22,6 +22,10 @@ log = LogFile().getLogger()
 LARGE_FILE_SIZE = int(1024 * 1024 * 1024 * 1.25)  # 2 GB
 
 
+class AlreadyEncoded(Exception):
+    """Raised when attempting to encoded a file previously encoded."""
+
+
 def checkVideoEncoding(source):
     ffmpeg = Popen((ENCODER, "-hide_banner", "-i", source), stderr=PIPE)  # nosec
     output = ffmpeg.communicate()[1].decode('utf-8')
@@ -322,7 +326,7 @@ def overwriteExistingFile(
 
 def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal=True):
     if MEDIAVIEWER_SUFFIX in filename:
-        raise Exception("File appears to already have been encoded. FAIL")
+        raise AlreadyEncoded("File appears to already have been encoded. FAIL")
 
     orig = os.path.realpath(filename)
     new = "tmpfile.mp4"

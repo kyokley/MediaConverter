@@ -8,6 +8,7 @@ from settings import MEDIAVIEWER_SUFFIX
 from convert import (
     _getFilesInDirectory,
     makeFileStreamable,
+    AlreadyEncoded,
 )
 
 
@@ -58,6 +59,9 @@ class TestMakeFileStreamable:
         makeFileStreamable(str(self.streamable_file_path))
         assert expected_new_file_path.exists()
         assert not self.streamable_file_path.exists()
+
+        with pytest.raises(AlreadyEncoded):
+            makeFileStreamable(str(expected_new_file_path))
 
     def test_dryRun(self):
         expected_new_file_path = self.streamable_file_path.parent / (MEDIAVIEWER_SUFFIX % self.streamable_file_path.name)
