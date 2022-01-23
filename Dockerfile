@@ -66,8 +66,18 @@ RUN PKG_CONFIG_PATH="/usr/bin/pkg-config" ./configure \
         --enable-nonfree && \
         make && \
         make install && \
-        ldconfig && \
-        rm -rf /tmp/x265 /tmp/ffmpeg_sources $HOME/ffmpeg_build
+        ldconfig
+
+
+WORKDIR /tmp/ffmpeg_sources
+RUN git clone https://github.com/nwoltman/srt-to-vtt-cl.git
+WORKDIR /tmp/ffmpeg_sources/srt-to-vtt-cl
+RUN make && \
+        find -name 'srt-vtt' | \
+            grep -i linux | \
+            head -n 1 | \
+            xargs -I{} cp {} /usr/local/bin/srt-vtt
+
 
 RUN $POETRY_VENV/bin/pip install -U pip poetry && $VIRTUAL_ENV/bin/pip install -U pip
 
@@ -75,6 +85,8 @@ WORKDIR /code
 COPY poetry.lock pyproject.toml /code/
 
 RUN $POETRY_VENV/bin/pip install poetry && $POETRY_VENV/bin/poetry install --no-dev
+
+RUN rm -rf /tmp/x265 /tmp/ffmpeg_sources $HOME/ffmpeg_build
 
 CMD ["/venv/bin/celery", "-A", "main", "worker", "--loglevel=info", "--concurrency=1"]
 

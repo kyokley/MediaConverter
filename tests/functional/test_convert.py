@@ -9,7 +9,11 @@ from convert import (
     _getFilesInDirectory,
     makeFileStreamable,
     AlreadyEncoded,
+    _handleSubtitles,
 )
+
+
+VTT_INDICATOR = 'WEBVTT'
 
 
 class TestGetFilesInDirectory:
@@ -69,3 +73,19 @@ class TestMakeFileStreamable:
         makeFileStreamable(str(self.streamable_file_path), dryRun=True)
         assert not expected_new_file_path.exists()
         assert self.streamable_file_path.exists()
+
+
+class TestHandleSubtitles:
+    @pytest.fixture(autouse=True)
+    def setUp(self, srt_file_path):
+        self.srt_file_path = srt_file_path
+
+    def test_handleSubtitles(self):
+        new_path = self.srt_file_path.parent / 'foo.vtt'
+
+        _handleSubtitles(self.srt_file_path, new_path, None)
+        assert new_path.exists()
+
+        with open(new_path, 'r') as f:
+            data = f.read()
+        assert VTT_INDICATOR in data
