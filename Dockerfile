@@ -119,6 +119,7 @@ COPY --from=builder /usr/local/bin/libx265* /usr/local/bin/
 COPY --from=builder /usr/local/lib/libx265* /usr/local/lib/
 
 RUN ldconfig
+WORKDIR /code
 
 # ********************* Begin Prod Image ******************
 FROM base AS prod
@@ -130,7 +131,6 @@ CMD ["/venv/bin/celery", "-A", "main", "worker", "--loglevel=info", "--concurren
 # ********************* Begin Dev Image ******************
 FROM base AS dev
 
-WORKDIR /code
 COPY poetry.lock pyproject.toml /code/
 
 RUN $POETRY_VENV/bin/pip install -U pip poetry && $VIRTUAL_ENV/bin/pip install -U pip
