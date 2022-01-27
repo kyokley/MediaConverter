@@ -2,7 +2,7 @@ build:
 	docker build -t kyokley/mediaconverter --target=prod .
 
 build-dev:
-	docker build -t kyokley/mediaconverter --target=dev .
+	docker-compose build
 
 shell: build-dev up
 	docker-compose exec mediaconverter /bin/bash

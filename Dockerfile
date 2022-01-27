@@ -1,6 +1,6 @@
 ARG BASE_IMAGE=python:3.10-slim
 
-FROM ${BASE_IMAGE} AS base
+FROM ${BASE_IMAGE} AS builder
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
@@ -33,18 +33,18 @@ RUN sed -i -e's/ main/ main contrib non-free/g' /etc/apt/sources.list && \
         libopus-dev \
         libtheora-dev
 
-WORKDIR /tmp
+WORKDIR /build
 RUN git clone https://github.com/videolan/x265
-WORKDIR  /tmp/x265
+WORKDIR  /build/x265
 RUN cmake source && \
         make && \
         make install
 
-WORKDIR /tmp/ffmpeg_sources
+WORKDIR /build/ffmpeg_sources
 RUN wget http://ffmpeg.org/releases/ffmpeg-snapshot.tar.bz2 && \
         tar xjvf ffmpeg-snapshot.tar.bz2
 
-WORKDIR /tmp/ffmpeg_sources/ffmpeg
+WORKDIR /build/ffmpeg_sources/ffmpeg
 RUN PKG_CONFIG_PATH="/usr/bin/pkg-config" ./configure \
         --prefix="$HOME/ffmpeg_build" \
         --pkg-config-flags="--static" \
@@ -69,9 +69,9 @@ RUN PKG_CONFIG_PATH="/usr/bin/pkg-config" ./configure \
         ldconfig
 
 
-WORKDIR /tmp/ffmpeg_sources
+WORKDIR /build/ffmpeg_sources
 RUN git clone https://github.com/nwoltman/srt-to-vtt-cl.git
-WORKDIR /tmp/ffmpeg_sources/srt-to-vtt-cl
+WORKDIR /build/ffmpeg_sources/srt-to-vtt-cl
 RUN make && \
         find -name 'srt-vtt' | \
             grep -i linux | \
@@ -86,16 +86,53 @@ COPY poetry.lock pyproject.toml /code/
 
 RUN $POETRY_VENV/bin/pip install poetry && $POETRY_VENV/bin/poetry install --no-dev
 
-RUN rm -rf /tmp/x265 /tmp/ffmpeg_sources $HOME/ffmpeg_build
+# RUN rm -rf /build/x265 /build/ffmpeg_sources $HOME/ffmpeg_build
 
-CMD ["/venv/bin/celery", "-A", "main", "worker", "--loglevel=info", "--concurrency=1"]
+FROM ${BASE_IMAGE} AS base
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
+ENV POETRY_VENV=/poetry_venv
+RUN python3 -m venv $POETRY_VENV
+
+ENV VIRTUAL_ENV=/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+RUN sed -i -e's/ main/ main contrib non-free/g' /etc/apt/sources.list && \
+    apt-get update && apt-get install -y \
+        libavcodec-dev \
+        libvorbis-dev \
+        libx264-dev \
+        libx265-dev \
+        libnuma-dev \
+        libvpx-dev \
+        libass-dev \
+        libfdk-aac-dev \
+        libmp3lame-dev \
+        libopus-dev \
+        libtheora-dev
+
+COPY --from=builder /venv /venv
+COPY --from=builder /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
+COPY --from=builder /usr/local/bin/srt-vtt /usr/local/bin/srt-vtt
+COPY --from=builder /usr/local/bin/libx265* /usr/local/bin/
+COPY --from=builder /usr/local/lib/libx265* /usr/local/lib/
+
+RUN ldconfig
 
 # ********************* Begin Prod Image ******************
 FROM base AS prod
+
 COPY . /code
 
+CMD ["/venv/bin/celery", "-A", "main", "worker", "--loglevel=info", "--concurrency=1"]
 
 # ********************* Begin Dev Image ******************
 FROM base AS dev
+
+WORKDIR /code
+COPY poetry.lock pyproject.toml /code/
+
+RUN $POETRY_VENV/bin/pip install -U pip poetry && $VIRTUAL_ENV/bin/pip install -U pip
+
 RUN $POETRY_VENV/bin/poetry install

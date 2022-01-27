@@ -11,6 +11,7 @@ services:
     build:
       context: .
       target: dev
+    image: kyokley/mediaconverter
     depends_on:
       - "rabbitmq"
     tty: true
