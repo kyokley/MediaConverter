@@ -8,7 +8,7 @@ shell: build-dev up
 	docker-compose exec mediaconverter /bin/bash
 
 tests: build-dev up
-	docker-compose exec mediaconverter pytest
+	docker-compose exec -T mediaconverter pytest
 
 autoformat: build-dev
 	docker-compose run --no-deps mediaconverter /venv/bin/black .
