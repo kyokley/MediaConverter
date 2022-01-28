@@ -115,7 +115,6 @@ RUN sed -i -e's/ main/ main contrib non-free/g' /etc/apt/sources.list && \
 COPY --from=builder /venv /venv
 COPY --from=builder /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
 COPY --from=builder /usr/local/bin/srt-vtt /usr/local/bin/srt-vtt
-COPY --from=builder /usr/local/bin/libx265* /usr/local/bin/
 COPY --from=builder /usr/local/lib/libx265* /usr/local/lib/
 
 RUN ldconfig
