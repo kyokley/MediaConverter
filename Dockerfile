@@ -130,6 +130,8 @@ CMD ["/venv/bin/celery", "-A", "main", "worker", "--loglevel=info", "--concurren
 # ********************* Begin Dev Image ******************
 FROM base AS dev
 
+RUN apt-get install -y g++
+
 COPY poetry.lock pyproject.toml /code/
 
 RUN $POETRY_VENV/bin/pip install -U pip poetry && $VIRTUAL_ENV/bin/pip install -U pip
