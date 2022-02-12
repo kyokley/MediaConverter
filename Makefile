@@ -1,8 +1,8 @@
 build:
-	docker build -t kyokley/mediaconverter --target=prod .
+	docker build -t kyokley/mediaconverter --target=prod --build-arg UID=$$(id -u) .
 
 build-dev:
-	docker-compose build
+	docker-compose build --build-arg UID=$$(id -u)
 
 shell: build-dev up
 	docker-compose exec mediaconverter /bin/bash
