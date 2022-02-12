@@ -12,21 +12,23 @@ LOCAL_TV_SHOWS_PATHS = ["tv_shows"]
 UNSORTED_PATHS = ["unsorted"]
 BASE_PATH = "/home/user"
 
-MEDIAVIEWER_MOVIE_PATH_URL = "https://127.0.0.1:8001/mediaviewer/api/moviepath/"
-MEDIAVIEWER_TV_PATH_URL = "https://127.0.0.1:8001/mediaviewer/api/tvpath/"
+DOMAIN = 'https://127.0.0.1:8001'  # Do not include trailing slash
 
-MEDIAVIEWER_MOVIE_FILE_URL = "https://127.0.0.1:8001/mediaviewer/api/movie/"
-MEDIAVIEWER_TV_FILE_URL = "https://127.0.0.1:8001/mediaviewer/api/tv/"
+MEDIAVIEWER_MOVIE_PATH_URL = f"{DOMAIN}/mediaviewer/api/moviepath/"
+MEDIAVIEWER_TV_PATH_URL = f"{DOMAIN}/mediaviewer/api/tvpath/"
 
-MEDIAVIEWER_TV_PATHFILES_URL = "https://127.0.0.1:8001/mediaviewer/api/tv/?pathid=%s"
+MEDIAVIEWER_MOVIE_FILE_URL = f"{DOMAIN}/mediaviewer/api/movie/"
+MEDIAVIEWER_TV_FILE_URL = f"{DOMAIN}/mediaviewer/api/tv/"
+
+MEDIAVIEWER_TV_PATHFILES_URL = f"{DOMAIN}/mediaviewer/api/tv/?pathid=%s"
 MEDIAVIEWER_MOVIE_PATHFILES_URL = (
-    "https://127.0.0.1:8001/mediaviewer/api/movie/?pathid=%s"
+    f"{DOMAIN}/mediaviewer/api/movie/?pathid=%s"
 )
 
 MEDIAVIEWER_UNSTREAMABLE_FILE_URL = (
-    "https://127.0.0.1:8001/mediaviewer/api/unstreamablefile/"
+    f"{DOMAIN}/mediaviewer/api/unstreamablefile/"
 )
-MEDIAVIEWER_INFER_SCRAPERS_URL = "https://127.0.0.1:8001/mediaviewer/api/inferscrapers/"
+MEDIAVIEWER_INFER_SCRAPERS_URL = f"{DOMAIN}/mediaviewer/api/inferscrapers/"
 
 MEDIAVIEWER_SUFFIX = "mv-encoded.mp4"
 
