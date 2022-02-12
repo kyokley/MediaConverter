@@ -10,7 +10,7 @@ services:
   mediaconverter:
     build:
       context: .
-      target: dev
+      target: dev-root
     image: kyokley/mediaconverter
     depends_on:
       - "rabbitmq"

@@ -1,0 +1,7 @@
+version: '3.6'
+
+services:
+  mediaconverter:
+    build:
+      target: dev
+    user: "${UID}:${GID}"
