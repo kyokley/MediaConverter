@@ -1,9 +1,14 @@
-publish:
+.PHONY: autoformat build build-dev ci-tests down exec publish shell tests up
+
+
+build:
 	docker build -t kyokley/mediaconverter --target=prod .
-	docker push kyokley/mediaconverter
 
 build-dev:
 	docker build -t kyokley/mediaconverter --target=dev .
+
+publish: build
+	docker push kyokley/mediaconverter
 
 shell: up
 	docker-compose exec mediaconverter /bin/bash
