@@ -15,10 +15,12 @@ from settings import (
     VERIFY_REQUESTS,
     MEDIA_FILE_EXTENSIONS,
     SUBTITLE_EXTENSIONS,
-    MEDIAVIEWER_INFER_SCRAPERS_URL,
+    DOMAIN,
 )
 
 log = logging.getLogger(__name__)
+
+MEDIAVIEWER_INFER_SCRAPERS_URL = f"{DOMAIN}/mediaviewer/api/inferscrapers/"
 
 
 class EncoderException(Exception):

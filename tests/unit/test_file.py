@@ -1,7 +1,6 @@
 import pytest
 import mock
-from file import File
-from settings import MEDIAVIEWER_TV_FILE_URL
+from file import File, MEDIAVIEWER_TV_FILE_URL
 
 
 class TestFile:

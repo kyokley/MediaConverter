@@ -1,13 +1,12 @@
 import os
 from settings import (
-    MEDIAVIEWER_MOVIE_FILE_URL,
     LOCAL_MOVIE_PATHS,
     SUBTITLE_FILES,
 )
 from convert import reencodeFilesInDirectory
 from utils import postData
 from path import Path
-from file import File
+from file import File, MEDIAVIEWER_MOVIE_FILE_URL
 
 import logging
 

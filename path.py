@@ -2,8 +2,7 @@ import requests
 import os
 from settings import (
     SERVER_NAME,
-    MEDIAVIEWER_TV_PATH_URL,
-    MEDIAVIEWER_MOVIE_PATH_URL,
+    DOMAIN,
     WAITER_USERNAME,
     WAITER_PASSWORD,
     LOCAL_TV_SHOWS_PATHS,
@@ -16,6 +15,9 @@ from utils import postData
 import logging
 
 log = logging.getLogger(__name__)
+
+MEDIAVIEWER_MOVIE_PATH_URL = f"{DOMAIN}/mediaviewer/api/moviepath/"
+MEDIAVIEWER_TV_PATH_URL = f"{DOMAIN}/mediaviewer/api/tvpath/"
 
 
 class Path(object):

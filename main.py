@@ -4,7 +4,7 @@ import logging
 from tv_runner import TvRunner
 from movie_runner import MovieRunner
 from settings import (
-    MEDIAVIEWER_INFER_SCRAPERS_URL,
+    DOMAIN,
     SEND_EMAIL,
     CELERY_VHOST,
 )
@@ -12,6 +12,9 @@ from utils import postData, send_email
 from celery import Celery
 
 log = logging.getLogger(__name__)
+
+MEDIAVIEWER_INFER_SCRAPERS_URL = f"{DOMAIN}/mediaviewer/api/inferscrapers/"
+
 
 app = Celery("tasks", broker=f"{os.environ['BROKER']}/{CELERY_VHOST}")
 

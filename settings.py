@@ -14,22 +14,6 @@ BASE_PATH = "/home/user"
 
 DOMAIN = 'https://127.0.0.1:8001'  # Do not include trailing slash
 
-MEDIAVIEWER_MOVIE_PATH_URL = f"{DOMAIN}/mediaviewer/api/moviepath/"
-MEDIAVIEWER_TV_PATH_URL = f"{DOMAIN}/mediaviewer/api/tvpath/"
-
-MEDIAVIEWER_MOVIE_FILE_URL = f"{DOMAIN}/mediaviewer/api/movie/"
-MEDIAVIEWER_TV_FILE_URL = f"{DOMAIN}/mediaviewer/api/tv/"
-
-MEDIAVIEWER_TV_PATHFILES_URL = f"{DOMAIN}/mediaviewer/api/tv/?pathid=%s"
-MEDIAVIEWER_MOVIE_PATHFILES_URL = (
-    f"{DOMAIN}/mediaviewer/api/movie/?pathid=%s"
-)
-
-MEDIAVIEWER_UNSTREAMABLE_FILE_URL = (
-    f"{DOMAIN}/mediaviewer/api/unstreamablefile/"
-)
-MEDIAVIEWER_INFER_SCRAPERS_URL = f"{DOMAIN}/mediaviewer/api/inferscrapers/"
-
 MEDIAVIEWER_SUFFIX = "mv-encoded.mp4"
 
 ENCODER = "ffmpeg"  # or 'avconv'
@@ -57,6 +41,6 @@ VERIFY_REQUESTS = True
 
 # DON'T MAKE ANY EDITS BELOW THIS LINE!!!!
 try:
-    from local_settings import *
-except:  # nosec
+    from local_settings import *  # noqa
+except:  # nosec # noqa
     pass
