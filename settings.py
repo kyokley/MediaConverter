@@ -53,8 +53,6 @@ GMAIL_USER = "some@user.com"
 GMAIL_PASSWORD = "some_password"
 EMAIL_RECIPIENTS = ["another@user.com"]
 
-ALEXA_AUTH = "secret"
-
 VERIFY_REQUESTS = True
 
 # DON'T MAKE ANY EDITS BELOW THIS LINE!!!!
