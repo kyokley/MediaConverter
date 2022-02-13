@@ -3,4 +3,3 @@ local_settings.py
 *.ca_bundle
 logs
 .python-version
-.env

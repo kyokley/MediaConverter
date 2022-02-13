@@ -98,17 +98,6 @@ RUN python3 -m venv $POETRY_VENV
 ENV VIRTUAL_ENV=/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-ARG UID=1234
-
-RUN useradd -c 'MediaConverter user' \
-        -u ${UID} \
-        -ml \
-        user && \
-    apt-get update && \
-        apt-get upgrade -y && \
-        apt-get install -y --no-install-recommends libmagic1 libpq-dev && \
-        rm -rf /var/cache/apt/* /var/lib/apt/lists/*
-
 RUN sed -i -e's/ main/ main contrib non-free/g' /etc/apt/sources.list && \
     apt-get update && apt-get install -y \
         libavcodec-dev \
@@ -136,12 +125,10 @@ FROM base AS prod
 
 COPY . /code
 
-USER user
-
 CMD ["/venv/bin/celery", "-A", "main", "worker", "--loglevel=info", "--concurrency=1"]
 
 # ********************* Begin Dev Image ******************
-FROM base AS dev-root
+FROM base AS dev
 
 RUN apt-get install -y g++
 
@@ -150,6 +137,3 @@ COPY poetry.lock pyproject.toml /code/
 RUN $POETRY_VENV/bin/pip install -U pip poetry && $VIRTUAL_ENV/bin/pip install -U pip
 
 RUN $POETRY_VENV/bin/poetry install
-
-FROM dev-root AS dev
-USER user
