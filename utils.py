@@ -86,7 +86,7 @@ def send_email(subject, body):
         server.sendmail(GMAIL_USER, EMAIL_RECIPIENTS, message)
         server.close()
         log.debug("successfully sent the mail")
-    except:
+    except Exception:
         log.error("failed to send mail")
 
 
@@ -111,7 +111,7 @@ def get_localpath_by_filename(filename):
 
     try:
         resp.raise_for_status()
-    except:
+    except Exception:
         log.warning("Unable to find path for {}".format(filename))
         log.debug(resp.text)
         return
