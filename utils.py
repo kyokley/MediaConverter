@@ -49,6 +49,9 @@ def postData(values, url):
 
 
 def stripUnicode(filename, path=None):
+    if isinstance(filename, bytes):
+        filename = filename.decode('utf-8')
+
     strippedFilename = unidecode(filename).replace("'", "")
     if strippedFilename != filename:
         if path:
