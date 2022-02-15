@@ -4,41 +4,55 @@ import os
 from unidecode import unidecode
 import smtplib
 
-from log import LogFile
+import logging
 
-from settings import (WAITER_USERNAME,
-                      WAITER_PASSWORD,
-                      GMAIL_USER,
-                      GMAIL_PASSWORD,
-                      EMAIL_RECIPIENTS,
-                      VERIFY_REQUESTS,
-                      MEDIA_FILE_EXTENSIONS,
-                      SUBTITLE_EXTENSIONS,
-                      MEDIAVIEWER_INFER_SCRAPERS_URL,
-                      )
+from settings import (
+    WAITER_USERNAME,
+    WAITER_PASSWORD,
+    GMAIL_USER,
+    GMAIL_PASSWORD,
+    EMAIL_RECIPIENTS,
+    VERIFY_REQUESTS,
+    MEDIA_FILE_EXTENSIONS,
+    SUBTITLE_EXTENSIONS,
+    DOMAIN,
+)
 
-log = LogFile().getLogger()
+log = logging.getLogger(__name__)
+
+MEDIAVIEWER_INFER_SCRAPERS_URL = f"{DOMAIN}/mediaviewer/api/inferscrapers/"
 
 
 class EncoderException(Exception):
     pass
 
+
 class MissingPathException(Exception):
     pass
 
+
 def postData(values, url):
     try:
-        log.debug('Posting the following values:')
+        log.debug("Posting the following values:")
         log.debug(values)
-        request = requests.post(url, data=values, auth=(WAITER_USERNAME, WAITER_PASSWORD), verify=VERIFY_REQUESTS)
+        request = requests.post(
+            url,
+            data=values,
+            auth=(WAITER_USERNAME, WAITER_PASSWORD),
+            verify=VERIFY_REQUESTS,
+        )
         request.raise_for_status()
         return request
     except Exception as e:
         log.error(e)
         raise
 
+
 def stripUnicode(filename, path=None):
-    strippedFilename = unidecode(filename.decode('utf-8')).replace("'", '')
+    if isinstance(filename, bytes):
+        filename = filename.decode('utf-8')
+
+    strippedFilename = unidecode(filename).replace("'", "")
     if strippedFilename != filename:
         if path:
             currentDir = os.getcwd()
@@ -56,9 +70,14 @@ def stripUnicode(filename, path=None):
 
 
 def send_email(subject, body):
-    log.info('sending error email')
+    log.info("sending error email")
     message = """From: %s\nTo: %s\nSubject: %s\n\n%s
-    """ % (GMAIL_USER, ", ".join(EMAIL_RECIPIENTS), subject, body)
+    """ % (
+        GMAIL_USER,
+        ", ".join(EMAIL_RECIPIENTS),
+        subject,
+        body,
+    )
     try:
         server = smtplib.SMTP("smtp.gmail.com", 587)
         server.ehlo()
@@ -66,31 +85,36 @@ def send_email(subject, body):
         server.login(GMAIL_USER, GMAIL_PASSWORD)
         server.sendmail(GMAIL_USER, EMAIL_RECIPIENTS, message)
         server.close()
-        log.debug('successfully sent the mail')
-    except:
+        log.debug("successfully sent the mail")
+    except Exception:
         log.error("failed to send mail")
+
 
 def file_ext(path):
     return os.path.splitext(path)[-1]
 
+
 def is_valid_media_file(path):
     return os.path.exists(path) and file_ext(path).lower() in MEDIA_FILE_EXTENSIONS
+
 
 def is_valid_subtitle_file(path):
     return os.path.exists(path) and file_ext(path).lower() in SUBTITLE_EXTENSIONS
 
+
 def get_localpath_by_filename(filename):
-    resp = requests.get(MEDIAVIEWER_INFER_SCRAPERS_URL,
-                        params={'title': filename},
-                        auth=(WAITER_USERNAME, WAITER_PASSWORD),
-                        )
+    resp = requests.get(
+        MEDIAVIEWER_INFER_SCRAPERS_URL,
+        params={"title": filename},
+        auth=(WAITER_USERNAME, WAITER_PASSWORD),
+    )
 
     try:
         resp.raise_for_status()
-    except:
-        log.warn('Unable to find path for {}'.format(filename))
+    except Exception:
+        log.warning("Unable to find path for {}".format(filename))
         log.debug(resp.text)
         return
 
     data = resp.json()
-    return data['localpath']
+    return data["localpath"]

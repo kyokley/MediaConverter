@@ -1,19 +1,25 @@
+import os
+import logging
+
 from tv_runner import TvRunner
 from movie_runner import MovieRunner
-from settings import (MEDIAVIEWER_INFER_SCRAPERS_URL,
-                      SEND_EMAIL,
-                      CELERY_VHOST,
-                      )
+from settings import (
+    DOMAIN,
+    SEND_EMAIL,
+    CELERY_VHOST,
+)
 from utils import postData, send_email
 from celery import Celery
 
-from log import LogFile
-log = LogFile().getLogger()
+log = logging.getLogger(__name__)
 
-app = Celery('tasks', broker='amqp://guest@localhost/%s' % CELERY_VHOST)
+MEDIAVIEWER_INFER_SCRAPERS_URL = f"{DOMAIN}/mediaviewer/api/inferscrapers/"
 
 
-@app.task(name='main.main', serializer='json')
+app = Celery("tasks", broker=f"{os.environ['BROKER']}/{CELERY_VHOST}")
+
+
+@app.task(name="main.main", serializer="json")
 def main():
     all_errors = []
     tvRunner = TvRunner()
@@ -28,17 +34,22 @@ def main():
     all_errors.extend(movie_errors)
 
     if all_errors:
-        log.error('Errors occured in the following files:')
+        log.error("Errors occured in the following files:")
         for error in all_errors:
             log.error(error)
 
         if SEND_EMAIL:
-            subject = 'MC: Got some errors'
-            message = '\n'.join(all_errors)
+            subject = "MC: Got some errors"
+            message = "\n".join(all_errors)
             send_email(subject, message)
 
-    log.info('All done')
+    log.info("All done")
 
 
-if __name__ == '__main__':
+@app.task(name='main.test')
+def test_task():
+    log.info('Test job ran successfully!')
+
+
+if __name__ == "__main__":
     main.delay()

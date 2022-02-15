@@ -1,65 +1,46 @@
-import os
+import logging
 
-DEBUG = False
+logging.getLogger().setLevel(level=logging.DEBUG)
 
-CWD = os.getcwd()
-LOG_DIR = os.path.join(CWD, 'logs')
-try:
-    os.makedirs(LOG_DIR)
-except OSError:
-    pass
-LOG_FILE_NAME = os.path.join(LOG_DIR, 'converterLog')
+CELERY_VHOST = ""
 
-CELERY_VHOST = '/'
+WAITER_USERNAME = "user"
+WAITER_PASSWORD = "password"
 
-WAITER_USERNAME = 'user'
-WAITER_PASSWORD = 'password'
+LOCAL_MOVIE_PATHS = ["movies"]
+LOCAL_TV_SHOWS_PATHS = ["tv_shows"]
+UNSORTED_PATHS = ["unsorted"]
+BASE_PATH = "/home/user"
 
-LOCAL_MOVIE_PATHS = ['movies']
-LOCAL_TV_SHOWS_PATHS = ['tv_shows']
-UNSORTED_PATHS = ['unsorted']
-BASE_PATH = '/home/user'
+DOMAIN = 'https://127.0.0.1:8001'  # Do not include trailing slash
 
-MEDIAVIEWER_MOVIE_PATH_URL = 'https://127.0.0.1:8001/mediaviewer/api/moviepath/'
-MEDIAVIEWER_TV_PATH_URL = 'https://127.0.0.1:8001/mediaviewer/api/tvpath/'
+MEDIAVIEWER_SUFFIX = "mv-encoded.mp4"
 
-MEDIAVIEWER_MOVIE_FILE_URL = 'https://127.0.0.1:8001/mediaviewer/api/movie/'
-MEDIAVIEWER_TV_FILE_URL = 'https://127.0.0.1:8001/mediaviewer/api/tv/'
+ENCODER = "ffmpeg"  # or 'avconv'
 
-MEDIAVIEWER_TV_PATHFILES_URL = 'https://127.0.0.1:8001/mediaviewer/api/tv/?pathid=%s'
-MEDIAVIEWER_MOVIE_PATHFILES_URL = 'https://127.0.0.1:8001/mediaviewer/api/movie/?pathid=%s'
+MEDIA_FILE_EXTENSIONS = (
+    ".mp4",
+    ".avi",
+    ".mpeg",
+    ".mkv",
+    ".m4v",
+    ".mpg",
+)
 
-MEDIAVIEWER_UNSTREAMABLE_FILE_URL = 'https://127.0.0.1:8001/mediaviewer/api/unstreamablefile/'
-MEDIAVIEWER_INFER_SCRAPERS_URL = 'https://127.0.0.1:8001/mediaviewer/api/inferscrapers/'
+SUBTITLE_EXTENSIONS = (".srt",)
+SUBTITLE_FILES = ("2_Eng.srt", "English.srt", "2_English.srt")
 
-MEDIAVIEWER_SUFFIX = '%s.mv-encoded.mp4'
-
-ENCODER = 'avconv' # or 'ffmpeg'
-
-MEDIA_FILE_EXTENSIONS = ('.mp4',
-                         '.avi',
-                         '.mpeg',
-                         '.mkv',
-                         '.m4v',
-                         '.mpg',
-                         )
-
-SUBTITLE_EXTENSIONS = ('.srt',)
-SUBTITLE_FILES = ('2_Eng.srt', 'English.srt', '2_English.srt')
-
-SERVER_NAME = '127.0.0.1'
+SERVER_NAME = "127.0.0.1"
 
 SEND_EMAIL = False
-GMAIL_USER = 'some@user.com'
-GMAIL_PASSWORD = 'some_password'
-EMAIL_RECIPIENTS = ['another@user.com']
-
-ALEXA_AUTH = 'secret'
+GMAIL_USER = "some@user.com"
+GMAIL_PASSWORD = "some_password"
+EMAIL_RECIPIENTS = ["another@user.com"]
 
 VERIFY_REQUESTS = True
 
 # DON'T MAKE ANY EDITS BELOW THIS LINE!!!!
 try:
-    from local_settings import *
-except: # nosec
+    from local_settings import *  # noqa
+except:  # nosec # noqa
     pass

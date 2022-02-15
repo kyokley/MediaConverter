@@ -1,0 +1,139 @@
+ARG BASE_IMAGE=python:3.10-slim
+
+FROM ${BASE_IMAGE} AS builder
+
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+ENV POETRY_VENV=/poetry_venv
+RUN python3 -m venv $POETRY_VENV
+
+ENV VIRTUAL_ENV=/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+RUN sed -i -e's/ main/ main contrib non-free/g' /etc/apt/sources.list && \
+    apt-get update && apt-get install -y \
+        g++ \
+        git \
+        wget \
+        yasm \
+        nasm \
+        cmake \
+        cmake-curses-gui \
+        libavcodec-dev \
+        libvorbis-dev \
+        libx264-dev \
+        libx265-dev \
+        libnuma-dev \
+        libvpx-dev \
+        libass-dev \
+        libfdk-aac-dev \
+        libmp3lame-dev \
+        libopus-dev \
+        libtheora-dev
+
+WORKDIR /build
+RUN git clone https://github.com/videolan/x265
+WORKDIR  /build/x265
+RUN cmake source && \
+        make && \
+        make install
+
+WORKDIR /build/ffmpeg_sources
+RUN wget http://ffmpeg.org/releases/ffmpeg-snapshot.tar.bz2 && \
+        tar xjvf ffmpeg-snapshot.tar.bz2
+
+WORKDIR /build/ffmpeg_sources/ffmpeg
+RUN PKG_CONFIG_PATH="/usr/bin/pkg-config" ./configure \
+        --prefix="$HOME/ffmpeg_build" \
+        --pkg-config-flags="--static" \
+        --extra-cflags="-I$HOME/ffmpeg_build/include" \
+        --extra-ldflags="-L$HOME/ffmpeg_build/lib -L/usr/local/lib" \
+        --bindir="/usr/local/bin" \
+        --enable-static \
+        --enable-gpl \
+        --enable-libass \
+        --enable-libfdk-aac \
+        --enable-libfreetype \
+        --enable-libmp3lame \
+        --enable-libopus \
+        --enable-libtheora \
+        --enable-libvorbis \
+        --enable-libvpx \
+        --enable-libx264 \
+        --enable-libx265 \
+        --enable-nonfree && \
+        make && \
+        make install && \
+        ldconfig
+
+
+WORKDIR /build/ffmpeg_sources
+RUN git clone https://github.com/nwoltman/srt-to-vtt-cl.git
+WORKDIR /build/ffmpeg_sources/srt-to-vtt-cl
+RUN make && \
+        find -name 'srt-vtt' | \
+            grep -i linux | \
+            head -n 1 | \
+            xargs -I{} cp {} /usr/local/bin/srt-vtt
+
+
+RUN $POETRY_VENV/bin/pip install -U pip poetry && $VIRTUAL_ENV/bin/pip install -U pip
+
+WORKDIR /code
+COPY poetry.lock pyproject.toml /code/
+
+RUN $POETRY_VENV/bin/pip install poetry && $POETRY_VENV/bin/poetry install --no-dev
+
+# RUN rm -rf /build/x265 /build/ffmpeg_sources $HOME/ffmpeg_build
+
+FROM ${BASE_IMAGE} AS base
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+ENV POETRY_VENV=/poetry_venv
+RUN python3 -m venv $POETRY_VENV
+
+ENV VIRTUAL_ENV=/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+RUN sed -i -e's/ main/ main contrib non-free/g' /etc/apt/sources.list && \
+    apt-get update && apt-get install -y \
+        libavcodec-dev \
+        libvorbis-dev \
+        libx264-dev \
+        libx265-dev \
+        libnuma-dev \
+        libvpx-dev \
+        libass-dev \
+        libfdk-aac-dev \
+        libmp3lame-dev \
+        libopus-dev \
+        libtheora-dev
+
+COPY --from=builder /venv /venv
+COPY --from=builder /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
+COPY --from=builder /usr/local/bin/srt-vtt /usr/local/bin/srt-vtt
+COPY --from=builder /usr/local/lib/libx265* /usr/local/lib/
+
+RUN ldconfig
+WORKDIR /code
+
+# ********************* Begin Prod Image ******************
+FROM base AS prod
+
+COPY . /code
+
+CMD ["/venv/bin/celery", "-A", "main", "worker", "--loglevel=info", "--concurrency=1"]
+
+# ********************* Begin Dev Image ******************
+FROM base AS dev
+
+RUN apt-get install -y g++
+
+COPY poetry.lock pyproject.toml /code/
+
+RUN $POETRY_VENV/bin/pip install -U pip poetry && $VIRTUAL_ENV/bin/pip install -U pip
+
+RUN $POETRY_VENV/bin/poetry install

@@ -1,5 +1,0 @@
--r requirements.txt
-mock
-nose
-bandit
-pytest

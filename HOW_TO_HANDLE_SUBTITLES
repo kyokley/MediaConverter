@@ -1,8 +1,0 @@
-To burn subtitles into the video it is necessary to do the following.
-
-1. Make sure that ffmpeg has been compiled with libass (--enable-libass)
-2. Run the following command:
-
-    ffmpeg -i in.mkv -c:v libx264 -c:a libmp3lame -vf subtitles=in.mkv:si=1 out.mp4
-
-where "si=1" represents the stream index.
