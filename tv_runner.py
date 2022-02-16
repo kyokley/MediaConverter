@@ -141,7 +141,7 @@ class TvRunner(object):
         localFileSet = local_files.split(b"\n")
         localFileSet = set(
             [
-                os.path.basename(x)
+                os.path.basename(x).decode('utf-8')
                 for x in localFileSet
                 if x and os.path.splitext(x)[1] not in IGNORED_FILE_EXTENSIONS
             ]
