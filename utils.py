@@ -95,10 +95,16 @@ def file_ext(path):
 
 
 def is_valid_media_file(path):
+    if isinstance(path, bytes):
+        path = path.decode('utf-8')
+
     return os.path.exists(path) and file_ext(path).lower() in MEDIA_FILE_EXTENSIONS
 
 
 def is_valid_subtitle_file(path):
+    if isinstance(path, bytes):
+        path = path.decode('utf-8')
+
     return os.path.exists(path) and file_ext(path).lower() in SUBTITLE_EXTENSIONS
 
 
