@@ -45,12 +45,12 @@ class TvRunner(object):
 
     @staticmethod
     def getOrCreateRemotePath(localPath):
-        log.debug("Get or create path for %s" % localPath)
+        log.info("Get or create path for %s" % localPath)
         newPath = Path(localPath, localPath)
         newPath.postTVShow()
         data = Path.getTVPathByLocalPathAndRemotePath(localPath, localPath)
         pathid = data["results"][0]["pk"]
-        log.debug("Got path")
+        log.info("Got path")
 
         return pathid
 
@@ -63,7 +63,7 @@ class TvRunner(object):
                 continue
             remoteFilenames = File.getTVFileSet(pathid)
             fileSet.update(remoteFilenames)
-        log.debug("Built remote fileSet")
+        log.info("Built remote fileSet")
 
         return fileSet
 
@@ -77,7 +77,7 @@ class TvRunner(object):
                 if not pathid:
                     pathid = self.getOrCreateRemotePath(path)
 
-                log.debug("Attempting to add %s" % (localFile,))
+                log.info("Attempting to add %s" % (localFile,))
                 fullPath = stripUnicode(localFile, path=path)
                 try:
                     fullPath = makeFileStreamable(
@@ -141,12 +141,12 @@ class TvRunner(object):
         localFileSet = local_files.split(b"\n")
         localFileSet = set(
             [
-                os.path.basename(x)
+                os.path.basename(x).decode('utf-8')
                 for x in localFileSet
                 if x and os.path.splitext(x)[1] not in IGNORED_FILE_EXTENSIONS
             ]
         )
-        log.debug(localFileSet)
+        log.info(localFileSet)
         return localFileSet
 
     def handleDirs(self, path):
@@ -186,27 +186,27 @@ class TvRunner(object):
                 shutil.rmtree(directory)
 
     def run(self):
-        log.debug("Attempting to sort unsorted files")
+        log.info("Attempting to sort unsorted files")
         self._sort_unsorted_files()
 
-        log.debug("Attempting to get paths")
+        log.info("Attempting to get paths")
         self.loadPaths()
-        log.debug("Got paths")
+        log.info("Got paths")
         for path, pathIDs in self.paths.items():
             try:
-                log.debug("Handling directories in {}".format(path))
+                log.info("Handling directories in {}".format(path))
                 self.handleDirs(path)
-                log.debug("Building local file set for %s" % path)
+                log.info("Building local file set for %s" % path)
                 localFileSet = self.buildLocalFileSet(path)
-                log.debug("Done building local file set for %s" % path)
+                log.info("Done building local file set for %s" % path)
             except MissingPathException as e:
                 log.error(e)
                 log.error("Continuing...")
                 continue
 
-            log.debug("Attempting to get remote files for %s" % path)
+            log.info("Attempting to get remote files for %s" % path)
             remoteFileSet = self.buildRemoteFileSetForPathIDs(pathIDs)
-            log.debug("Done building remote file set for %s" % path)
+            log.info("Done building remote file set for %s" % path)
 
             self.updateFileRecords(path, localFileSet, remoteFileSet)
 
@@ -214,14 +214,14 @@ class TvRunner(object):
             log.error("Errors occured in the following files:")
             for error in self.errors:
                 log.error(error)
-        log.debug("Done running tv shows")
+        log.info("Done running tv shows")
         return self.errors
 
     @staticmethod
     def _sort_unsorted_files():
         for unsorted_path in UNSORTED_PATHS:
             if not os.path.exists(unsorted_path):
-                log.debug("Unsorted file path {} does not exist".format(unsorted_path))
+                log.info("Unsorted file path {} does not exist".format(unsorted_path))
                 return
 
             for filename in os.listdir(unsorted_path):

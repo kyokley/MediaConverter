@@ -77,8 +77,8 @@ def _extractSubtitleFromVideo(
         source,
     ]
     subtitle_command = command + ["-map", stream_identifier, srt_filename]
-    log.debug("Extracting using following command:")
-    log.debug(" ".join(subtitle_command))
+    log.info("Extracting using following command:")
+    log.info(" ".join(subtitle_command))
     process = Popen(subtitle_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)  # nosec
     out, err = process.communicate()
     if process.returncode != 0:
@@ -93,8 +93,8 @@ def _extractSubtitleFromVideo(
 def _convertSrtToVtt(srt_filename):
     vtt_filename = "%s.vtt" % os.path.splitext(srt_filename)[0]
     srt_vtt_command = ["srt-vtt", srt_filename]
-    log.debug("Extracting using following command:")
-    log.debug(" ".join(srt_vtt_command))
+    log.info("Extracting using following command:")
+    log.info(" ".join(srt_vtt_command))
     process = Popen(srt_vtt_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)  # nosec
     out, err = process.communicate()
     if process.returncode != 0:
