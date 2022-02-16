@@ -133,7 +133,7 @@ class TestRun:
     def setUp(self, mocker):
         self.mock_postMovies = mocker.patch("movie_runner.MovieRunner.postMovies")
 
-        self.mock_debug = mocker.patch("movie_runner.log.debug")
+        self.mock_info = mocker.patch("movie_runner.log.info")
 
         self.movieRunner = MovieRunner()
         self.errors = mock.MagicMock()
@@ -145,7 +145,7 @@ class TestRun:
 
         assert expected == actual
         self.mock_postMovies.assert_called_once_with()
-        self.mock_debug.assert_called_once_with("Done running movies")
+        self.mock_info.assert_called_once_with("Done running movies")
 
 
 class TestPromoteSubtitles:

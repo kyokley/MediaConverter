@@ -33,8 +33,8 @@ class MissingPathException(Exception):
 
 def postData(values, url):
     try:
-        log.debug("Posting the following values:")
-        log.debug(values)
+        log.info("Posting the following values:")
+        log.info(values)
         request = requests.post(
             url,
             data=values,
@@ -85,7 +85,7 @@ def send_email(subject, body):
         server.login(GMAIL_USER, GMAIL_PASSWORD)
         server.sendmail(GMAIL_USER, EMAIL_RECIPIENTS, message)
         server.close()
-        log.debug("successfully sent the mail")
+        log.info("successfully sent the mail")
     except Exception:
         log.error("failed to send mail")
 
@@ -119,7 +119,7 @@ def get_localpath_by_filename(filename):
         resp.raise_for_status()
     except Exception:
         log.warning("Unable to find path for {}".format(filename))
-        log.debug(resp.text)
+        log.warning(resp.text)
         return
 
     data = resp.json()

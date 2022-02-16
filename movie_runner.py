@@ -76,7 +76,7 @@ class MovieRunner(object):
 
     def run(self):
         self.postMovies()
-        log.debug("Done running movies")
+        log.info("Done running movies")
         return self.errors
 
     def _postMovie(self, name, pathid):
