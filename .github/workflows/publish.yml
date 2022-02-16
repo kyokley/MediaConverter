@@ -6,19 +6,8 @@ on:
       - master
 
 jobs:
-  test:
-    name: Run test suite
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Make tests
-        run: make ci-tests
 
   publish:
-    needs: test
     runs-on: ubuntu-latest
 
     steps:
