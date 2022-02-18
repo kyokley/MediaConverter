@@ -19,7 +19,7 @@ MEDIAVIEWER_TV_PATHFILES_URL = f"{DOMAIN}/mediaviewer/api/tv/?pathid=%s"
 MEDIAVIEWER_MOVIE_PATHFILES_URL = f"{DOMAIN}/mediaviewer/api/movie/?pathid=%s"
 
 
-class File(object):
+class File:
     def __init__(self, filename, pathid, size, streamable):
         self.filename = filename
         self.pathid = pathid
@@ -34,7 +34,7 @@ class File(object):
 
         if not self.filename or not self.pathid:
             log.error("Invalid request")
-            log.error("Filename: %s Pathid: %s" % (self.filename, self.pathid))
+            log.error(f"Filename: {self.filename} Pathid: {self.pathid}")
             return
 
         values = {

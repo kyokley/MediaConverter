@@ -13,7 +13,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-class MovieRunner(object):
+class MovieRunner:
     def __init__(self):
         self.movies = set()
         self.errors = []
@@ -21,7 +21,7 @@ class MovieRunner(object):
     def postMovies(self):
         for moviepath in LOCAL_MOVIE_PATHS:
             if not os.path.exists(moviepath):
-                self.errors.append("{} does not exist. Continuing...".format(moviepath))
+                self.errors.append(f"{moviepath} does not exist. Continuing...")
                 continue
 
             path = Path(moviepath, moviepath)
@@ -37,8 +37,8 @@ class MovieRunner(object):
             for token in tokens:
                 localpath = os.path.join(moviepath, token)
                 if localpath not in fileset:
-                    log.info("Found {}".format(localpath))
-                    log.info("Starting re-encoding of {}...".format(localpath))
+                    log.info(f"Found {localpath}")
+                    log.info(f"Starting re-encoding of {localpath}...")
                     try:
                         self.promoteSubtitles(localpath)
                         errors = reencodeFilesInDirectory(localpath)
@@ -47,10 +47,10 @@ class MovieRunner(object):
                             self.errors.extend(errors)
                             continue
                     except Exception as e:
-                        log.error("Error processing {}".format(localpath))
+                        log.error(f"Error processing {localpath}")
                         log.error(str(e))
                         raise
-                    log.info("Posting {}".format(localpath))
+                    log.info(f"Posting {localpath}")
                     self._postMovie(token, pathid)
 
     @staticmethod
@@ -82,7 +82,7 @@ class MovieRunner(object):
     def _postMovie(self, name, pathid):
         if not name or not pathid:
             log.error("Invalid request")
-            log.error("Filename: {} Pathid: {}".format(name, pathid))
+            log.error(f"Filename: {name} Pathid: {pathid}")
             return
 
         values = {

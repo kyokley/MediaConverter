@@ -31,7 +31,7 @@ IGNORED_FILE_EXTENSIONS = (".vtt", ".srt")
 SMALL_FILE_SIZE = 1024 * 1024 * 10  # 10 MB
 
 
-class TvRunner(object):
+class TvRunner:
     def __init__(self):
         self.paths = dict()
         self.errors = []
@@ -45,7 +45,7 @@ class TvRunner(object):
 
     @staticmethod
     def getOrCreateRemotePath(localPath):
-        log.info("Get or create path for %s" % localPath)
+        log.info(f"Get or create path for {localPath}")
         newPath = Path(localPath, localPath)
         newPath.postTVShow()
         data = Path.getTVPathByLocalPathAndRemotePath(localPath, localPath)
@@ -77,16 +77,15 @@ class TvRunner(object):
                 if not pathid:
                     pathid = self.getOrCreateRemotePath(path)
 
-                log.info("Attempting to add %s" % (localFile,))
+                log.info(f"Attempting to add {localFile}")
                 fullPath = stripUnicode(localFile, path=path)
                 try:
                     fullPath = makeFileStreamable(
                         fullPath, appendSuffix=True, removeOriginal=True, dryRun=False
                     )
-                except EncoderException as e:
+                except EncoderException:
                     errorMsg = (
-                        "Got a non-fatal encoding error attempting to make %s streamable"
-                        % fullPath
+                        f"Got a non-fatal encoding error attempting to make {fullPath} streamable"
                     )
                     log.error(errorMsg)
                     log.error("Attempting to recover and continue")
@@ -104,30 +103,24 @@ class TvRunner(object):
                     newFile.postTVFile()
             except Exception as e:
                 errorMsg = (
-                    "Something bad happened attempting to make %s streamable" % fullPath
+                    f"Something bad happened attempting to make {fullPath} streamable"
                 )
                 log.error(errorMsg)
                 log.error(e)
 
                 if SEND_EMAIL:
                     subject = "MC: Got some errors"
-                    message = """
-                    %s
+                    message = f"""
+                    {errorMsg}
                     Got the following:
-                    %s
-                    """ % (
-                        errorMsg,
-                        traceback.format_exc(),
-                    )
+                    {traceback.format_exc()}
+                    """
                     send_email(subject, message)
                 raise
 
     @staticmethod
     def buildLocalFileSet(path):
-        command = "find '%s' -maxdepth 1 -size +%sc -not -type d" % (
-            path,
-            SMALL_FILE_SIZE,
-        )
+        command = f"find '{path}' -maxdepth 1 -size +{SMALL_FILE_SIZE}c -not -type d"
         p = subprocess.Popen(
             shlex.split(command),  # nosec
             stdout=subprocess.PIPE,
@@ -136,7 +129,7 @@ class TvRunner(object):
         local_files = p.communicate()[0]
 
         if FIND_FAIL_STRING in local_files:
-            raise MissingPathException("Path not found: %s" % path)
+            raise MissingPathException(f"Path not found: {path}")
 
         localFileSet = local_files.split(b"\n")
         localFileSet = set(
@@ -168,7 +161,7 @@ class TvRunner(object):
 
                     if file in SUBTITLE_FILES:
                         # Move subtitle to show directory and rename
-                        log.info("Found subtitle file in {}".format(episode))
+                        log.info(f"Found subtitle file in {episode}")
                         new = os.path.join(top, episode + ".srt")
                         os.rename(fullpath, new)
 
@@ -177,12 +170,12 @@ class TvRunner(object):
                         and os.path.getsize(fullpath) > SMALL_FILE_SIZE
                     ):
                         # Move media file to show directory
-                        log.info("Found media file in {}".format(episode))
+                        log.info(f"Found media file in {episode}")
                         new = os.path.join(top, file)
                         os.rename(fullpath, new)
 
             for directory in dir_set:
-                log.info("Deleting {}".format(directory))
+                log.info(f"Deleting {directory}")
                 shutil.rmtree(directory)
 
     def run(self):
@@ -194,19 +187,19 @@ class TvRunner(object):
         log.info("Got paths")
         for path, pathIDs in self.paths.items():
             try:
-                log.info("Handling directories in {}".format(path))
+                log.info(f"Handling directories in {path}")
                 self.handleDirs(path)
-                log.info("Building local file set for %s" % path)
+                log.info(f"Building local file set for {path}")
                 localFileSet = self.buildLocalFileSet(path)
-                log.info("Done building local file set for %s" % path)
+                log.info(f"Done building local file set for {path}")
             except MissingPathException as e:
                 log.error(e)
                 log.error("Continuing...")
                 continue
 
-            log.info("Attempting to get remote files for %s" % path)
+            log.info(f"Attempting to get remote files for {path}")
             remoteFileSet = self.buildRemoteFileSetForPathIDs(pathIDs)
-            log.info("Done building remote file set for %s" % path)
+            log.info(f"Done building remote file set for {path}")
 
             self.updateFileRecords(path, localFileSet, remoteFileSet)
 
@@ -221,7 +214,7 @@ class TvRunner(object):
     def _sort_unsorted_files():
         for unsorted_path in UNSORTED_PATHS:
             if not os.path.exists(unsorted_path):
-                log.info("Unsorted file path {} does not exist".format(unsorted_path))
+                log.info(f"Unsorted file path {unsorted_path} does not exist")
                 return
 
             for filename in os.listdir(unsorted_path):

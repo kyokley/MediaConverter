@@ -20,7 +20,7 @@ MEDIAVIEWER_MOVIE_PATH_URL = f"{DOMAIN}/mediaviewer/api/moviepath/"
 MEDIAVIEWER_TV_PATH_URL = f"{DOMAIN}/mediaviewer/api/tvpath/"
 
 
-class Path(object):
+class Path:
     def __init__(self, localpath, remotepath):
         self.localpath = localpath
         self.remotepath = remotepath
@@ -98,7 +98,7 @@ class Path(object):
         localpaths = set()
         for localpath in filepaths:
             if not os.path.exists(localpath):
-                log.error("{} does not exist. Continuing...".format(localpath))
+                log.error(f"{localpath} does not exist. Continuing...")
                 continue
 
             res = set(
@@ -121,7 +121,9 @@ class Path(object):
 
     @classmethod
     def _getAllPaths(cls, getMovies=False):
-        """Returns a dict of localpaths related to pathids
+        """
+        Returns a dict of localpaths related to pathids
+
         Local paths not in the server are represented with pathid -1.
         """
         allPaths = cls._getPaths(getMovies=getMovies)
