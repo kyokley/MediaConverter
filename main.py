@@ -46,9 +46,9 @@ def main():
     log.info("All done")
 
 
-@app.task(name='main.test')
+@app.task(name="main.test")
 def test_task():
-    log.info('Test job ran successfully!')
+    log.info("Test job ran successfully!")
 
 
 if __name__ == "__main__":

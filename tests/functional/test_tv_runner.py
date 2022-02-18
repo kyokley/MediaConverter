@@ -36,11 +36,7 @@ class TestBuildLocalFileSetFunctional:
                 f.write(os.urandom(i * 100))
 
         expected = set(
-            [
-                os.path.basename(x[1])
-                for x in files
-                if os.path.getsize(x[1]) > 201
-            ]
+            [os.path.basename(x[1]) for x in files if os.path.getsize(x[1]) > 201]
         )
         actual = self.tv_runner.buildLocalFileSet(self.temp_dir)
         assert expected == actual

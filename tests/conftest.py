@@ -5,12 +5,12 @@ import tempfile
 from pathlib import Path
 
 
-DATA_DIR_PATH = Path(__file__).parent / 'data'
-STREAMABLE_FILE_NAME = 'mov_bbb.mp4'
+DATA_DIR_PATH = Path(__file__).parent / "data"
+STREAMABLE_FILE_NAME = "mov_bbb.mp4"
 STREAMABLE_FILE_PATH = DATA_DIR_PATH / STREAMABLE_FILE_NAME
-UNSTREAMABLE_FILE_NAME = 'mov_bbb_x265.mp4'
+UNSTREAMABLE_FILE_NAME = "mov_bbb_x265.mp4"
 UNSTREAMABLE_FILE_PATH = DATA_DIR_PATH / UNSTREAMABLE_FILE_NAME
-SRT_FILE_NAME = '2_Eng.srt'
+SRT_FILE_NAME = "2_Eng.srt"
 SRT_FILE_PATH = DATA_DIR_PATH / SRT_FILE_NAME
 
 

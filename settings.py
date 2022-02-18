@@ -12,7 +12,7 @@ LOCAL_TV_SHOWS_PATHS = ["tv_shows"]
 UNSORTED_PATHS = ["unsorted"]
 BASE_PATH = "/home/user"
 
-DOMAIN = 'https://127.0.0.1:8001'  # Do not include trailing slash
+DOMAIN = "https://127.0.0.1:8001"  # Do not include trailing slash
 
 MEDIAVIEWER_SUFFIX = "mv-encoded.mp4"
 

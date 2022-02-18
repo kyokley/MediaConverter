@@ -28,7 +28,7 @@ class AlreadyEncoded(Exception):
 
 def checkVideoEncoding(source):
     ffmpeg = Popen((ENCODER, "-hide_banner", "-i", source), stderr=PIPE)  # nosec
-    output = ffmpeg.communicate()[1].decode('utf-8')
+    output = ffmpeg.communicate()[1].decode("utf-8")
 
     # Can't check returncode here since we always get back 1
     if "At least one output file must be specified" != output.split("\n")[-2]:
@@ -307,7 +307,7 @@ def overwriteExistingFile(
         if removeOriginal and os.path.exists(dest):
             os.remove(dest)
 
-    dest = appendSuffix and f'{dest}.{MEDIAVIEWER_SUFFIX}' or dest
+    dest = appendSuffix and f"{dest}.{MEDIAVIEWER_SUFFIX}" or dest
 
     log.info("Renaming file %s to %s" % (source, dest))
     if not dryRun:

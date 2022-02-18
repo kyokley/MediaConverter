@@ -24,8 +24,7 @@ class CreateFileMixin:
             f.write("")
 
 
-@pytest.mark.parametrize(
-    'use_bytes', (True, False))
+@pytest.mark.parametrize("use_bytes", (True, False))
 class TestStripUnicode(CreateFileMixin):
     @pytest.fixture(autouse=True)
     def setUp(self):
@@ -42,7 +41,7 @@ class TestStripUnicode(CreateFileMixin):
         self._create_file(test_filename)
 
         if use_bytes:
-            test_filename = test_filename.encode('utf-8')
+            test_filename = test_filename.encode("utf-8")
 
         expected = "test_filename"
         actual = stripUnicode(test_filename)
@@ -54,7 +53,7 @@ class TestStripUnicode(CreateFileMixin):
         self._create_file(test_filename)
 
         if use_bytes:
-            test_filename = test_filename.encode('utf-8')
+            test_filename = test_filename.encode("utf-8")
 
         expected = "test_filenameDAE"
         actual = stripUnicode(test_filename)
@@ -66,7 +65,7 @@ class TestStripUnicode(CreateFileMixin):
         self._create_file(test_filename)
 
         if use_bytes:
-            test_filename = test_filename.encode('utf-8')
+            test_filename = test_filename.encode("utf-8")
 
         expected = "its got an apostrophe"
         actual = stripUnicode(test_filename)
@@ -78,7 +77,7 @@ class TestStripUnicode(CreateFileMixin):
         self._create_file(test_filename, path="new_path")
 
         if use_bytes:
-            test_filename = test_filename.encode('utf-8')
+            test_filename = test_filename.encode("utf-8")
 
         expected = f"{Path('new_path') / 'test_filenameDAE'}"
         actual = stripUnicode(test_filename, path="new_path")

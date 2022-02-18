@@ -50,7 +50,7 @@ def postData(values, url):
 
 def stripUnicode(filename, path=None):
     if isinstance(filename, bytes):
-        filename = filename.decode('utf-8')
+        filename = filename.decode("utf-8")
 
     strippedFilename = unidecode(filename).replace("'", "")
     if strippedFilename != filename:
@@ -96,14 +96,14 @@ def file_ext(path):
 
 def is_valid_media_file(path):
     if isinstance(path, bytes):
-        path = path.decode('utf-8')
+        path = path.decode("utf-8")
 
     return os.path.exists(path) and file_ext(path).lower() in MEDIA_FILE_EXTENSIONS
 
 
 def is_valid_subtitle_file(path):
     if isinstance(path, bytes):
-        path = path.decode('utf-8')
+        path = path.decode("utf-8")
 
     return os.path.exists(path) and file_ext(path).lower() in SUBTITLE_EXTENSIONS
 
