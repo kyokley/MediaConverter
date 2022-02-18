@@ -16,9 +16,7 @@ MEDIAVIEWER_MOVIE_FILE_URL = f"{DOMAIN}/mediaviewer/api/movie/"
 MEDIAVIEWER_TV_FILE_URL = f"{DOMAIN}/mediaviewer/api/tv/"
 
 MEDIAVIEWER_TV_PATHFILES_URL = f"{DOMAIN}/mediaviewer/api/tv/?pathid=%s"
-MEDIAVIEWER_MOVIE_PATHFILES_URL = (
-    f"{DOMAIN}/mediaviewer/api/movie/?pathid=%s"
-)
+MEDIAVIEWER_MOVIE_PATHFILES_URL = f"{DOMAIN}/mediaviewer/api/movie/?pathid=%s"
 
 
 class File(object):
