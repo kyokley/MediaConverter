@@ -84,9 +84,7 @@ class TvRunner:
                         fullPath, appendSuffix=True, removeOriginal=True, dryRun=False
                     )
                 except EncoderException:
-                    errorMsg = (
-                        f"Got a non-fatal encoding error attempting to make {fullPath} streamable"
-                    )
+                    errorMsg = f"Got a non-fatal encoding error attempting to make {fullPath} streamable"
                     log.error(errorMsg)
                     log.error("Attempting to recover and continue")
                     self.errors.append(errorMsg)
