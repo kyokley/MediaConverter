@@ -11,6 +11,7 @@ from settings import (
     MEDIA_FILE_EXTENSIONS,
     SUBTITLE_FILES,
     UNSORTED_PATHS,
+    BASE_PATH,
 )
 from convert import makeFileStreamable
 from utils import (
@@ -211,6 +212,9 @@ class TvRunner:
     @staticmethod
     def _sort_unsorted_files():
         for unsorted_path in UNSORTED_PATHS:
+            if BASE_PATH not in unsorted_path:
+                unsorted_path = os.path.join(BASE_PATH, unsorted_path)
+
             if not os.path.exists(unsorted_path):
                 log.info(f"Unsorted file path {unsorted_path} does not exist")
                 return
