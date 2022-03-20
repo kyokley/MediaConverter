@@ -1,5 +1,6 @@
 import requests
 import os
+from pathlib import Path as Pathlib
 from settings import (
     SERVER_NAME,
     DOMAIN,
@@ -176,3 +177,12 @@ class Path:
         return cls._getPathByLocalPathAndRemotePath(
             localpath, remotepath, useMovieURL=True
         )
+
+    @staticmethod
+    def strip_base_path(path_str, is_movie=True):
+        path = Pathlib(path_str)
+
+        if is_movie:
+            return path.stem
+        else:
+            return path.parts[-2:]
