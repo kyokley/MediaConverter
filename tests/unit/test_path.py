@@ -38,12 +38,8 @@ class TestPost:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker):
         self.mock_postData = mocker.patch("path.postData")
-        mocker.patch(
-            "path.MEDIAVIEWER_MOVIE_PATH_URL", "test_movie_url"
-        )
-        mocker.patch(
-            "path.MEDIAVIEWER_TV_PATH_URL", "test_tv_url"
-        )
+        mocker.patch("path.MEDIAVIEWER_MOVIE_PATH_URL", "test_movie_url")
+        mocker.patch("path.MEDIAVIEWER_TV_PATH_URL", "test_tv_url")
         mocker.patch("path.SERVER_NAME", "test_server_name")
 
         self.path = Path("/path/to/local", "/path/to/remote")
@@ -80,19 +76,11 @@ class TestPost:
 class TestGetPaths:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker):
-        mocker.patch(
-            "path.MEDIAVIEWER_MOVIE_PATH_URL", "test_movie_url"
-        )
-        mocker.patch(
-            "path.MEDIAVIEWER_TV_PATH_URL", "test_tv_url"
-        )
+        mocker.patch("path.MEDIAVIEWER_MOVIE_PATH_URL", "test_movie_url")
+        mocker.patch("path.MEDIAVIEWER_TV_PATH_URL", "test_tv_url")
         mocker.patch("path.VERIFY_REQUESTS", True)
-        mocker.patch(
-            "path.WAITER_USERNAME", "test_waiter_username"
-        )
-        mocker.patch(
-            "path.WAITER_PASSWORD", "test_waiter_password"
-        )
+        mocker.patch("path.WAITER_USERNAME", "test_waiter_username")
+        mocker.patch("path.WAITER_PASSWORD", "test_waiter_password")
         mocker.patch("path.BASE_PATH", "")
         self.mock_get = mocker.patch("path.requests.get")
 
@@ -216,13 +204,9 @@ class TestGetMoviePaths:
 class TestGetLocalPaths:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker):
-        mocker.patch(
-            "path.LOCAL_TV_SHOWS_PATHS", "test_local_tv_path"
-        )
+        mocker.patch("path.LOCAL_TV_SHOWS_PATHS", "test_local_tv_path")
 
-        mocker.patch(
-            "path.LOCAL_MOVIE_PATHS", "test_local_movie_path"
-        )
+        mocker.patch("path.LOCAL_MOVIE_PATHS", "test_local_movie_path")
 
         self.mock_buildLocalPaths = mocker.patch("path.Path._buildLocalPaths")
 
@@ -369,19 +353,11 @@ class TestGetAllMovieAndTVPaths:
 class TestGetPathByLocalPathAndRemotePath:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker):
-        mocker.patch(
-            "path.MEDIAVIEWER_MOVIE_PATH_URL", "test_movie_url"
-        )
-        mocker.patch(
-            "path.MEDIAVIEWER_TV_PATH_URL", "test_tv_url"
-        )
+        mocker.patch("path.MEDIAVIEWER_MOVIE_PATH_URL", "test_movie_url")
+        mocker.patch("path.MEDIAVIEWER_TV_PATH_URL", "test_tv_url")
         mocker.patch("path.VERIFY_REQUESTS", True)
-        mocker.patch(
-            "path.WAITER_USERNAME", "test_waiter_username"
-        )
-        mocker.patch(
-            "path.WAITER_PASSWORD", "test_waiter_password"
-        )
+        mocker.patch("path.WAITER_USERNAME", "test_waiter_username")
+        mocker.patch("path.WAITER_PASSWORD", "test_waiter_password")
 
         self.mock_get = mocker.patch("path.requests.get")
 
