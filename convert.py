@@ -51,7 +51,7 @@ def fixMetaData(source, dryRun=False):
 
 
 def _extractSubtitles(source, dest, stream_identifier):
-    srt_filename = "%s.srt" % os.path.splitext(dest)[0]
+    srt_filename = f"{os.path.splitext(dest)[0]}.srt"
 
     _extractSubtitleFromVideo(
         source,
