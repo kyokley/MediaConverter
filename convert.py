@@ -91,7 +91,7 @@ def _extractSubtitleFromVideo(
 
 
 def _convertSrtToVtt(srt_filename):
-    vtt_filename = "%s.vtt" % os.path.splitext(srt_filename)[0]
+    vtt_filename = f"{os.path.splitext(srt_filename)[0]}.vtt"
     srt_vtt_command = ["srt-vtt", srt_filename]
     log.info("Extracting using following command:")
     log.info(" ".join(srt_vtt_command))
@@ -132,22 +132,20 @@ def _handleSubtitles(source, dest, sres):
             or (english_2_srt_path_exists and english_2_srt_path)
         )
         log.info(
-            "{} found in directory. Attempting to convert.".format(
-                os.path.basename(srt_path)
-            )
+            f"{os.path.basename(srt_path)} found in directory. Attempting to convert."
         )
-        dest_path = "%s.vtt" % os.path.splitext(dest)[0]
+        dest_path = f"{os.path.splitext(dest)[0]}.vtt"
         vtt_filename = _convertSrtToVtt(srt_path)
         _moveSubtitleFile(vtt_filename, dest_path)
     elif os.path.exists(file_srt_path):
-        log.info("{} found in directory. Attempting to convert.".format(file_srt_path))
-        dest_path = "%s.vtt" % os.path.splitext(dest)[0]
+        log.info(f"{file_srt_path} found in directory. Attempting to convert.")
+        dest_path = f"{os.path.splitext(dest)[0]}.vtt"
         vtt_filename = _convertSrtToVtt(file_srt_path)
         _moveSubtitleFile(vtt_filename, dest_path)
     elif sres:
         log.info("Found subtitles stream. Attempting to extract")
         sres = sres.groups()
-        stream_identifier = "%s:%s" % (sres[0], sres[1])
+        stream_identifier = f"{sres[0]}:{sres[1]}"
         _extractSubtitles(
             source,
             dest,
@@ -275,16 +273,15 @@ def _reencodeVideo(source, dest, vres, ares, surround, dryRun=False):
 
 
 def _moveSubtitleFile(source, dest, dryRun=False):
-    srt_filename = "%s.srt" % os.path.splitext(source)[0]
-    source_vtt_filename = "%s.vtt" % os.path.splitext(source)[0]
-    dest_vtt_filename = "%s.vtt" % os.path.splitext(dest)[0]
+    srt_filename = f"{os.path.splitext(source)[0]}.srt"
+    source_vtt_filename = f"{os.path.splitext(source)[0]}.vtt"
+    dest_vtt_filename = f"{os.path.splitext(dest)[0]}.vtt"
     if os.path.exists(source_vtt_filename):
         log.info("Found associated subtitle")
         if not dryRun:
             try:
                 log.info(
-                    "Moving subtitle from %s to %s"
-                    % (source_vtt_filename, dest_vtt_filename)
+                    f"Moving subtitle from {source_vtt_filename} to {dest_vtt_filename}"
                 )
                 shutil.move(source_vtt_filename, dest_vtt_filename)
             except Exception as e:
@@ -292,12 +289,12 @@ def _moveSubtitleFile(source, dest, dryRun=False):
                 raise
 
             try:
-                log.info("Removing old srt file %s" % srt_filename)
+                log.info(f"Removing old srt file {srt_filename}")
                 os.remove(srt_filename)
             except OSError as e:
                 log.warning(e)
     else:
-        log.warning("File not found: %s" % source_vtt_filename)
+        log.warning(f"File not found: {source_vtt_filename}")
 
 
 def overwriteExistingFile(
@@ -309,7 +306,7 @@ def overwriteExistingFile(
 
     dest = appendSuffix and f"{dest}.{MEDIAVIEWER_SUFFIX}" or dest
 
-    log.info("Renaming file %s to %s" % (source, dest))
+    log.info(f"Renaming file {source} to {dest}")
     if not dryRun:
         try:
             shutil.move(source, dest)
@@ -331,7 +328,7 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
     orig = os.path.realpath(filename)
     new = "tmpfile.mp4"
 
-    log.info("Begin re-encoding of %s..." % orig)
+    log.info(f"Begin re-encoding of {orig}...")
     encode(orig, new, dryRun=dryRun)
     log.info("Finished encoding")
 
@@ -352,7 +349,7 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
 
 
 def _getFilesInDirectory(fullPath):
-    command = "find '%s' -maxdepth 10 -not -type d" % fullPath
+    command = f"find '{fullPath}' -maxdepth 10 -not -type d"
     p = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE)  # nosec
     res = p.communicate()[0]
     tokens = res.split(b"\n")
