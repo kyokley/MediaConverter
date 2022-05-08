@@ -1,27 +1,30 @@
 import tempfile
 import os
-import unittest
 import shutil
+import pytest
+
+from pathlib import Path as PathlibPath
 
 from movie_runner import MovieRunner
 
 
-class TestgetLocalMoviePathsFunctional(unittest.TestCase):
+class TestGetLocalMoviePathsFunctional:
+    @pytest.fixture(autouse=True)
     def setUp(self):
-        self.temp_dir = tempfile.mkdtemp()
+        self.temp_dir = PathlibPath(tempfile.mkdtemp())
         self.movieRunner = MovieRunner()
 
-    def tearDown(self):
+        yield
         shutil.rmtree(self.temp_dir)
 
     def test_path_does_not_exist(self):
-        path_name = os.path.join(self.temp_dir, "test_file")
+        path_name = self.temp_dir / "test_file"
         expected = set()
         actual = self.movieRunner._getLocalMoviePaths(path_name)
-        self.assertEqual(expected, actual)
+        assert expected == actual
 
     def test_path_exists(self):
         files = set([tempfile.mkstemp(dir=self.temp_dir)[1] for i in range(3)])
         expected = set([os.path.basename(x) for x in files])
         actual = self.movieRunner._getLocalMoviePaths(self.temp_dir)
-        self.assertEqual(expected, actual)
+        assert expected == actual

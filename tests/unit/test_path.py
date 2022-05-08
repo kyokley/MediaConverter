@@ -1,70 +1,48 @@
-import unittest
+import pytest
 import mock
 
 from path import Path
 
 
-class TestPostMovie(unittest.TestCase):
-    def setUp(self):
-        self._post_patcher = mock.patch("path.Path._post")
-        self.mock_post = self._post_patcher.start()
+class TestPostMovie:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_post = mocker.patch("path.Path._post")
 
         self.path = Path("/path/to/local", "/path/to/remote")
-
-    def tearDown(self):
-        self._post_patcher.stop()
 
     def test_postMovie(self):
         expected = None
         actual = self.path.postMovie()
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_post.assert_called_once_with(useMovieURL=True)
 
 
-class TestPostTVShow(unittest.TestCase):
-    def setUp(self):
-        self._post_patcher = mock.patch("path.Path._post")
-        self.mock_post = self._post_patcher.start()
+class TestPostTVShow:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_post = mocker.patch("path.Path._post")
 
         self.path = Path("/path/to/local", "/path/to/remote")
-
-    def tearDown(self):
-        self._post_patcher.stop()
 
     def test_postTVShow(self):
         expected = None
         actual = self.path.postTVShow()
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_post.assert_called_once_with(useMovieURL=False)
 
 
-class TestPost(unittest.TestCase):
-    def setUp(self):
-        self.postData_patcher = mock.patch("path.postData")
-        self.mock_postData = self.postData_patcher.start()
-
-        self.MEDIAVIEWER_MOVIE_PATH_URL_patcher = mock.patch(
-            "path.MEDIAVIEWER_MOVIE_PATH_URL", "test_movie_url"
-        )
-        self.MEDIAVIEWER_MOVIE_PATH_URL_patcher.start()
-
-        self.MEDIAVIEWER_TV_PATH_URL_patcher = mock.patch(
-            "path.MEDIAVIEWER_TV_PATH_URL", "test_tv_url"
-        )
-        self.MEDIAVIEWER_TV_PATH_URL_patcher.start()
-
-        self.SERVER_NAME_patcher = mock.patch("path.SERVER_NAME", "test_server_name")
-        self.SERVER_NAME_patcher.start()
+class TestPost:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_postData = mocker.patch("path.postData")
+        mocker.patch("path.MEDIAVIEWER_MOVIE_PATH_URL", "test_movie_url")
+        mocker.patch("path.MEDIAVIEWER_TV_PATH_URL", "test_tv_url")
+        mocker.patch("path.SERVER_NAME", "test_server_name")
 
         self.path = Path("/path/to/local", "/path/to/remote")
-
-    def tearDown(self):
-        self.postData_patcher.stop()
-        self.MEDIAVIEWER_TV_PATH_URL_patcher.stop()
-        self.MEDIAVIEWER_MOVIE_PATH_URL_patcher.stop()
-        self.SERVER_NAME_patcher.stop()
 
     def test_useMovieURL(self):
         expected = None
@@ -77,7 +55,7 @@ class TestPost(unittest.TestCase):
             "server": "test_server_name",
         }
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_postData.assert_called_once_with(expected_values, "test_movie_url")
 
     def test_not_useMovieURL(self):
@@ -91,40 +69,20 @@ class TestPost(unittest.TestCase):
             "server": "test_server_name",
         }
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_postData.assert_called_once_with(expected_values, "test_tv_url")
 
 
-class TestGetPaths(unittest.TestCase):
-    def setUp(self):
-        self.MEDIAVIEWER_MOVIE_PATH_URL_patcher = mock.patch(
-            "path.MEDIAVIEWER_MOVIE_PATH_URL", "test_movie_url"
-        )
-        self.MEDIAVIEWER_MOVIE_PATH_URL_patcher.start()
-
-        self.MEDIAVIEWER_TV_PATH_URL_patcher = mock.patch(
-            "path.MEDIAVIEWER_TV_PATH_URL", "test_tv_url"
-        )
-        self.MEDIAVIEWER_TV_PATH_URL_patcher.start()
-
-        self.VERIFY_REQUESTS_patcher = mock.patch("path.VERIFY_REQUESTS", True)
-        self.VERIFY_REQUESTS_patcher.start()
-
-        self.WAITER_USERNAME_patcher = mock.patch(
-            "path.WAITER_USERNAME", "test_waiter_username"
-        )
-        self.WAITER_USERNAME_patcher.start()
-
-        self.WAITER_PASSWORD_patcher = mock.patch(
-            "path.WAITER_PASSWORD", "test_waiter_password"
-        )
-        self.WAITER_PASSWORD_patcher.start()
-
-        self.BASE_PATH_patcher = mock.patch("path.BASE_PATH", "")
-        self.BASE_PATH_patcher.start()
-
-        self.get_patcher = mock.patch("path.requests.get")
-        self.mock_get = self.get_patcher.start()
+class TestGetPaths:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        mocker.patch("path.MEDIAVIEWER_MOVIE_PATH_URL", "test_movie_url")
+        mocker.patch("path.MEDIAVIEWER_TV_PATH_URL", "test_tv_url")
+        mocker.patch("path.VERIFY_REQUESTS", True)
+        mocker.patch("path.WAITER_USERNAME", "test_waiter_username")
+        mocker.patch("path.WAITER_PASSWORD", "test_waiter_password")
+        mocker.patch("path.BASE_PATH", "")
+        self.mock_get = mocker.patch("path.requests.get")
 
         self.path = Path("/path/to/local", "/path/to/remote")
         self.mock_get.return_value.json.side_effect = [
@@ -158,15 +116,6 @@ class TestGetPaths(unittest.TestCase):
             },
         ]
 
-    def tearDown(self):
-        self.mock_get = self.get_patcher.stop()
-        self.WAITER_PASSWORD_patcher.stop()
-        self.WAITER_USERNAME_patcher.stop()
-        self.VERIFY_REQUESTS_patcher.stop()
-        self.MEDIAVIEWER_TV_PATH_URL_patcher.stop()
-        self.MEDIAVIEWER_MOVIE_PATH_URL_patcher.stop()
-        self.BASE_PATH_patcher.stop()
-
     def test_getMovies(self):
         expected = {
             "some.local.path": {"pks": set([123, 125]), "finished": False},
@@ -174,7 +123,7 @@ class TestGetPaths(unittest.TestCase):
         }
         actual = self.path._getPaths(getMovies=True)
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_get.assert_has_calls(
             [
                 mock.call(
@@ -201,7 +150,7 @@ class TestGetPaths(unittest.TestCase):
         }
         actual = self.path._getPaths(getMovies=False)
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_get.assert_has_calls(
             [
                 mock.call(
@@ -222,92 +171,66 @@ class TestGetPaths(unittest.TestCase):
         )
 
 
-class TestGetTVPaths(unittest.TestCase):
-    def setUp(self):
-        self._getPaths_patcher = mock.patch("path.Path._getPaths")
-        self.mock_getPaths = self._getPaths_patcher.start()
+class TestGetTVPaths:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_getPaths = mocker.patch("path.Path._getPaths")
 
         self.path = Path("/path/to/local", "/path/to/remote")
-
-    def tearDown(self):
-        self._getPaths_patcher.stop()
 
     def test_getTVPaths(self):
         expected = self.mock_getPaths.return_value
         actual = self.path.getTVPaths()
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_getPaths.assert_called_once_with(getMovies=False)
 
 
-class TestGetMoviePaths(unittest.TestCase):
-    def setUp(self):
-        self._getPaths_patcher = mock.patch("path.Path._getPaths")
-        self.mock_getPaths = self._getPaths_patcher.start()
+class TestGetMoviePaths:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_getPaths = mocker.patch("path.Path._getPaths")
 
         self.path = Path("/path/to/local", "/path/to/remote")
-
-    def tearDown(self):
-        self._getPaths_patcher.stop()
 
     def test_getTVPaths(self):
         expected = self.mock_getPaths.return_value
         actual = self.path.getMoviePaths()
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_getPaths.assert_called_once_with(getMovies=True)
 
 
-class TestGetLocalPaths(unittest.TestCase):
-    def setUp(self):
-        self.LOCAL_TV_SHOWS_PATHS_patcher = mock.patch(
-            "path.LOCAL_TV_SHOWS_PATHS", "test_local_tv_path"
-        )
-        self.LOCAL_TV_SHOWS_PATHS_patcher.start()
+class TestGetLocalPaths:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        mocker.patch("path.LOCAL_TV_SHOWS_PATHS", "test_local_tv_path")
 
-        self.LOCAL_MOVIE_PATHS_patcher = mock.patch(
-            "path.LOCAL_MOVIE_PATHS", "test_local_movie_path"
-        )
-        self.LOCAL_MOVIE_PATHS_patcher.start()
+        mocker.patch("path.LOCAL_MOVIE_PATHS", "test_local_movie_path")
 
-        self._buildLocalPaths_patcher = mock.patch("path.Path._buildLocalPaths")
-        self.mock_buildLocalPaths = self._buildLocalPaths_patcher.start()
-
-    def tearDown(self):
-        self.LOCAL_MOVIE_PATHS_patcher.stop()
-        self.LOCAL_TV_SHOWS_PATHS_patcher.stop()
-        self._buildLocalPaths_patcher.stop()
+        self.mock_buildLocalPaths = mocker.patch("path.Path._buildLocalPaths")
 
     def test_getLocalMovies(self):
         expected = self.mock_buildLocalPaths.return_value
         actual = Path._getLocalPaths(getMovies=True)
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_buildLocalPaths.assert_called_once_with("test_local_movie_path")
 
     def test_getLocalTVShows(self):
         expected = self.mock_buildLocalPaths.return_value
         actual = Path._getLocalPaths(getMovies=False)
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_buildLocalPaths.assert_called_once_with("test_local_tv_path")
 
 
-class TestBuildLocalPaths(unittest.TestCase):
-    def setUp(self):
-        self.error_patcher = mock.patch("path.log.error")
-        self.mock_error = self.error_patcher.start()
-
-        self.exists_patcher = mock.patch("path.os.path.exists")
-        self.mock_exists = self.exists_patcher.start()
-
-        self.listdir_patcher = mock.patch("path.os.listdir")
-        self.mock_listdir = self.listdir_patcher.start()
-
-    def tearDown(self):
-        self.error_patcher.stop()
-        self.listdir_patcher.stop()
-        self.exists_patcher.stop()
+class TestBuildLocalPaths:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_error = mocker.patch("path.log.error")
+        self.mock_exists = mocker.patch("path.os.path.exists")
+        self.mock_listdir = mocker.patch("path.os.listdir")
 
     def test_buildLocalPaths(self):
         test_paths = ["file_path1", "file_path2", "file_path3"]
@@ -328,7 +251,7 @@ class TestBuildLocalPaths(unittest.TestCase):
         )
         actual = Path._buildLocalPaths(test_paths)
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_exists.assert_has_calls(
             [
                 mock.call("file_path1"),
@@ -347,46 +270,38 @@ class TestBuildLocalPaths(unittest.TestCase):
         )
 
 
-class TestGetLocalTVAndMoviePaths(unittest.TestCase):
-    def setUp(self):
-        self._getLocalPaths_patcher = mock.patch("path.Path._getLocalPaths")
-        self.mock_getLocalPaths = self._getLocalPaths_patcher.start()
-
-    def tearDown(self):
-        self._getLocalPaths_patcher.stop()
+class TestGetLocalTVAndMoviePaths:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_getLocalPaths = mocker.patch("path.Path._getLocalPaths")
 
     def test_getLocalTVPaths(self):
         expected = self.mock_getLocalPaths.return_value
         actual = Path.getLocalTVPaths()
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_getLocalPaths.assert_called_once_with(getMovies=False)
 
     def test_getLocalMoviePaths(self):
         expected = self.mock_getLocalPaths.return_value
         actual = Path.getLocalMoviePaths()
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_getLocalPaths.assert_called_once_with(getMovies=True)
 
 
-class TestGetAllPaths(unittest.TestCase):
-    def setUp(self):
-        self._getPaths_patcher = mock.patch("path.Path._getPaths")
-        self.mock_getPaths = self._getPaths_patcher.start()
+class TestGetAllPaths:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_getPaths = mocker.patch("path.Path._getPaths")
 
-        self._getLocalPaths_patcher = mock.patch("path.Path._getLocalPaths")
-        self.mock_getLocalPaths = self._getLocalPaths_patcher.start()
+        self.mock_getLocalPaths = mocker.patch("path.Path._getLocalPaths")
 
         self.mock_getPaths.return_value = {
             "test_path1": {"pks": set([123, 124]), "finished": False},
             "test_path2": {"pks": set([100, 101]), "finished": False},
         }
         self.mock_getLocalPaths.return_value = set(["test_path3", "test_path4"])
-
-    def tearDown(self):
-        self._getLocalPaths_patcher.stop()
-        self._getPaths_patcher.stop()
 
     def test_getMovies(self):
         expected = {
@@ -397,7 +312,7 @@ class TestGetAllPaths(unittest.TestCase):
         }
         actual = Path._getAllPaths(getMovies=True)
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_getPaths.assert_called_once_with(getMovies=True)
         self.mock_getLocalPaths.assert_called_once_with(getMovies=True)
 
@@ -410,69 +325,41 @@ class TestGetAllPaths(unittest.TestCase):
         }
         actual = Path._getAllPaths(getMovies=False)
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_getPaths.assert_called_once_with(getMovies=False)
         self.mock_getLocalPaths.assert_called_once_with(getMovies=False)
 
 
-class TestGetAllMovieAndTVPaths(unittest.TestCase):
-    def setUp(self):
-        self._getAllPaths_patcher = mock.patch("path.Path._getAllPaths")
-        self.mock_getAllPaths = self._getAllPaths_patcher.start()
-
-    def tearDown(self):
-        self._getAllPaths_patcher.stop()
+class TestGetAllMovieAndTVPaths:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_getAllPaths = mocker.patch("path.Path._getAllPaths")
 
     def test_getAllTVPaths(self):
         expected = self.mock_getAllPaths.return_value
         actual = Path.getAllTVPaths()
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_getAllPaths.assert_called_once_with(getMovies=False)
 
     def test_getAllMoviePaths(self):
         expected = self.mock_getAllPaths.return_value
         actual = Path.getAllMoviePaths()
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_getAllPaths.assert_called_once_with(getMovies=True)
 
 
-class TestGetPathByLocalPathAndRemotePath(unittest.TestCase):
-    def setUp(self):
-        self.MEDIAVIEWER_MOVIE_PATH_URL_patcher = mock.patch(
-            "path.MEDIAVIEWER_MOVIE_PATH_URL", "test_movie_url"
-        )
-        self.MEDIAVIEWER_MOVIE_PATH_URL_patcher.start()
+class TestGetPathByLocalPathAndRemotePath:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        mocker.patch("path.MEDIAVIEWER_MOVIE_PATH_URL", "test_movie_url")
+        mocker.patch("path.MEDIAVIEWER_TV_PATH_URL", "test_tv_url")
+        mocker.patch("path.VERIFY_REQUESTS", True)
+        mocker.patch("path.WAITER_USERNAME", "test_waiter_username")
+        mocker.patch("path.WAITER_PASSWORD", "test_waiter_password")
 
-        self.MEDIAVIEWER_TV_PATH_URL_patcher = mock.patch(
-            "path.MEDIAVIEWER_TV_PATH_URL", "test_tv_url"
-        )
-        self.MEDIAVIEWER_TV_PATH_URL_patcher.start()
-
-        self.VERIFY_REQUESTS_patcher = mock.patch("path.VERIFY_REQUESTS", True)
-        self.VERIFY_REQUESTS_patcher.start()
-
-        self.WAITER_USERNAME_patcher = mock.patch(
-            "path.WAITER_USERNAME", "test_waiter_username"
-        )
-        self.WAITER_USERNAME_patcher.start()
-
-        self.WAITER_PASSWORD_patcher = mock.patch(
-            "path.WAITER_PASSWORD", "test_waiter_password"
-        )
-        self.WAITER_PASSWORD_patcher.start()
-
-        self.get_patcher = mock.patch("path.requests.get")
-        self.mock_get = self.get_patcher.start()
-
-    def tearDown(self):
-        self.get_patcher.stop()
-        self.MEDIAVIEWER_TV_PATH_URL_patcher.stop()
-        self.MEDIAVIEWER_MOVIE_PATH_URL_patcher.stop()
-        self.WAITER_PASSWORD_patcher.stop()
-        self.WAITER_USERNAME_patcher.stop()
-        self.VERIFY_REQUESTS_patcher.stop()
+        self.mock_get = mocker.patch("path.requests.get")
 
     def test_useMovieURL(self):
         expected = self.mock_get.return_value.json.return_value
@@ -480,7 +367,7 @@ class TestGetPathByLocalPathAndRemotePath(unittest.TestCase):
             "test_localpath", "test_remotepath", useMovieURL=True
         )
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_get.assert_called_once_with(
             "test_movie_url",
             params={"localpath": "test_localpath", "remotepath": "test_remotepath"},
@@ -496,7 +383,7 @@ class TestGetPathByLocalPathAndRemotePath(unittest.TestCase):
             "test_localpath", "test_remotepath", useMovieURL=False
         )
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_get.assert_called_once_with(
             "test_tv_url",
             params={"localpath": "test_localpath", "remotepath": "test_remotepath"},
@@ -507,17 +394,12 @@ class TestGetPathByLocalPathAndRemotePath(unittest.TestCase):
         self.mock_get.return_value.json.assert_called_once_with()
 
 
-class TestGetMovieAndTVPathByLocalPathAndRemotePath(unittest.TestCase):
-    def setUp(self):
-        self._getPathByLocalPathAndRmeotePath_patcher = mock.patch(
+class TestGetMovieAndTVPathByLocalPathAndRemotePath:
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        self.mock_getPathByLocalPathAndRemotePath = mocker.patch(
             "path.Path._getPathByLocalPathAndRemotePath"
         )
-        self.mock_getPathByLocalPathAndRemotePath = (
-            self._getPathByLocalPathAndRmeotePath_patcher.start()
-        )
-
-    def tearDown(self):
-        self._getPathByLocalPathAndRmeotePath_patcher.stop()
 
     def test_getTVPathByLocalPathAndRemotePath(self):
         expected = self.mock_getPathByLocalPathAndRemotePath.return_value
@@ -526,7 +408,7 @@ class TestGetMovieAndTVPathByLocalPathAndRemotePath(unittest.TestCase):
             "test_remotepath",
         )
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_getPathByLocalPathAndRemotePath.assert_called_once_with(
             "test_localpath", "test_remotepath", useMovieURL=False
         )
@@ -538,7 +420,7 @@ class TestGetMovieAndTVPathByLocalPathAndRemotePath(unittest.TestCase):
             "test_remotepath",
         )
 
-        self.assertEqual(expected, actual)
+        assert expected == actual
         self.mock_getPathByLocalPathAndRemotePath.assert_called_once_with(
             "test_localpath", "test_remotepath", useMovieURL=True
         )

@@ -71,12 +71,10 @@ def stripUnicode(filename, path=None):
 
 def send_email(subject, body):
     log.info("sending error email")
-    message = """From: %s\nTo: %s\nSubject: %s\n\n%s
-    """ % (
-        GMAIL_USER,
-        ", ".join(EMAIL_RECIPIENTS),
-        subject,
-        body,
+    message = (
+        f"From: {GMAIL_USER}\n"
+        f"To: {', '.join(EMAIL_RECIPIENTS)}\n"
+        f"Subject: {subject}\n\n{body}\n"
     )
     try:
         server = smtplib.SMTP("smtp.gmail.com", 587)
@@ -118,7 +116,7 @@ def get_localpath_by_filename(filename):
     try:
         resp.raise_for_status()
     except Exception:
-        log.warning("Unable to find path for {}".format(filename))
+        log.warning(f"Unable to find path for {filename}")
         log.warning(resp.text)
         return
 
