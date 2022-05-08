@@ -5,7 +5,7 @@ build:
 	docker build -t kyokley/mediaconverter --target=prod .
 
 build-dev:
-	# docker build -t kyokley/mediaconverter --target=dev .
+	docker build -t kyokley/mediaconverter --target=dev .
 
 publish: build
 	docker push kyokley/mediaconverter

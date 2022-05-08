@@ -1,6 +1,6 @@
 ARG BASE_IMAGE=python:3.10-slim
 
-FROM --platform=linux/amd64 ${BASE_IMAGE} AS builder
+FROM ${BASE_IMAGE} AS builder
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
@@ -88,7 +88,7 @@ RUN $POETRY_VENV/bin/pip install poetry && $POETRY_VENV/bin/poetry install --no-
 
 # RUN rm -rf /build/x265 /build/ffmpeg_sources $HOME/ffmpeg_build
 
-FROM --platform=linux/amd64 ${BASE_IMAGE} AS base
+FROM ${BASE_IMAGE} AS base
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
