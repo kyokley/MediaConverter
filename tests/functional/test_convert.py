@@ -54,18 +54,27 @@ class TestGetFilesInDirectory:
 
 class TestMakeFileStreamable:
     @pytest.fixture(autouse=True)
-    def setUp(self, streamable_file_path):
+    def setUp(self, streamable_file_path, unstreamable_file_path):
         self.streamable_file_path = streamable_file_path
+        self.unstreamable_file_path = unstreamable_file_path
 
-    def test_makeFileStreamable(self):
+    @pytest.mark.parametrize(
+        'use_streamable',
+        (True, False))
+    def test_makeFileStreamable(self, use_streamable):
+        if use_streamable:
+            path = self.streamable_file_path
+        else:
+            path = self.unstreamable_file_path
+
         expected_new_file_path = (
-            self.streamable_file_path.parent
-            / f"{self.streamable_file_path.name}.{MEDIAVIEWER_SUFFIX}"
+            path.parent
+            / f"{path.name}.{MEDIAVIEWER_SUFFIX}"
         )
 
-        makeFileStreamable(str(self.streamable_file_path))
+        makeFileStreamable(str(path))
         assert expected_new_file_path.exists()
-        assert not self.streamable_file_path.exists()
+        assert not path.exists()
 
         with pytest.raises(AlreadyEncoded):
             makeFileStreamable(str(expected_new_file_path))
