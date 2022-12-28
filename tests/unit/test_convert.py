@@ -94,7 +94,7 @@ class TestExtractSubtitles:
         _extractSubtitles(source, dest, stream_identifier)
 
         self.mock_extractSubtitleFromVideo.assert_called_once_with(
-            source, dest, stream_identifier, expected_srt
+            source, stream_identifier, expected_srt
         )
         self.mock_convertSrtToVtt.assert_called_once_with(expected_srt)
 
@@ -121,7 +121,6 @@ class TestExtractSubtitleFromVideo:
     def test_success(self):
         _extractSubtitleFromVideo(
             self.source,
-            self.dest,
             self.stream_identifier,
             "/tmp/test_dest.srt",  # nosec
         )
