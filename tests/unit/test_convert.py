@@ -606,7 +606,7 @@ class TestReencodeVideo:
         self.mock_Popen.assert_called_once_with(
             tuple(
                 shlex.split(
-                    "test_encoder -hide_banner -y" " -i test_source -c copy test_dest"
+                    "test_encoder -hide_banner -y -i test_source -c copy -pix_fmt yuv420p test_dest"
                 )
             ),
             stdin=PIPE,
@@ -623,7 +623,7 @@ class TestReencodeVideo:
             tuple(
                 shlex.split(
                     "test_encoder -hide_banner -y "
-                    "-i test_source -c:v copy -c:a libfdk_aac test_dest"
+                    "-i test_source -c:v copy -c:a libfdk_aac -pix_fmt yuv420p test_dest"
                 )
             ),
             stdin=PIPE,
@@ -641,7 +641,7 @@ class TestReencodeVideo:
                 shlex.split(
                     "test_encoder -hide_banner -y "
                     "-i test_source -c:v libx264 "
-                    "-c:a libfdk_aac test_dest"
+                    "-c:a libfdk_aac -pix_fmt yuv420p test_dest"
                 )
             ),
             stdin=PIPE,
@@ -660,7 +660,7 @@ class TestReencodeVideo:
             tuple(
                 shlex.split(
                     "test_encoder -hide_banner -y "
-                    "-i test_source -crf 30 -preset slow test_dest"
+                    "-i test_source -crf 30 -preset slow -pix_fmt yuv420p test_dest"
                 )
             ),
             stdin=PIPE,
@@ -680,7 +680,7 @@ class TestReencodeVideo:
                 shlex.split(
                     "test_encoder -hide_banner -y "
                     "-i test_source -crf 30 -preset slow "
-                    "-c:a libfdk_aac test_dest"
+                    "-c:a libfdk_aac -pix_fmt yuv420p test_dest"
                 )
             ),
             stdin=PIPE,
@@ -700,7 +700,7 @@ class TestReencodeVideo:
                 shlex.split(
                     "test_encoder -hide_banner -y "
                     "-i test_source -crf 30 -preset slow "
-                    "-c:v libx264 -c:a libfdk_aac test_dest"
+                    "-c:v libx264 -c:a libfdk_aac -pix_fmt yuv420p test_dest"
                 )
             ),
             stdin=PIPE,

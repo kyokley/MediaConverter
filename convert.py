@@ -248,6 +248,7 @@ def _reencodeVideo(source, dest, vres, ares, surround, dryRun=False):
         if surround:
             command.extend(["-ac", "2"])
 
+    command.extend(["-pix_fmt", "yuv420p"])
     command.append(dest)
     command = tuple(command)
 
