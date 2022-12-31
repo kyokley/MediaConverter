@@ -119,19 +119,24 @@ def _handleSubtitles(source, dest, sres):
 
     file_srt_path = Path(source).with_suffix(".srt")
 
-    for idx, srt_path in enumerate(english_subtitle_paths):
+    count = 0
+
+    for srt_path in english_subtitle_paths:
         log.info(
             f"{srt_path.name} found in directory. Attempting to convert."
         )
-        dest_path = Path(f"{dest}-{idx}.vtt")
+        dest_path = Path(f"{dest}-{count}.vtt")
         vtt_filename = _convertSrtToVtt(srt_path)
         _moveSubtitleFile(vtt_filename, dest_path)
 
+        count += 1
+
     if file_srt_path.exists():
         log.info(f"{file_srt_path} found in directory. Attempting to convert.")
-        dest_path = Path(dest).with_suffix(".vtt")
+        dest_path = Path(f"{dest}-{count}.vtt")
         vtt_filename = _convertSrtToVtt(file_srt_path)
         _moveSubtitleFile(vtt_filename, dest_path)
+        count += 1
     elif sres:
         log.info("Found subtitles stream. Attempting to extract")
         sres = sres.groups()
