@@ -91,16 +91,26 @@ class TestMakeFileStreamable:
 
 
 class TestHandleSubtitles:
-    @pytest.fixture(autouse=True)
-    def setUp(self, srt_file_path):
-        self.srt_file_path = srt_file_path
+    def test_handleSubtitles(self, srt_file_path):
+        new_path = srt_file_path.parent / "foo.vtt"
 
-    def test_handleSubtitles(self):
-        new_path = self.srt_file_path.parent / "foo.vtt"
+        _handleSubtitles(srt_file_path, new_path, None)
+        subs = [x for x in new_path.parent.glob("*.vtt")]
+        assert len(subs) == 1
+        assert new_path.name in str(subs[0])
 
-        _handleSubtitles(self.srt_file_path, new_path, None)
-        assert new_path.exists()
-
-        with open(new_path, "r") as f:
+        with open(subs[0], "r") as f:
             data = f.read()
         assert VTT_INDICATOR in data
+
+    def test_multiple_subtitles(self, multiple_srt_path):
+        new_path = multiple_srt_path.parent / "foo.vtt"
+        _handleSubtitles(multiple_srt_path, new_path, None)
+        subs = [x for x in new_path.parent.glob("*.vtt")]
+        assert len(subs) == 3
+        for sub in subs:
+            assert new_path.name in str(sub)
+
+            with open(sub, "r") as f:
+                data = f.read()
+            assert VTT_INDICATOR in data

@@ -48,3 +48,16 @@ def srt_file_path():
 
     yield new_path
     shutil.rmtree(temp_dir)
+
+
+@pytest.fixture()
+def multiple_srt_path():
+    temp_dir = tempfile.mkdtemp()
+    temp_dir_path = Path(temp_dir)
+
+    for sub_file in DATA_DIR_PATH.glob("*.srt"):
+        new_path = temp_dir_path / sub_file.name
+        shutil.copy(sub_file, new_path)
+
+    yield new_path
+    shutil.rmtree(temp_dir)

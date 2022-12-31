@@ -91,7 +91,7 @@ def _extractSubtitleFromVideo(
 
 def _convertSrtToVtt(srt_filename):
     vtt_filename = f"{os.path.splitext(srt_filename)[0]}.vtt"
-    srt_vtt_command = ["srt-vtt", srt_filename]
+    srt_vtt_command = ["srt-vtt", str(srt_filename)]
     log.info("Extracting using following command:")
     log.info(" ".join(srt_vtt_command))
     process = Popen(srt_vtt_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)  # nosec
