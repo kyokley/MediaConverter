@@ -84,9 +84,8 @@ RUN $POETRY_VENV/bin/pip install -U pip poetry && $VIRTUAL_ENV/bin/pip install -
 WORKDIR /code
 COPY poetry.lock pyproject.toml /code/
 
-RUN $POETRY_VENV/bin/pip install poetry && $POETRY_VENV/bin/poetry install --no-dev
+RUN $POETRY_VENV/bin/pip install poetry && $POETRY_VENV/bin/poetry install --only main
 
-# RUN rm -rf /build/x265 /build/ffmpeg_sources $HOME/ffmpeg_build
 
 FROM ${BASE_IMAGE} AS base
 ENV PYTHONDONTWRITEBYTECODE 1
