@@ -312,7 +312,6 @@ def overwriteExistingFile(
     else:
         log.info("Skipping move execution for dry-run")
 
-    _moveSubtitleFile(source, dest, dryRun=dryRun)
     log.info("Finished renaming file")
     return dest
 
@@ -321,8 +320,10 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
     if MEDIAVIEWER_SUFFIX in filename:
         raise AlreadyEncoded("File appears to already have been encoded. FAIL")
 
-    orig = os.path.realpath(filename)
-    new = "tmpfile.mp4"
+    orig = Path(filename).resolve()
+
+    new = Path('/tmp') / orig.name
+    new = new.with_suffix('.mp4')
 
     log.info(f"Begin re-encoding of {orig}...")
     encode(orig, new, dryRun=dryRun)

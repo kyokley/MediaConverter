@@ -1,6 +1,7 @@
 import pytest
 import mock
 import shlex
+from pathlib import Path
 from subprocess import PIPE
 from settings import ENCODER
 from utils import EncoderException
@@ -11,7 +12,6 @@ from convert import (
     _extractSubtitleFromVideo,
     _convertSrtToVtt,
     _moveSubtitleFile,
-    _handleSubtitles,
     overwriteExistingFile,
     makeFileStreamable,
     encode,
@@ -271,8 +271,6 @@ class TestOverwriteExistingFile:
 
         self.mock_move = mocker.patch("convert.shutil.move")
 
-        self.mock_moveSubtitleFile = mocker.patch("convert._moveSubtitleFile")
-
         self.mock_exists.return_value = True
 
         self.source = "tmpfile.mp4"
@@ -291,9 +289,6 @@ class TestOverwriteExistingFile:
             "tmpfile.mp4",
             "/tmp/this.is.a.file.mp4",  # nosec
         )
-        self.mock_moveSubtitleFile.assert_called_once_with(
-            "tmpfile.mp4", "/tmp/this.is.a.file.mp4", dryRun=False
-        )
         assert res == "/tmp/this.is.a.file.mp4"
 
     def test_removeOriginal_noDryRun_noSuffix(self):
@@ -306,9 +301,6 @@ class TestOverwriteExistingFile:
         )
         self.mock_remove.assert_called_once_with("/tmp/this.is.a.file.mp4")
         self.mock_move.assert_called_once_with("tmpfile.mp4", "/tmp/this.is.a.file.mp4")
-        self.mock_moveSubtitleFile.assert_called_once_with(
-            "tmpfile.mp4", "/tmp/this.is.a.file.mp4", dryRun=False
-        )
         assert res == "/tmp/this.is.a.file.mp4"
 
     def test_keepOriginal_dryRun_noSuffix(self):
@@ -321,9 +313,6 @@ class TestOverwriteExistingFile:
         )
         assert not self.mock_remove.called
         assert not self.mock_move.called
-        self.mock_moveSubtitleFile.assert_called_once_with(
-            "tmpfile.mp4", "/tmp/this.is.a.file.mp4", dryRun=True
-        )
         assert res == "/tmp/this.is.a.file.mp4"
 
     def test_removeOriginal_dryRun_noSuffix(self):
@@ -336,9 +325,6 @@ class TestOverwriteExistingFile:
         )
         assert not self.mock_remove.called
         assert not self.mock_move.called
-        self.mock_moveSubtitleFile.assert_called_once_with(
-            "tmpfile.mp4", "/tmp/this.is.a.file.mp4", dryRun=True
-        )
         assert res == "/tmp/this.is.a.file.mp4"
 
     def test_keepOriginal_noDryRun_suffix(self):
@@ -352,9 +338,6 @@ class TestOverwriteExistingFile:
         assert not self.mock_remove.called
         self.mock_move.assert_called_once_with(
             "tmpfile.mp4", "/tmp/this.is.a.file.mp4.suffix.mp4"
-        )
-        self.mock_moveSubtitleFile.assert_called_once_with(
-            "tmpfile.mp4", "/tmp/this.is.a.file.mp4.suffix.mp4", dryRun=False
         )
         assert res == "/tmp/this.is.a.file.mp4.suffix.mp4"
 
@@ -370,9 +353,6 @@ class TestOverwriteExistingFile:
         self.mock_move.assert_called_once_with(
             "tmpfile.mp4", "/tmp/this.is.a.file.mp4.suffix.mp4"
         )
-        self.mock_moveSubtitleFile.assert_called_once_with(
-            "tmpfile.mp4", "/tmp/this.is.a.file.mp4.suffix.mp4", dryRun=False
-        )
         assert res == "/tmp/this.is.a.file.mp4.suffix.mp4"
 
     def test_keepOriginal_dryRun_suffix(self):
@@ -385,9 +365,6 @@ class TestOverwriteExistingFile:
         )
         assert not self.mock_remove.called
         assert not self.mock_move.called
-        self.mock_moveSubtitleFile.assert_called_once_with(
-            "tmpfile.mp4", "/tmp/this.is.a.file.mp4.suffix.mp4", dryRun=True
-        )
         assert res == "/tmp/this.is.a.file.mp4.suffix.mp4"
 
     def test_removeOriginal_dryRun_suffix(self):
@@ -400,18 +377,12 @@ class TestOverwriteExistingFile:
         )
         assert not self.mock_remove.called
         assert not self.mock_move.called
-        self.mock_moveSubtitleFile.assert_called_once_with(
-            "tmpfile.mp4", "/tmp/this.is.a.file.mp4.suffix.mp4", dryRun=True
-        )
         assert res == "/tmp/this.is.a.file.mp4.suffix.mp4"
 
 
 class TestMakeFileStreamable:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker):
-        self.mock_realpath = mocker.patch("convert.os.path.realpath")
-        self.mock_realpath.return_value = "orig_filename"
-
         self.mock_log = mocker.patch("convert.log")
 
         self.mock_encode = mocker.patch("convert.encode")
@@ -426,22 +397,23 @@ class TestMakeFileStreamable:
         appendSuffixSentinel = object()
         removeOriginalSentinel = object()
         res = makeFileStreamable(
-            "/tmp/this.is.a.file.mkv",
+            "/media/this.is.a.file.mkv",
             dryRun=dryRunSentinel,
             appendSuffix=appendSuffixSentinel,
             removeOriginal=removeOriginalSentinel,
         )
         assert res == "the_final_destination"
-        self.mock_realpath.assert_called_once_with("/tmp/this.is.a.file.mkv")
         self.mock_encode.assert_called_once_with(
-            "orig_filename", "tmpfile.mp4", dryRun=dryRunSentinel
+            Path("/media/this.is.a.file.mkv"),
+            Path("/tmp/this.is.a.file.mp4"),
+            dryRun=dryRunSentinel
         )
         self.mock_fixMetaData.assert_called_once_with(
-            "tmpfile.mp4", dryRun=dryRunSentinel
+            Path("/tmp/this.is.a.file.mp4"), dryRun=dryRunSentinel
         )
         self.mock_overwriteExistingFile.assert_called_once_with(
-            "tmpfile.mp4",
-            "orig_filename",
+            Path("/tmp/this.is.a.file.mp4"),
+            Path("/media/this.is.a.file.mkv"),
             dryRun=dryRunSentinel,
             appendSuffix=appendSuffixSentinel,
             removeOriginal=removeOriginalSentinel,
