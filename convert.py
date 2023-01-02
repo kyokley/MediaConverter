@@ -117,7 +117,7 @@ def _handleSubtitles(source, dest, sres):
     dirname = Path(source).parent
     english_subtitle_paths = dirname.glob("*Eng*.srt")
 
-    file_srt_paths = dirname.glob(f"{source.name}*.srt")
+    file_srt_paths = dirname.glob("*.srt")
 
     count = 0
 
@@ -132,11 +132,12 @@ def _handleSubtitles(source, dest, sres):
         count += 1
 
     for file_srt_path in file_srt_paths:
-        log.info(f"{file_srt_path} found in directory. Attempting to convert.")
-        dest_path = dirname / f"{dest.name}.{MEDIAVIEWER_SUFFIX}-{count}.vtt"
-        vtt_filename = _convertSrtToVtt(file_srt_path)
-        _moveSubtitleFile(vtt_filename, dest_path)
-        count += 1
+        if source.stem in str(file_srt_path):
+            log.info(f"{file_srt_path} found in directory. Attempting to convert.")
+            dest_path = dirname / f"{dest.name}.{MEDIAVIEWER_SUFFIX}-{count}.vtt"
+            vtt_filename = _convertSrtToVtt(file_srt_path)
+            _moveSubtitleFile(vtt_filename, dest_path)
+            count += 1
 
     if sres:
         log.info("Found subtitles stream. Attempting to extract")
