@@ -125,7 +125,7 @@ def _handleSubtitles(source, dest, sres):
         log.info(
             f"{srt_path.name} found in directory. Attempting to convert."
         )
-        dest_path = Path(f"{dest}-{count}.vtt")
+        dest_path = Path(f"{dest.name}-{count}.vtt")
         vtt_filename = _convertSrtToVtt(srt_path)
         _moveSubtitleFile(vtt_filename, dest_path)
 
@@ -133,7 +133,7 @@ def _handleSubtitles(source, dest, sres):
 
     if file_srt_path.exists():
         log.info(f"{file_srt_path} found in directory. Attempting to convert.")
-        dest_path = Path(f"{dest}-{count}.vtt")
+        dest_path = Path(f"{dest.name}-{count}.vtt")
         vtt_filename = _convertSrtToVtt(file_srt_path)
         _moveSubtitleFile(vtt_filename, dest_path)
         count += 1
