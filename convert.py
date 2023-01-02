@@ -321,7 +321,9 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
         raise AlreadyEncoded("File appears to already have been encoded. FAIL")
 
     orig = Path(filename).resolve()
+
     new = Path('/tmp') / orig.name
+    new = new.with_suffix('.mp4')
 
     log.info(f"Begin re-encoding of {orig}...")
     encode(orig, new, dryRun=dryRun)
