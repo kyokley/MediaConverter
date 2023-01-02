@@ -94,7 +94,7 @@ class TestExtractSubtitles:
         _extractSubtitles(source, dest, stream_identifier)
 
         self.mock_extractSubtitleFromVideo.assert_called_once_with(
-            source, dest, stream_identifier, expected_srt
+            source, stream_identifier, expected_srt
         )
         self.mock_convertSrtToVtt.assert_called_once_with(expected_srt)
 
@@ -121,7 +121,6 @@ class TestExtractSubtitleFromVideo:
     def test_success(self):
         _extractSubtitleFromVideo(
             self.source,
-            self.dest,
             self.stream_identifier,
             "/tmp/test_dest.srt",  # nosec
         )
@@ -488,103 +487,6 @@ class TestEncode:
             self.mock_surround,
             dryRun=dryRunSentinel,
         )
-
-
-class TestHandleSubtitles:
-    @pytest.fixture(autouse=True)
-    def setUp(self, mocker):
-        self.mock_exists = mocker.patch("convert.os.path.exists")
-
-        self.mock_log = mocker.patch("convert.log")
-
-        self.mock_convertSrtToVtt = mocker.patch("convert._convertSrtToVtt")
-        self.mock_convertSrtToVtt.return_value = "/path/to/English.vtt"
-
-        self.mock_moveSubtitleFile = mocker.patch("convert._moveSubtitleFile")
-
-        self.mock_extractSubtitles = mocker.patch("convert._extractSubtitles")
-
-        self.source = "/path/to/file.mkv"
-        self.dest = "tmpfile.mp4"
-        self.sres = mock.MagicMock()
-        self.sres.groups.return_value = (3, 4)
-
-    def test_EnglishSrtExists(self):
-        self.mock_exists.side_effect = [True, False, False]
-
-        _handleSubtitles(self.source, self.dest, self.sres)
-
-        self.mock_exists.assert_has_calls(
-            [
-                mock.call("/path/to/English.srt"),
-                mock.call("/path/to/2_Eng.srt"),
-            ]
-        )
-        self.mock_convertSrtToVtt.assert_called_once_with("/path/to/English.srt")
-        self.mock_moveSubtitleFile.assert_called_once_with(
-            "/path/to/English.vtt", "tmpfile.vtt"
-        )
-        assert not self.mock_extractSubtitles.called
-        assert not self.sres.groups.called
-
-    def test_2_EngSrtExists(self):
-        self.mock_exists.side_effect = [False, True, False]
-
-        _handleSubtitles(self.source, self.dest, self.sres)
-
-        self.mock_exists.assert_has_calls(
-            [
-                mock.call("/path/to/English.srt"),
-                mock.call("/path/to/2_Eng.srt"),
-            ]
-        )
-        self.mock_convertSrtToVtt.assert_called_once_with("/path/to/2_Eng.srt")
-        self.mock_moveSubtitleFile.assert_called_once_with(
-            "/path/to/English.vtt", "tmpfile.vtt"
-        )
-        assert not self.mock_extractSubtitles.called
-        assert not self.sres.groups.called
-
-    def test_FileSrtExists(self):
-        self.mock_exists.side_effect = [False, False, False, True]
-        self.mock_convertSrtToVtt.return_value = "/path/to/file.vtt"
-
-        _handleSubtitles(self.source, self.dest, self.sres)
-
-        self.mock_exists.assert_any_call("/path/to/English.srt")
-        self.mock_exists.assert_any_call("/path/to/file.srt")
-        self.mock_convertSrtToVtt.assert_called_once_with("/path/to/file.srt")
-        self.mock_moveSubtitleFile.assert_called_once_with(
-            "/path/to/file.vtt", "tmpfile.vtt"
-        )
-        assert not self.mock_extractSubtitles.called
-        assert not self.sres.groups.called
-
-    def test_subtitleStreamInFile(self):
-        self.mock_exists.return_value = False
-
-        _handleSubtitles(self.source, self.dest, self.sres)
-
-        self.mock_exists.assert_any_call("/path/to/English.srt")
-        self.mock_exists.assert_any_call("/path/to/file.srt")
-        assert not self.mock_convertSrtToVtt.called
-        assert not self.mock_moveSubtitleFile.called
-        self.sres.groups.assert_called_once_with()
-        self.mock_extractSubtitles.assert_called_once_with(
-            self.source, self.dest, "3:4"
-        )
-
-    def test_noSubtitles(self):
-        self.mock_exists.return_value = False
-
-        _handleSubtitles(self.source, self.dest, None)
-
-        self.mock_exists.assert_any_call("/path/to/English.srt")
-        self.mock_exists.assert_any_call("/path/to/file.srt")
-        assert not self.mock_convertSrtToVtt.called
-        assert not self.mock_moveSubtitleFile.called
-        assert not self.mock_extractSubtitles.called
-        assert not self.sres.groups.called
 
 
 class TestReencodeVideo:

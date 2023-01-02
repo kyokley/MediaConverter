@@ -2,6 +2,7 @@ import os
 import shutil
 import shlex
 import sys
+from pathlib import Path
 from re import search
 from settings import (
     MEDIAVIEWER_SUFFIX,
@@ -55,7 +56,6 @@ def _extractSubtitles(source, dest, stream_identifier):
 
     _extractSubtitleFromVideo(
         source,
-        dest,
         stream_identifier,
         srt_filename,
     )
@@ -65,7 +65,6 @@ def _extractSubtitles(source, dest, stream_identifier):
 
 def _extractSubtitleFromVideo(
     source,
-    dest,
     stream_identifier,
     srt_filename,
 ):
@@ -92,7 +91,7 @@ def _extractSubtitleFromVideo(
 
 def _convertSrtToVtt(srt_filename):
     vtt_filename = f"{os.path.splitext(srt_filename)[0]}.vtt"
-    srt_vtt_command = ["srt-vtt", srt_filename]
+    srt_vtt_command = ["srt-vtt", str(srt_filename)]
     log.info("Extracting using following command:")
     log.info(" ".join(srt_vtt_command))
     process = Popen(srt_vtt_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)  # nosec
@@ -115,33 +114,29 @@ def encode(source, dest, dryRun=False):
 
 
 def _handleSubtitles(source, dest, sres):
-    dirname = os.path.dirname(source)
-    english_srt_path = os.path.join(dirname, "English.srt")
-    english_2_srt_path = os.path.join(dirname, "2_English.srt")
-    eng_srt_path = os.path.join(dirname, "2_Eng.srt")
-    file_srt_path = os.path.splitext(source)[0] + ".srt"
+    dirname = Path(source).parent
+    english_subtitle_paths = dirname.glob("*Eng*.srt")
 
-    english_srt_path_exists = os.path.exists(english_srt_path)
-    eng_srt_path_exists = os.path.exists(eng_srt_path)
-    english_2_srt_path_exists = os.path.exists(english_2_srt_path)
+    file_srt_path = Path(source).with_suffix(".srt")
 
-    if english_srt_path_exists or eng_srt_path_exists or english_2_srt_path_exists:
-        srt_path = (
-            (english_srt_path_exists and english_srt_path)
-            or (eng_srt_path_exists and eng_srt_path)
-            or (english_2_srt_path_exists and english_2_srt_path)
-        )
+    count = 0
+
+    for srt_path in english_subtitle_paths:
         log.info(
-            f"{os.path.basename(srt_path)} found in directory. Attempting to convert."
+            f"{srt_path.name} found in directory. Attempting to convert."
         )
-        dest_path = f"{os.path.splitext(dest)[0]}.vtt"
+        dest_path = Path(f"{dest}-{count}.vtt")
         vtt_filename = _convertSrtToVtt(srt_path)
         _moveSubtitleFile(vtt_filename, dest_path)
-    elif os.path.exists(file_srt_path):
+
+        count += 1
+
+    if file_srt_path.exists():
         log.info(f"{file_srt_path} found in directory. Attempting to convert.")
-        dest_path = f"{os.path.splitext(dest)[0]}.vtt"
+        dest_path = Path(f"{dest}-{count}.vtt")
         vtt_filename = _convertSrtToVtt(file_srt_path)
         _moveSubtitleFile(vtt_filename, dest_path)
+        count += 1
     elif sres:
         log.info("Found subtitles stream. Attempting to extract")
         sres = sres.groups()
