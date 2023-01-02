@@ -136,7 +136,7 @@ class TestHandleDirs:
         self.expected_media_file = (
             self.tv_dir / "Test.Dir.Path.S04E01.WEBRip.x264-MV.mp4"
         )
-        self.expected_sub_file = self.tv_dir / "Test.Dir.Path.S04E01.WEBRip.x264-MV.srt"
+        self.expected_sub_file = self.tv_dir / "Test.Dir.Path.S04E01.WEBRip.x264-MV-0.srt"
         self.non_existent_small_file = self.tv_dir / "small.mp4"
 
         self.tv_runner = TvRunner()
