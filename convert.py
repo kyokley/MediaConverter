@@ -132,6 +132,7 @@ def _handleSubtitles(source, dest, sres):
         count += 1
 
     for file_srt_path in file_srt_paths:
+        log.info(f"{file_srt_path} found in directory. Looking for {source.stem}")
         if source.stem in str(file_srt_path):
             log.info(f"{file_srt_path} found in directory. Attempting to convert.")
             dest_path = dirname / f"{dest.name}.{MEDIAVIEWER_SUFFIX}-{count}.vtt"
