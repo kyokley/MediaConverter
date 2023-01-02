@@ -4,12 +4,12 @@ import subprocess  # nosec
 import shlex
 import shutil
 
+from pathlib import Path as PLPath
 from file import File
 from path import Path
 from settings import (
     SEND_EMAIL,
     MEDIA_FILE_EXTENSIONS,
-    SUBTITLE_FILES,
     UNSORTED_PATHS,
 )
 from convert import makeFileStreamable
@@ -153,17 +153,20 @@ class TvRunner:
                 top, episode, file = path, dirs[1], dirs[-1]
                 file_ext = os.path.splitext(file)[-1].lower()
 
-                dir_path = os.path.join(top, episode)
-                if os.path.isdir(dir_path):
+                dir_path = PLPath(top) / episode
+                if dir_path.is_dir():
                     dir_set.add(dir_path)
 
-                    if file in SUBTITLE_FILES:
+                    english_subtitle_paths = dir_path.rglob("*Eng*.srt")
+                    count = 0
+                    for srt_path in english_subtitle_paths:
                         # Move subtitle to show directory and rename
                         log.info(f"Found subtitle file in {episode}")
-                        new = os.path.join(top, episode + ".srt")
-                        os.rename(fullpath, new)
+                        new = PLPath(top) / f"{episode}-{count}.srt"
+                        os.rename(srt_path, new)
+                        count += 1
 
-                    elif (
+                    if (
                         file_ext in MEDIA_FILE_EXTENSIONS
                         and os.path.getsize(fullpath) > SMALL_FILE_SIZE
                     ):
