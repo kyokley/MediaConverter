@@ -1,4 +1,6 @@
 import requests
+from path import Path
+
 from settings import (
     DOMAIN,
     WAITER_USERNAME,
@@ -72,7 +74,7 @@ class File:
 
             if data["results"]:
                 for result in data["results"]:
-                    fileSet.add(result["filename"])
+                    fileSet.add(Path.strip_base_path(result["filename"], is_movie=useMovieURL))
         return fileSet
 
     @classmethod

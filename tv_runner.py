@@ -11,6 +11,7 @@ from settings import (
     SEND_EMAIL,
     MEDIA_FILE_EXTENSIONS,
     UNSORTED_PATHS,
+    BASE_PATH,
 )
 from convert import makeFileStreamable
 from utils import (
@@ -132,7 +133,7 @@ class TvRunner:
         localFileSet = local_files.split(b"\n")
         localFileSet = set(
             [
-                os.path.basename(x).decode("utf-8")
+                Path.strip_base_path(os.path.basename(x).decode("utf-8"))
                 for x in localFileSet
                 if x and os.path.splitext(x)[1] not in IGNORED_FILE_EXTENSIONS
             ]
@@ -214,6 +215,9 @@ class TvRunner:
     @staticmethod
     def _sort_unsorted_files():
         for unsorted_path in UNSORTED_PATHS:
+            if BASE_PATH not in unsorted_path:
+                unsorted_path = os.path.join(BASE_PATH, unsorted_path)
+
             if not os.path.exists(unsorted_path):
                 log.info(f"Unsorted file path {unsorted_path} does not exist")
                 return
