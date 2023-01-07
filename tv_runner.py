@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 FIND_FAIL_STRING = b"No such file or directory"
 IGNORED_FILE_EXTENSIONS = (".vtt", ".srt")
 
-SMALL_FILE_SIZE = 1024 * 1024 * 5  # 5 MB
+SMALL_FILE_SIZE = 1024 * 1024 * 10  # 10 MB
 
 
 class TvRunner:
