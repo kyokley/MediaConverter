@@ -39,6 +39,8 @@ EMAIL_RECIPIENTS = ["another@user.com"]
 
 VERIFY_REQUESTS = True
 
+MINIMUM_FILE_SIZE = 10000000
+
 # DON'T MAKE ANY EDITS BELOW THIS LINE!!!!
 try:
     from local_settings import *  # noqa

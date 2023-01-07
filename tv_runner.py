@@ -11,6 +11,7 @@ from settings import (
     SEND_EMAIL,
     MEDIA_FILE_EXTENSIONS,
     UNSORTED_PATHS,
+    MINIMUM_FILE_SIZE,
 )
 from convert import makeFileStreamable
 from utils import (
@@ -27,8 +28,6 @@ log = logging.getLogger(__name__)
 
 FIND_FAIL_STRING = b"No such file or directory"
 IGNORED_FILE_EXTENSIONS = (".vtt", ".srt")
-
-SMALL_FILE_SIZE = 1024 * 1024 * 5  # 5 MB
 
 
 class TvRunner:
@@ -118,7 +117,7 @@ class TvRunner:
 
     @staticmethod
     def buildLocalFileSet(path):
-        command = f"find '{path}' -maxdepth 1 -size +{SMALL_FILE_SIZE}c -not -type d"
+        command = f"find '{path}' -maxdepth 1 -size +{MINIMUM_FILE_SIZE}c -not -type d"
         p = subprocess.Popen(
             shlex.split(command),  # nosec
             stdout=subprocess.PIPE,
@@ -168,7 +167,7 @@ class TvRunner:
 
                     if (
                         file_ext in MEDIA_FILE_EXTENSIONS
-                        and os.path.getsize(fullpath) > SMALL_FILE_SIZE
+                        and os.path.getsize(fullpath) > MINIMUM_FILE_SIZE
                     ):
                         # Move media file to show directory
                         log.info(f"Found media file in {episode}")
