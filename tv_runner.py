@@ -11,6 +11,7 @@ from settings import (
     SEND_EMAIL,
     MEDIA_FILE_EXTENSIONS,
     UNSORTED_PATHS,
+    MINIMUM_FILE_SIZE,
 )
 from convert import makeFileStreamable
 from utils import (
@@ -28,7 +29,7 @@ log = logging.getLogger(__name__)
 FIND_FAIL_STRING = b"No such file or directory"
 IGNORED_FILE_EXTENSIONS = (".vtt", ".srt")
 
-SMALL_FILE_SIZE = 1024 * 1024 * 10  # 10 MB
+SMALL_FILE_SIZE = 1024 * 1024 * MINIMUM_FILE_SIZE  # in MB
 
 
 class TvRunner:
