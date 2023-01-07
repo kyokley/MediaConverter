@@ -12,15 +12,15 @@ from utils import MissingPathException
 class TestBuildLocalFileSetFunctional:
     @pytest.fixture(autouse=True)
     def setUp(self):
-        self.SMALL_FILE_SIZE_patcher = mock.patch("tv_runner.SMALL_FILE_SIZE", 201)
-        self.SMALL_FILE_SIZE_patcher.start()
+        self.MINIMUM_FILE_SIZE_patcher = mock.patch("tv_runner.MINIMUM_FILE_SIZE", 201)
+        self.MINIMUM_FILE_SIZE_patcher.start()
 
         self.temp_dir = tempfile.mkdtemp()
 
         self.tv_runner = TvRunner()
 
         yield
-        self.SMALL_FILE_SIZE_patcher.stop()
+        self.MINIMUM_FILE_SIZE_patcher.stop()
         shutil.rmtree(self.temp_dir)
 
     def test_file_does_not_exist(self):
@@ -106,7 +106,7 @@ class TestSortUnsortedFiles:
 class TestHandleDirs:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker):
-        mocker.patch("tv_runner.SMALL_FILE_SIZE", 100)
+        mocker.patch("tv_runner.MINIMUM_FILE_SIZE", 100)
 
         self.temp_dir = tempfile.mkdtemp()
         self.temp_dir_path = Path(self.temp_dir)
