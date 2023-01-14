@@ -27,6 +27,10 @@ class AlreadyEncoded(Exception):
     """Raised when attempting to encoded a file previously encoded."""
 
 
+class SkipProcessing(Exception):
+    """Raised to stop processing a file."""
+
+
 def checkVideoEncoding(source):
     ffmpeg = Popen((ENCODER, "-hide_banner", "-i", source), stderr=PIPE)  # nosec
     output = ffmpeg.communicate()[1].decode("utf-8")
@@ -322,6 +326,9 @@ def overwriteExistingFile(
 def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal=True):
     if MEDIAVIEWER_SUFFIX in filename:
         raise AlreadyEncoded("File appears to already have been encoded. FAIL")
+
+    if not is_valid_media_file(filename):
+        raise SkipProcessing(f'{filename} is not a valid media file. Skipping')
 
     orig = Path(filename).resolve()
 
