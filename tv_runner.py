@@ -13,7 +13,7 @@ from settings import (
     UNSORTED_PATHS,
     MINIMUM_FILE_SIZE,
 )
-from convert import makeFileStreamable, SkipProcessing
+from convert import makeFileStreamable, SkipProcessing, AlreadyEncoded
 from utils import (
     stripUnicode,
     EncoderException,
@@ -88,8 +88,8 @@ class TvRunner:
                     log.error("Attempting to recover and continue")
                     self.errors.append(errorMsg)
                     continue
-                except SkipProcessing as e:
-                    log.error(e)
+                except (AlreadyEncoded, SkipProcessing) as e:
+                    log.warning(e)
                     continue
 
                 if os.path.exists(fullPath):
