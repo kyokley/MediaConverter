@@ -391,6 +391,8 @@ class TestMakeFileStreamable:
 
         self.mock_overwriteExistingFile = mocker.patch("convert.overwriteExistingFile")
         self.mock_overwriteExistingFile.return_value = "the_final_destination"
+        self.mock_exists = mocker.patch("convert.Path.exists")
+        self.mock_exists.return_value = True
 
     def test_args_are_passed_along(self):
         dryRunSentinel = object()
@@ -406,7 +408,7 @@ class TestMakeFileStreamable:
         self.mock_encode.assert_called_once_with(
             Path("/media/this.is.a.file.mkv"),
             Path("/tmp/this.is.a.file.mp4"),
-            dryRun=dryRunSentinel
+            dryRun=dryRunSentinel,
         )
         self.mock_fixMetaData.assert_called_once_with(
             Path("/tmp/this.is.a.file.mp4"), dryRun=dryRunSentinel

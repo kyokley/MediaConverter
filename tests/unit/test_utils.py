@@ -2,18 +2,7 @@ import pytest
 import mock
 import requests
 
-from utils import (
-    file_ext,
-    get_localpath_by_filename,
-)
-
-
-class TestFileExt:
-    def test_file_ext(self):
-        expected = ".mp4"
-        actual = file_ext("test_path.mp4")
-
-        assert expected == actual
+from utils import get_localpath_by_filename
 
 
 class TestGetLocalpathByFilename:
@@ -31,19 +20,19 @@ class TestGetLocalpathByFilename:
 
         self.mock_response = mock.MagicMock(requests.models.Response)
         self.mock_response.json.return_value = {
-            u"is_movie": False,
-            u"localpath": u"/path/to/media/test_filename",
-            u"number_of_unwatched_shows": 0,
-            u"pk": 161,
-            u"remotepath": u"/path/to/media/test_filename",
-            u"server": u"localhost",
-            u"skip": True,
+            "is_movie": False,
+            "localpath": "/path/to/media/test_filename",
+            "number_of_unwatched_shows": 0,
+            "pk": 161,
+            "remotepath": "/path/to/media/test_filename",
+            "server": "localhost",
+            "skip": True,
         }
 
         self.mock_get.return_value = self.mock_response
 
     def test_success(self):
-        expected = u"/path/to/media/test_filename"
+        expected = "/path/to/media/test_filename"
         actual = get_localpath_by_filename(self.test_filename)
 
         assert expected == actual
