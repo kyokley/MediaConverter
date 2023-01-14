@@ -391,6 +391,8 @@ class TestMakeFileStreamable:
 
         self.mock_overwriteExistingFile = mocker.patch("convert.overwriteExistingFile")
         self.mock_overwriteExistingFile.return_value = "the_final_destination"
+        self.mock_exists = mocker.patch("convert.Path.exists")
+        self.mock_exists.return_value = True
 
     def test_args_are_passed_along(self):
         dryRunSentinel = object()

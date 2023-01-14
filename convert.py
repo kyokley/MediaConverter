@@ -327,10 +327,10 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
     if MEDIAVIEWER_SUFFIX in filename:
         raise AlreadyEncoded("File appears to already have been encoded. FAIL")
 
-    if not is_valid_media_file(filename):
-        raise SkipProcessing(f'{filename} is not a valid media file. Skipping')
-
     orig = Path(filename).resolve()
+
+    if not is_valid_media_file(filename) or not orig.exists():
+        raise SkipProcessing(f'{filename} is not a valid media file. Skipping')
 
     new = Path('/tmp') / orig.name
     new = new.with_suffix('.mp4')

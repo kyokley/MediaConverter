@@ -2,18 +2,7 @@ import pytest
 import mock
 import requests
 
-from utils import (
-    file_ext,
-    get_localpath_by_filename,
-)
-
-
-class TestFileExt:
-    def test_file_ext(self):
-        expected = ".mp4"
-        actual = file_ext("test_path.mp4")
-
-        assert expected == actual
+from utils import get_localpath_by_filename
 
 
 class TestGetLocalpathByFilename:

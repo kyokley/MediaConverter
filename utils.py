@@ -1,6 +1,7 @@
 import requests
 import os
 
+from pathlib import Path
 from unidecode import unidecode
 import smtplib
 
@@ -14,7 +15,6 @@ from settings import (
     EMAIL_RECIPIENTS,
     VERIFY_REQUESTS,
     MEDIA_FILE_EXTENSIONS,
-    SUBTITLE_EXTENSIONS,
     DOMAIN,
 )
 
@@ -88,22 +88,9 @@ def send_email(subject, body):
         log.error("failed to send mail")
 
 
-def file_ext(path):
-    return os.path.splitext(path)[-1]
-
-
 def is_valid_media_file(path):
-    if isinstance(path, bytes):
-        path = path.decode("utf-8")
-
-    return os.path.exists(path) and file_ext(path).lower() in MEDIA_FILE_EXTENSIONS
-
-
-def is_valid_subtitle_file(path):
-    if isinstance(path, bytes):
-        path = path.decode("utf-8")
-
-    return os.path.exists(path) and file_ext(path).lower() in SUBTITLE_EXTENSIONS
+    path = Path(path)
+    return path.suffix.lower() in MEDIA_FILE_EXTENSIONS
 
 
 def get_localpath_by_filename(filename):
