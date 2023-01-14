@@ -58,19 +58,14 @@ class TestMakeFileStreamable:
         self.streamable_file_path = streamable_file_path
         self.unstreamable_file_path = unstreamable_file_path
 
-    @pytest.mark.parametrize(
-        'use_streamable',
-        (True, False))
+    @pytest.mark.parametrize("use_streamable", (True, False))
     def test_makeFileStreamable(self, use_streamable):
         if use_streamable:
             path = self.streamable_file_path
         else:
             path = self.unstreamable_file_path
 
-        expected_new_file_path = (
-            path.parent
-            / f"{path.name}.{MEDIAVIEWER_SUFFIX}"
-        )
+        expected_new_file_path = path.parent / f"{path.name}.{MEDIAVIEWER_SUFFIX}"
 
         makeFileStreamable(str(path))
         assert expected_new_file_path.exists()

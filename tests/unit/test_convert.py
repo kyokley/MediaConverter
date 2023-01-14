@@ -408,7 +408,7 @@ class TestMakeFileStreamable:
         self.mock_encode.assert_called_once_with(
             Path("/media/this.is.a.file.mkv"),
             Path("/tmp/this.is.a.file.mp4"),
-            dryRun=dryRunSentinel
+            dryRun=dryRunSentinel,
         )
         self.mock_fixMetaData.assert_called_once_with(
             Path("/tmp/this.is.a.file.mp4"), dryRun=dryRunSentinel

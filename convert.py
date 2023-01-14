@@ -126,9 +126,7 @@ def _handleSubtitles(source, dest, sres):
     count = 0
 
     for srt_path in english_subtitle_paths:
-        log.info(
-            f"{srt_path.name} found in directory. Attempting to convert."
-        )
+        log.info(f"{srt_path.name} found in directory. Attempting to convert.")
         dest_path = dirname / f"{dest.name}.{MEDIAVIEWER_SUFFIX}-{count}.vtt"
         vtt_filename = _convertSrtToVtt(srt_path)
         _moveSubtitleFile(vtt_filename, dest_path)
@@ -330,10 +328,10 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
     orig = Path(filename).resolve()
 
     if not is_valid_media_file(filename) or not orig.exists():
-        raise SkipProcessing(f'{filename} is not a valid media file. Skipping')
+        raise SkipProcessing(f"{filename} is not a valid media file. Skipping")
 
-    new = Path('/tmp') / orig.name
-    new = new.with_suffix('.mp4')
+    new = Path("/tmp") / orig.name
+    new = new.with_suffix(".mp4")
 
     log.info(f"Begin re-encoding of {orig}...")
     encode(orig, new, dryRun=dryRun)
