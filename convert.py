@@ -376,6 +376,8 @@ def reencodeFilesInDirectory(fullPath, dryRun=False):
             except EncoderException as e:
                 log.error(e)
                 errors.append(cleanPath)
+            except (AlreadyEncoded, SkipProcessing) as e:
+                log.warning(e)
     return errors
 
 
