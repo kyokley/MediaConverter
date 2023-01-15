@@ -323,12 +323,12 @@ def overwriteExistingFile(
 
 def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal=True):
     if MEDIAVIEWER_SUFFIX in filename:
-        raise AlreadyEncoded("File appears to already have been encoded. FAIL")
+        raise AlreadyEncoded("File appears to already have been encoded.")
 
     orig = Path(filename).resolve()
 
     if not is_valid_media_file(filename) or not orig.exists():
-        raise SkipProcessing(f"{filename} is not a valid media file. Skipping")
+        raise SkipProcessing(f"{filename} is not a valid media file.")
 
     new = Path("/tmp") / orig.name
     new = new.with_suffix(".mp4")
