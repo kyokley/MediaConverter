@@ -89,6 +89,8 @@ def send_email(subject, body):
 
 
 def is_valid_media_file(path):
+    if isinstance(path, bytes):
+        path = path.decode('utf-8')
     path = Path(path)
     return path.suffix.lower() in MEDIA_FILE_EXTENSIONS
 
