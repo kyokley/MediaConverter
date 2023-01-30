@@ -84,6 +84,7 @@ class TestStripUnicode(CreateFileMixin):
         assert expected == actual
 
 
+@pytest.mark.parametrize("use_bytes", (True, False))
 class TestIsValidMediaFile(CreateFileMixin):
     @pytest.fixture(autouse=True)
     def setUp(self):
@@ -95,12 +96,21 @@ class TestIsValidMediaFile(CreateFileMixin):
         shutil.rmtree(self.temp_dir)
         os.chdir(self.current_dir)
 
-    def test_bad_extension(self):
+    def test_bad_extension(self, use_bytes):
         self._create_file("test_path.txt")
 
-        assert not is_valid_media_file("test_path.txt")
+        if use_bytes:
+            assert not is_valid_media_file(b"test_path.txt")
+        else:
+            assert not is_valid_media_file("test_path.txt")
 
     @pytest.mark.parametrize("ext", ("mp4", "MP4"))
-    def test_valid(self, ext):
+    def test_valid(self, ext, use_bytes):
         self._create_file(f"test_path.{ext}")
-        assert is_valid_media_file(f"test_path.{ext}")
+
+        if use_bytes:
+            test_str = f"test_path.{ext}"
+            test_bytes = test_str.encode('utf-8')
+            assert is_valid_media_file(test_bytes)
+        else:
+            assert is_valid_media_file(f"test_path.{ext}")
