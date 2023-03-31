@@ -537,7 +537,7 @@ class TestReencodeVideo:
             tuple(
                 shlex.split(
                     "test_encoder -hide_banner -y "
-                    "-i test_source -crf 30 -preset slow -pix_fmt yuv420p test_dest"
+                    "-i test_source -c copy -pix_fmt yuv420p test_dest"
                 )
             ),
             stdin=PIPE,
@@ -556,7 +556,7 @@ class TestReencodeVideo:
             tuple(
                 shlex.split(
                     "test_encoder -hide_banner -y "
-                    "-i test_source -crf 30 -preset slow "
+                    "-i test_source -c:v copy "
                     "-c:a libfdk_aac -pix_fmt yuv420p test_dest"
                 )
             ),
@@ -576,7 +576,7 @@ class TestReencodeVideo:
             tuple(
                 shlex.split(
                     "test_encoder -hide_banner -y "
-                    "-i test_source -crf 30 -preset slow "
+                    "-i test_source "
                     "-c:v libx264 -c:a libfdk_aac -pix_fmt yuv420p test_dest"
                 )
             ),

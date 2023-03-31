@@ -20,9 +20,6 @@ import logging
 log = logging.getLogger(__name__)
 
 
-LARGE_FILE_SIZE = int(1024 * 1024 * 1024 * 1.25)  # 2 GB
-
-
 class AlreadyEncoded(Exception):
     """Raised when attempting to encoded a file previously encoded."""
 
@@ -154,8 +151,6 @@ def _handleSubtitles(source, dest, sres):
 
 
 def _reencodeVideo(source, dest, vres, ares, surround, dryRun=False):
-    file_size = os.path.getsize(source)
-
     command = [
         ENCODER,
         "-hide_banner",
@@ -165,42 +160,17 @@ def _reencodeVideo(source, dest, vres, ares, surround, dryRun=False):
     ]
 
     if vres and (ares and not surround):
-        if file_size > LARGE_FILE_SIZE:
-            command.extend(
-                [
-                    "-crf",
-                    "30",
-                    "-preset",
-                    "slow",
-                ]
-            )
-        else:
-            command.extend(
-                [
-                    "-c",
-                    "copy",
-                ]
-            )
-    elif vres:
-        if file_size > LARGE_FILE_SIZE:
-            command.extend(
-                [
-                    "-crf",
-                    "30",
-                    "-preset",
-                    "slow",
-                ]
-            )
-        else:
-            command.extend(
-                [
-                    "-c:v",
-                    "copy",
-                ]
-            )
-
         command.extend(
             [
+                "-c",
+                "copy",
+            ]
+        )
+    elif vres:
+        command.extend(
+            [
+                "-c:v",
+                "copy",
                 "-c:a",
                 "libfdk_aac",
             ]
@@ -209,16 +179,6 @@ def _reencodeVideo(source, dest, vres, ares, surround, dryRun=False):
         if surround:
             command.extend(["-ac", "2"])
     elif ares:
-        if file_size > LARGE_FILE_SIZE:
-            command.extend(
-                [
-                    "-crf",
-                    "30",
-                    "-preset",
-                    "slow",
-                ]
-            )
-
         command.extend(
             [
                 "-c:v",
@@ -236,16 +196,6 @@ def _reencodeVideo(source, dest, vres, ares, surround, dryRun=False):
                 ]
             )
     else:
-        if file_size > LARGE_FILE_SIZE:
-            command.extend(
-                [
-                    "-crf",
-                    "30",
-                    "-preset",
-                    "slow",
-                ]
-            )
-
         command.extend(
             [
                 "-c:v",
