@@ -74,7 +74,7 @@ def _extractSubtitleFromVideo(
         "-hide_banner",
         "-y",
         "-i",
-        source,
+        str(source),
     ]
     subtitle_command = command + ["-map", stream_identifier, srt_filename]
     log.info("Extracting using following command:")
