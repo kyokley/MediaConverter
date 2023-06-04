@@ -116,7 +116,7 @@ def encode(source, dest, dryRun=False):
 
 def _handleSubtitles(source, dest, sres):
     dirname = Path(source).parent
-    english_subtitle_paths = dirname.glob("*Eng*.srt")
+    english_subtitle_paths = dirname.glob("*[eE][nN][gG]*.srt")
 
     file_srt_paths = dirname.glob("*.srt")
 
