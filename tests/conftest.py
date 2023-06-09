@@ -61,3 +61,11 @@ def multiple_srt_path():
 
     yield new_path
     shutil.rmtree(temp_dir)
+
+
+@pytest.fixture()
+def temp_directory():
+    temp_dir = tempfile.mkdtemp()
+    temp_dir_path = Path(temp_dir)
+    yield temp_dir_path
+    shutil.rmtree(temp_dir_path)

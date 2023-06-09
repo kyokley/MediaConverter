@@ -110,7 +110,7 @@ class TestIsValidMediaFile(CreateFileMixin):
 
         if use_bytes:
             test_str = f"test_path.{ext}"
-            test_bytes = test_str.encode('utf-8')
+            test_bytes = test_str.encode("utf-8")
             assert is_valid_media_file(test_bytes)
         else:
             assert is_valid_media_file(f"test_path.{ext}")
