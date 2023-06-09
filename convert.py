@@ -330,10 +330,3 @@ def reencodeFilesInDirectory(fullPath, dryRun=False):
             except (AlreadyEncoded, SkipProcessing) as e:
                 log.warning(e)
     return errors
-
-
-if __name__ == "__main__":
-    source = Path(
-        "tests/data/Silo.S01E06.480p.x264-RUBiK/Silo.S01E06.480p.x264-RUBiK.mkv"
-    )
-    makeFileStreamable(source, removeOriginal=False)
