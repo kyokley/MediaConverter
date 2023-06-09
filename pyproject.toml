@@ -21,6 +21,13 @@ bpython = "^0.22.1"
 black = "^22.12.0"
 pytest-mock = "^3.6.1"
 
+[tool.poetry.group.dev.dependencies]
+blessings = "^1.7"
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+select = ["E", "F"]
+ignore = ["E501"]
