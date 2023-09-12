@@ -42,14 +42,6 @@ def checkVideoEncoding(source):
     return (vmatch and 1 or 0, amatch and 1 or 0, smatch, surround)
 
 
-def fixMetaData(source, dryRun=False):
-    if not dryRun:
-        process = Popen(
-            ("qtfaststart", source), stdin=PIPE, stdout=PIPE, stderr=PIPE
-        )  # nosec
-        process.communicate()
-
-
 def _extractSubtitles(source, dest, stream_identifier):
     srt_path = dest.with_suffix(".srt")
 
@@ -212,7 +204,7 @@ def _reencodeVideo(source, dest, vres, ares, surround, dryRun=False):
         if surround:
             command.extend(["-ac", "2"])
 
-    command.extend(["-pix_fmt", "yuv420p"])
+    command.extend(["-pix_fmt", "yuv420p", "-movflags", "faststart"])
     command.append(str(dest))
     command = tuple(command)
 
@@ -287,10 +279,6 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
     log.info(f"Begin re-encoding of {orig}...")
     encode(orig, new, dryRun=dryRun)
     log.info("Finished encoding")
-
-    log.info("Fixing metadata")
-    fixMetaData(new, dryRun=dryRun)
-    log.info("Finished fixing metadata")
 
     dest = overwriteExistingFile(
         new,
