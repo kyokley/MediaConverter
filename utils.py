@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 
 MEDIAVIEWER_INFER_SCRAPERS_URL = f"{DOMAIN}/mediaviewer/api/inferscrapers/"
 
-EXTERNAL_REQUEST_COOLDOWN = .25
+EXTERNAL_REQUEST_COOLDOWN = 0.25
 
 
 class EncoderException(Exception):
@@ -47,13 +47,18 @@ def postData(values, url):
         request.raise_for_status()
         time.sleep(EXTERNAL_REQUEST_COOLDOWN)
 
-        request = requests.post(
-            MEDIAVIEWER_INFER_SCRAPERS_URL,
-            data={},
-            auth=(WAITER_USERNAME, WAITER_PASSWORD),
-            verify=VERIFY_REQUESTS,
-        )
-        time.sleep(EXTERNAL_REQUEST_COOLDOWN)
+        try:
+            requests.post(
+                MEDIAVIEWER_INFER_SCRAPERS_URL,
+                data={},
+                auth=(WAITER_USERNAME, WAITER_PASSWORD),
+                verify=VERIFY_REQUESTS,
+            )
+            time.sleep(EXTERNAL_REQUEST_COOLDOWN)
+        except Exception as e:
+            log.error(e)
+            log.warning("Ignoring error generated during scraping")
+
         return request
     except Exception as e:
         log.error(e)
