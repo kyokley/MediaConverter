@@ -274,7 +274,7 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
     if not is_valid_media_file(filename) or not orig.exists():
         raise SkipProcessing(f"{filename} is not a valid media file.")
 
-    new = Path("/tmp") / orig.with_suffix('.mp4').name
+    new = Path("/tmp") / orig.with_suffix(".mp4").name
 
     log.info(f"Begin re-encoding of {orig}...")
     encode(orig, new, dryRun=dryRun)
