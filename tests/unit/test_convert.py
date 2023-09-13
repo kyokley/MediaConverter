@@ -359,11 +359,11 @@ class TestMakeFileStreamable(TouchFileMixin):
         assert res == "the_final_destination"
         self.mock_encode.assert_called_once_with(
             self.temp_directory / "this.is.a.file.mkv",
-            Path("/tmp/this.is.a.file.mkv"),
+            Path("/tmp/this.is.a.file.mp4"),
             dryRun=dryRunSentinel,
         )
         self.mock_overwriteExistingFile.assert_called_once_with(
-            Path("/tmp/this.is.a.file.mkv"),
+            Path("/tmp/this.is.a.file.mp4"),
             self.temp_directory / "this.is.a.file.mkv",
             dryRun=dryRunSentinel,
             appendSuffix=appendSuffixSentinel,
