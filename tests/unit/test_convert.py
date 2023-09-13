@@ -7,7 +7,6 @@ from settings import ENCODER
 from utils import EncoderException
 from convert import (
     checkVideoEncoding,
-    fixMetaData,
     _extractSubtitles,
     _extractSubtitleFromVideo,
     _convertSrtToVtt,
@@ -49,30 +48,6 @@ class TestCheckVideoEncoding:
         assert vres == 1
         assert ares == 0
         assert sres is not None
-
-
-class TestFixMetaData:
-    @pytest.fixture(autouse=True)
-    def setUp(self, mocker):
-        self.mock_popen = mocker.patch("convert.Popen")
-
-        self.process = mock.MagicMock()
-        self.mock_popen.return_value = self.process
-        self.source = "test.mkv"
-
-    def test_dryRun(self):
-        fixMetaData(self.source, dryRun=True)
-
-        assert not self.mock_popen.called
-        assert not self.process.called
-
-    def test_noDryRun(self):
-        fixMetaData(self.source, dryRun=False)
-
-        self.mock_popen.assert_called_once_with(
-            ("qtfaststart", self.source), stdin=PIPE, stdout=PIPE, stderr=PIPE
-        )
-        assert self.process.communicate.called
 
 
 class TestExtractSubtitles:
@@ -366,8 +341,6 @@ class TestMakeFileStreamable(TouchFileMixin):
 
         self.mock_encode = mocker.patch("convert.encode")
 
-        self.mock_fixMetaData = mocker.patch("convert.fixMetaData")
-
         self.mock_overwriteExistingFile = mocker.patch("convert.overwriteExistingFile")
         self.mock_overwriteExistingFile.return_value = "the_final_destination"
 
@@ -388,9 +361,6 @@ class TestMakeFileStreamable(TouchFileMixin):
             self.temp_directory / "this.is.a.file.mkv",
             Path("/tmp/this.is.a.file.mkv"),
             dryRun=dryRunSentinel,
-        )
-        self.mock_fixMetaData.assert_called_once_with(
-            Path("/tmp/this.is.a.file.mkv"), dryRun=dryRunSentinel
         )
         self.mock_overwriteExistingFile.assert_called_once_with(
             Path("/tmp/this.is.a.file.mkv"),
@@ -458,7 +428,7 @@ class TestReencodeVideo:
         self.mock_Popen.assert_called_once_with(
             tuple(
                 shlex.split(
-                    "test_encoder -hide_banner -y -i test_source -c copy -pix_fmt yuv420p test_dest"
+                    "test_encoder -hide_banner -y -i test_source -c copy -pix_fmt yuv420p -movflags faststart test_dest"
                 )
             ),
             stdin=PIPE,
@@ -475,7 +445,7 @@ class TestReencodeVideo:
             tuple(
                 shlex.split(
                     "test_encoder -hide_banner -y "
-                    "-i test_source -c:v copy -c:a libfdk_aac -pix_fmt yuv420p test_dest"
+                    "-i test_source -c:v copy -c:a libfdk_aac -pix_fmt yuv420p -movflags faststart test_dest"
                 )
             ),
             stdin=PIPE,
@@ -493,7 +463,7 @@ class TestReencodeVideo:
                 shlex.split(
                     "test_encoder -hide_banner -y "
                     "-i test_source -c:v libx264 "
-                    "-c:a libfdk_aac -pix_fmt yuv420p test_dest"
+                    "-c:a libfdk_aac -pix_fmt yuv420p -movflags faststart test_dest"
                 )
             ),
             stdin=PIPE,
@@ -510,7 +480,7 @@ class TestReencodeVideo:
             tuple(
                 shlex.split(
                     "test_encoder -hide_banner -y "
-                    "-i test_source -c copy -pix_fmt yuv420p test_dest"
+                    "-i test_source -c copy -pix_fmt yuv420p -movflags faststart test_dest"
                 )
             ),
             stdin=PIPE,
@@ -528,7 +498,7 @@ class TestReencodeVideo:
                 shlex.split(
                     "test_encoder -hide_banner -y "
                     "-i test_source -c:v copy "
-                    "-c:a libfdk_aac -pix_fmt yuv420p test_dest"
+                    "-c:a libfdk_aac -pix_fmt yuv420p -movflags faststart test_dest"
                 )
             ),
             stdin=PIPE,
@@ -546,7 +516,7 @@ class TestReencodeVideo:
                 shlex.split(
                     "test_encoder -hide_banner -y "
                     "-i test_source "
-                    "-c:v libx264 -c:a libfdk_aac -pix_fmt yuv420p test_dest"
+                    "-c:v libx264 -c:a libfdk_aac -pix_fmt yuv420p -movflags faststart test_dest"
                 )
             ),
             stdin=PIPE,

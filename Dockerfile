@@ -1,6 +1,8 @@
-ARG BASE_IMAGE=python:3.10-slim
+ARG BASE_IMAGE=python:3.11-slim
 
 FROM ${BASE_IMAGE} AS builder
+
+ENV FFMPEG_VERSION=6.0
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
@@ -12,7 +14,7 @@ ENV VIRTUAL_ENV=/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN sed -i -e's/ main/ main contrib non-free/g' /etc/apt/sources.list && \
+RUN sed -i -e's/ main/ main contrib non-free non-free-firmware/g' /etc/apt/sources.list.d/debian.sources && \
     apt-get update && apt-get install -y \
         g++ \
         git \
@@ -41,10 +43,10 @@ RUN cmake source && \
         make install
 
 WORKDIR /build/ffmpeg_sources
-RUN wget http://ffmpeg.org/releases/ffmpeg-snapshot.tar.bz2 && \
-        tar xjvf ffmpeg-snapshot.tar.bz2
+RUN wget https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.gz && \
+        tar xvzf ffmpeg-${FFMPEG_VERSION}.tar.gz
 
-WORKDIR /build/ffmpeg_sources/ffmpeg
+WORKDIR /build/ffmpeg_sources/ffmpeg-${FFMPEG_VERSION}
 RUN PKG_CONFIG_PATH="/usr/bin/pkg-config" ./configure \
         --prefix="$HOME/ffmpeg_build" \
         --pkg-config-flags="--static" \
@@ -97,7 +99,7 @@ RUN python3 -m venv $POETRY_VENV
 ENV VIRTUAL_ENV=/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN sed -i -e's/ main/ main contrib non-free/g' /etc/apt/sources.list && \
+RUN sed -i -e's/ main/ main contrib non-free non-free-firmware/g' /etc/apt/sources.list.d/debian.sources && \
     apt-get update && apt-get install -y \
         libavcodec-dev \
         libvorbis-dev \
