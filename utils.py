@@ -1,5 +1,6 @@
 import requests
 import os
+import time
 
 from pathlib import Path
 from unidecode import unidecode
@@ -22,6 +23,8 @@ log = logging.getLogger(__name__)
 
 MEDIAVIEWER_INFER_SCRAPERS_URL = f"{DOMAIN}/mediaviewer/api/inferscrapers/"
 
+EXTERNAL_REQUEST_COOLDOWN = .25
+
 
 class EncoderException(Exception):
     pass
@@ -42,6 +45,15 @@ def postData(values, url):
             verify=VERIFY_REQUESTS,
         )
         request.raise_for_status()
+        time.sleep(EXTERNAL_REQUEST_COOLDOWN)
+
+        request = requests.post(
+            MEDIAVIEWER_INFER_SCRAPERS_URL,
+            data={},
+            auth=(WAITER_USERNAME, WAITER_PASSWORD),
+            verify=VERIFY_REQUESTS,
+        )
+        time.sleep(EXTERNAL_REQUEST_COOLDOWN)
         return request
     except Exception as e:
         log.error(e)
