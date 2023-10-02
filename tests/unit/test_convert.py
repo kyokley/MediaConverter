@@ -230,107 +230,54 @@ class TestOverwriteExistingFile(TouchFileMixin):
         self.mock_move = mocker.patch("convert.shutil.move")
 
         self.source = self.temp_directory / "tmpfile.mp4"
-        self.dest = self.temp_directory / "this.is.a.file.mp4"
 
-    def test_keepOriginal_noDryRun_noSuffix(self):
+    def test_noDryRun_noSuffix(self, temp_directory):
+        expected_dest = temp_directory / "tmpfile.mp4"
+
         res = overwriteExistingFile(
             self.source,
-            self.dest,
-            removeOriginal=False,
+            temp_directory,
             dryRun=False,
             appendSuffix=False,
         )
         self.mock_move.assert_called_once_with(
             self.source,
-            self.dest,
+            expected_dest,
         )
-        assert res == self.dest
+        assert res == expected_dest
 
-    def test_removeOriginal_noDryRun_noSuffix(self):
+    def test_dryRun_noSuffix(self, temp_directory):
         res = overwriteExistingFile(
             self.source,
-            self.dest,
-            removeOriginal=True,
-            dryRun=False,
-            appendSuffix=False,
-        )
-        self.mock_move.assert_called_once_with(
-            self.temp_directory / "tmpfile.mp4",
-            self.temp_directory / "this.is.a.file.mp4",
-        )
-        assert res == self.temp_directory / "this.is.a.file.mp4"
-
-    def test_keepOriginal_dryRun_noSuffix(self):
-        res = overwriteExistingFile(
-            self.source,
-            self.dest,
-            removeOriginal=False,
+            temp_directory,
             dryRun=True,
             appendSuffix=False,
         )
         assert not self.mock_move.called
-        assert res == self.temp_directory / "this.is.a.file.mp4"
+        assert res == temp_directory / "tmpfile.mp4"
 
-    def test_removeOriginal_dryRun_noSuffix(self):
+    def test_noDryRun_suffix(self, temp_directory):
         res = overwriteExistingFile(
             self.source,
-            self.dest,
-            removeOriginal=True,
-            dryRun=True,
-            appendSuffix=False,
-        )
-        assert not self.mock_move.called
-        assert res == self.temp_directory / "this.is.a.file.mp4"
-
-    def test_keepOriginal_noDryRun_suffix(self):
-        res = overwriteExistingFile(
-            self.source,
-            self.dest,
-            removeOriginal=False,
+            temp_directory,
             dryRun=False,
             appendSuffix=True,
         )
         self.mock_move.assert_called_once_with(
             self.temp_directory / "tmpfile.mp4",
-            self.temp_directory / "this.is.a.file.mp4.suffix.mp4",
+            temp_directory / "tmpfile.mp4.suffix.mp4",
         )
-        assert res == self.temp_directory / "this.is.a.file.mp4.suffix.mp4"
+        assert res == temp_directory / "tmpfile.mp4.suffix.mp4"
 
-    def test_removeOriginal_noDryRun_suffix(self):
+    def test_dryRun_suffix(self, temp_directory):
         res = overwriteExistingFile(
             self.source,
-            self.dest,
-            removeOriginal=True,
-            dryRun=False,
-            appendSuffix=True,
-        )
-        self.mock_move.assert_called_once_with(
-            self.temp_directory / "tmpfile.mp4",
-            self.temp_directory / "this.is.a.file.mp4.suffix.mp4",
-        )
-        assert res == self.temp_directory / "this.is.a.file.mp4.suffix.mp4"
-
-    def test_keepOriginal_dryRun_suffix(self):
-        res = overwriteExistingFile(
-            self.source,
-            self.dest,
-            removeOriginal=False,
+            temp_directory,
             dryRun=True,
             appendSuffix=True,
         )
         assert not self.mock_move.called
-        assert res == self.temp_directory / "this.is.a.file.mp4.suffix.mp4"
-
-    def test_removeOriginal_dryRun_suffix(self):
-        res = overwriteExistingFile(
-            self.source,
-            self.dest,
-            removeOriginal=True,
-            dryRun=True,
-            appendSuffix=True,
-        )
-        assert not self.mock_move.called
-        assert res == self.temp_directory / "this.is.a.file.mp4.suffix.mp4"
+        assert res == temp_directory / f'{self.source.name}.suffix.mp4'
 
 
 class TestMakeFileStreamable(TouchFileMixin):
@@ -347,14 +294,12 @@ class TestMakeFileStreamable(TouchFileMixin):
     def test_args_are_passed_along(self):
         dryRunSentinel = object()
         appendSuffixSentinel = object()
-        removeOriginalSentinel = object()
         orig = self.temp_directory / "this.is.a.file.mkv"
         self._touch_file(orig)
         res = makeFileStreamable(
             orig,
             dryRun=dryRunSentinel,
             appendSuffix=appendSuffixSentinel,
-            removeOriginal=removeOriginalSentinel,
         )
         assert res == "the_final_destination"
         self.mock_encode.assert_called_once_with(
@@ -364,10 +309,9 @@ class TestMakeFileStreamable(TouchFileMixin):
         )
         self.mock_overwriteExistingFile.assert_called_once_with(
             Path("/tmp/this.is.a.file.mp4"),
-            self.temp_directory / "this.is.a.file.mkv",
+            self.temp_directory,
             dryRun=dryRunSentinel,
             appendSuffix=appendSuffixSentinel,
-            removeOriginal=removeOriginalSentinel,
         )
 
 

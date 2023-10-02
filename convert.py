@@ -243,12 +243,9 @@ def _moveSubtitleFile(source, dest, dryRun=False):
 
 
 def overwriteExistingFile(
-    source, dest, removeOriginal=True, dryRun=False, appendSuffix=True
+    source, directory, dryRun=False, appendSuffix=True
 ):
-    if not dryRun:
-        if removeOriginal and dest.exists():
-            dest.unlink()
-
+    dest = directory / source.name
     dest = appendSuffix and Path(f"{dest}.{MEDIAVIEWER_SUFFIX}") or dest
 
     log.info(f"Renaming file {source} to {dest}")
@@ -282,11 +279,14 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
 
     dest = overwriteExistingFile(
         new,
-        orig,
+        orig.parent,
         dryRun=dryRun,
         appendSuffix=appendSuffix,
-        removeOriginal=removeOriginal,
     )
+
+    if not dryRun:
+        if removeOriginal and orig.exists():
+            orig.unlink()
 
     log.info("Done")
     return dest
