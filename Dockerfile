@@ -36,7 +36,7 @@ RUN sed -i -e's/ main/ main contrib non-free non-free-firmware/g' /etc/apt/sourc
         libtheora-dev
 
 WORKDIR /build
-RUN git clone https://github.com/videolan/x265
+RUN git clone --depth=1 https://github.com/videolan/x265.git
 WORKDIR  /build/x265
 RUN cmake source && \
         make && \
@@ -72,7 +72,7 @@ RUN PKG_CONFIG_PATH="/usr/bin/pkg-config" ./configure \
 
 
 WORKDIR /build/ffmpeg_sources
-RUN git clone https://github.com/nwoltman/srt-to-vtt-cl.git
+RUN git clone --depth=1 https://github.com/nwoltman/srt-to-vtt-cl.git
 WORKDIR /build/ffmpeg_sources/srt-to-vtt-cl
 RUN make && \
         find -name 'srt-vtt' | \
