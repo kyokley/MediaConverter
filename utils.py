@@ -34,18 +34,9 @@ class MissingPathException(Exception):
     pass
 
 
-def postData(values, url):
+def post_data(values, url):
     try:
-        log.info("Posting the following values:")
-        log.info(values)
-        request = requests.post(
-            url,
-            data=values,
-            auth=(WAITER_USERNAME, WAITER_PASSWORD),
-            verify=VERIFY_REQUESTS,
-        )
-        request.raise_for_status()
-        time.sleep(EXTERNAL_REQUEST_COOLDOWN)
+        request = _make_request('POST', url, values=values)
 
         try:
             requests.post(
@@ -58,6 +49,47 @@ def postData(values, url):
         except Exception as e:
             log.error(e)
             log.warning("Ignoring error generated during scraping")
+
+        return request
+    except Exception as e:
+        log.error(e)
+        raise
+
+
+def get_data(url):
+    try:
+        return _make_request('GET', url)
+    except Exception as e:
+        log.error(e)
+        raise
+
+
+def _make_request(verb, url, values=None):
+    verb = verb.upper()
+
+    try:
+        if values:
+            log.info(f"{verb}-ing the following values to {url}:")
+            log.info(values)
+        else:
+            log.info(f"{verb}-ing to {url}")
+
+        request_method = None
+        if verb == 'GET':
+            request_method = requests.get
+        elif verb == 'POST':
+            request_method = requests.post
+        else:
+            raise ValueError(f'Got invalid verb {verb}')
+
+        request = request_method(
+            url,
+            data=values,
+            auth=(WAITER_USERNAME, WAITER_PASSWORD),
+            verify=VERIFY_REQUESTS,
+        )
+        request.raise_for_status()
+        time.sleep(EXTERNAL_REQUEST_COOLDOWN)
 
         return request
     except Exception as e:
