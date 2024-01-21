@@ -19,7 +19,6 @@ class TestPostMovies:
 
         self.mock_Path = mocker.patch("movie_runner.Path")
 
-        self.mock_getMovieFileSet = mocker.patch("movie_runner.File.getMovieFileSet")
 
         self.mock_exists = mocker.patch("movie_runner.os.path.exists")
 
@@ -33,11 +32,8 @@ class TestPostMovies:
 
         self.mock_log = mocker.patch("movie_runner.log")
 
-        self.mock_postMovie = mocker.patch("movie_runner.MovieRunner._postMovie")
-
         self.mock_exists.return_value = True
         self.mock_Path.getMoviePathByLocalPathAndRemotePath.side_effect = gen_data(5)
-        self.mock_getMovieFileSet.return_value = set(["movie1", "movie3"])
         self.mock_getLocalMoviePaths.return_value = ["movie1", "movie2", "movie3"]
         self.mock_reencodeFilesInDirectory.return_value = None
 
@@ -62,7 +58,6 @@ class TestPostMovies:
         )
         assert not self.mock_log.error.called
 
-        self.mock_postMovie.assert_called_once_with("movie2", 1)
         self.mock_reencodeFilesInDirectory.assert_called_once_with(
             "/path/to/movies/movie2"
         )
@@ -88,7 +83,6 @@ class TestPostMovies:
         )
         assert not self.mock_log.error.called
 
-        assert not self.mock_postMovie.called
         self.mock_reencodeFilesInDirectory.assert_called_once_with(
             "/path/to/movies/movie2"
         )
@@ -121,7 +115,6 @@ class TestPostMovies:
             ]
         )
 
-        assert not self.mock_postMovie.called
         self.mock_reencodeFilesInDirectory.assert_called_once_with(
             "/path/to/movies/movie2"
         )
@@ -254,53 +247,3 @@ class TestGetLocalMoviePaths:
         assert expected == actual
         self.mock_exists.assert_called_once_with("test_path")
         self.mock_listdir.assert_called_once_with("test_path")
-
-
-class TestPostMovie:
-    @pytest.fixture(autouse=True)
-    def setUp(self, mocker):
-        mocker.patch("movie_runner.MEDIAVIEWER_MOVIE_FILE_URL", "test_movie_file_url")
-
-        self.mock_postData = mocker.patch("movie_runner.postData")
-
-        self.mock_error = mocker.patch("movie_runner.log.error")
-
-        self.movie_runner = MovieRunner()
-
-    def test_invalid_name(self):
-        expected = None
-        actual = self.movie_runner._postMovie(None, 123)
-
-        assert expected == actual
-        self.mock_error.assert_has_calls(
-            [mock.call("Invalid request"), mock.call("Filename: None Pathid: 123")]
-        )
-        assert not self.mock_postData.called
-
-    def test_invalid_pathid(self):
-        expected = None
-        actual = self.movie_runner._postMovie("test_name", 0)
-
-        assert expected == actual
-        self.mock_error.assert_has_calls(
-            [mock.call("Invalid request"), mock.call("Filename: test_name Pathid: 0")]
-        )
-        assert not self.mock_postData.called
-
-    def test_valid(self):
-        expected = None
-        actual = self.movie_runner._postMovie("test_name", 123)
-
-        assert expected == actual
-        assert not self.mock_error.called
-        self.mock_postData.assert_called_once_with(
-            {
-                "path": 123,
-                "filename": "test_name",
-                "skip": 1,
-                "size": 0,
-                "finished": 1,
-                "streamable": True,
-            },
-            "test_movie_file_url",
-        )

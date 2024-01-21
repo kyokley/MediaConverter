@@ -32,17 +32,35 @@ FIND_FAIL_STRING = b"No such file or directory"
 IGNORED_FILE_EXTENSIONS = (".vtt", ".srt")
 
 
-MEDIAVIEWER_TV_URL = f"{DOMAIN}/mediaviewer/api/tv/"
-MEDIAVIEWER_MEDIAPATH_URL = f"{DOMAIN}/mediaviewer/api/mediapath/"
-MEDIAVIEWER_MEDIAFILE_URL = f"{DOMAIN}/mediaviewer/api/mediafile/"
+class MediaPathMixin:
+    @classmethod
+    @property
+    def MEDIAVIEWER_MEDIAPATH_DETAIL_URL(cls):
+        return cls.MEDIAVIEWER_MEDIAPATH_URL + "{media_path_id}/"
+
+    @classmethod
+    def post_media_path(cls, path):
+        payload = {'path': path}
+        resp = post_data(payload, cls.MEDIAVIEWER_MEDIAPATH_URL)
+        resp.raise_for_status()
+        return resp.json()
+
+    @classmethod
+    def get_media_path(cls, media_path_id):
+        resp = get_data(cls.MEDIAVIEWER_MEDIAPATH_DETAIL_URL.format(media_path_id=media_path_id))
+        resp.raise_for_status()
+        return resp.json()
 
 
-class Tv:
+class Tv(MediaPathMixin):
+    MEDIAVIEWER_TV_URL = f"{DOMAIN}/mediaviewer/api/tv/"
+    MEDIAVIEWER_MEDIAPATH_URL = DOMAIN + "/mediaviewer/api/tvmediapath/"
+
     @classmethod
     def get_all_tv(cls):
         paths = dict()
 
-        data = {"next": MEDIAVIEWER_TV_URL}
+        data = {"next": cls.MEDIAVIEWER_TV_URL}
         while data["next"]:
             request = get_data(data['next'])
             request.raise_for_status()
@@ -62,15 +80,10 @@ class Tv:
                         val["pks"].add(result["pk"])
                         paths[local_path] = val
 
-    @classmethod
-    def post_media_path(cls, path):
-        payload = {'path': path}
-        resp = post_data(payload, MEDIAVIEWER_MEDIAPATH_URL)
-        resp.raise_for_status()
-        return resp.json()
-
 
 class MediaFile:
+    MEDIAVIEWER_MEDIAFILE_URL = f"{DOMAIN}/mediaviewer/api/mediafile/"
+
     @classmethod
     def post_media_file(
         cls,
@@ -81,7 +94,7 @@ class MediaFile:
         payload = {'filename': filename,
                    'media_path': media_path_id,
                    'size': size}
-        resp = post_data(payload, MEDIAVIEWER_MEDIAFILE_URL)
+        resp = post_data(payload, cls.MEDIAVIEWER_MEDIAFILE_URL)
         resp.raise_for_status()
         return resp.json()
 
@@ -112,8 +125,8 @@ class TvRunner:
             if pathid == -1:
                 continue
             # TODO: Get MediaFiles for this MediaPath!
-            # remoteFilenames = File.getTVFileSet(pathid)
-            # fileSet.update(remoteFilenames)
+            res = Tv.get_media_path(pathid)
+            fileSet.update(res['media_files'])
         log.info("Built remote fileSet")
 
         return fileSet
