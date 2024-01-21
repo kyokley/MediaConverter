@@ -11,6 +11,14 @@ def gen_data(num):
 class TestPostMovies:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker):
+        self.mock_get_data = mocker.patch('movie_runner.get_data')
+        self.mock_response = mock.MagicMock()
+        self.mock_response.json.return_value = {
+            'results': [],
+            'next': '',
+        }
+        self.mock_get_data.return_value = self.mock_response
+
         mocker.patch("movie_runner.LOCAL_MOVIE_PATHS", ["/path/to/movies"])
 
         self.mock_promoteSubtitles = mocker.patch(
