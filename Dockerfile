@@ -133,6 +133,7 @@ FROM base AS dev
 
 RUN apt-get install -y g++
 
+COPY pdbrc.py /root/.pdbrc.py
 COPY poetry.lock pyproject.toml /code/
 
 RUN $POETRY_VENV/bin/pip install -U pip poetry && $VIRTUAL_ENV/bin/pip install -U pip
