@@ -14,8 +14,8 @@ class TestTvRunner:
 
         self.tvRunner = TvRunner()
 
-    def test_loadPaths(self, mocker):
-        mock_path = mocker.patch("tv_runner.Path")
+    def test_load_paths(self, mocker):
+        mock_tv = mocker.patch("tv_runner.Tv")
 
         fake_path = mock.MagicMock()
         fake_pks = mock.MagicMock()
@@ -32,20 +32,20 @@ class TestTvRunner:
 
         expected = {fake_path: fake_pks}
 
-        mock_path.getAllTVPaths.return_value = fake_paths
-        self.tvRunner.loadPaths()
+        mock_tv.get_all_tv.return_value = fake_paths
+        self.tvRunner.load_paths()
         assert expected == self.tvRunner.paths
 
-    def test_getOrCreateRemotePath(self, mocker):
-        mock_path = mocker.patch("tv_runner.Path")
+    def test_get_or_create_media_path(self, mocker):
+        mock_tv = mocker.patch("tv_runner.Tv")
 
         expectedPathID = 123
-        testData = {"results": [{"pk": expectedPathID}]}
+        testData = {"pk": expectedPathID}
         testPath = "test path"
 
-        mock_path.getTVPathByLocalPathAndRemotePath.return_value = testData
+        mock_tv.post_media_path.return_value = testData
 
-        actualPathID = self.tvRunner.getOrCreateRemotePath(testPath)
+        actualPathID = self.tvRunner.get_or_create_media_path(testPath)
         assert expectedPathID == actualPathID
 
     def test_buildRemoteFileSetForPathIDs(self, mocker):
