@@ -118,7 +118,7 @@ class TvRunner:
         return media_path_data['pk']
 
     @staticmethod
-    def buildRemoteFileSetForPathIDs(pathIDs):
+    def build_remote_media_file_set(pathIDs):
         fileSet = set()
         for pathid in pathIDs:
             # Skip local paths
@@ -262,7 +262,7 @@ class TvRunner:
                 continue
 
             log.info(f"Attempting to get remote files for {path}")
-            remoteFileSet = self.buildRemoteFileSetForPathIDs(pathIDs)
+            remoteFileSet = self.build_remote_media_file_set(pathIDs)
             log.info(f"Done building remote file set for {path}")
 
             self.updateFileRecords(path, localFileSet, remoteFileSet)

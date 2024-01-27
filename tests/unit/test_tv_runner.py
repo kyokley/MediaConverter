@@ -48,14 +48,14 @@ class TestTvRunner:
         actualPathID = self.tvRunner.get_or_create_media_path(testPath)
         assert expectedPathID == actualPathID
 
-    def test_buildRemoteFileSetForPathIDs(self, mocker):
-        mock_file = mocker.patch("tv_runner.File")
+    def test_build_remote_media_file_set(self, mocker):
+        mock_tv = mocker.patch("tv_runner.Tv")
 
         testData = {
-            -1: ["invalid"],
-            1: ["test1"],
-            12: ["test12"],
-            123: ["test123"],
+            -1: {'media_files': ["invalid"]},
+            1: {'media_files': ["test1"]},
+            12: {'media_files': ["test12"]},
+            123: {'media_files': ["test123"]},
         }
         expectedSet = set(
             [
@@ -64,9 +64,9 @@ class TestTvRunner:
                 "test123",
             ]
         )
-        mock_file.getTVFileSet = lambda x: testData.get(x)
+        mock_tv.get_media_path = lambda x: testData.get(x)
 
-        actualSet = self.tvRunner.buildRemoteFileSetForPathIDs([-1, 1, 12, 123])
+        actualSet = self.tvRunner.build_remote_media_file_set([-1, 1, 12, 123])
         assert expectedSet == actualSet
 
     def test_updateFileRecords(self, mocker):
@@ -123,8 +123,8 @@ class TestTvRunner:
         self.tvRunner.buildLocalFileSet = mock.MagicMock()
         self.tvRunner.buildLocalFileSet.return_value = set(["some", "paths"])
 
-        self.tvRunner.buildRemoteFileSetForPathIDs = mock.MagicMock()
-        self.tvRunner.buildRemoteFileSetForPathIDs.return_value = set(
+        self.tvRunner.build_remote_media_file_set = mock.MagicMock()
+        self.tvRunner.build_remote_media_file_set.return_value = set(
             ["some", "remote", "paths"]
         )
 
@@ -139,10 +139,10 @@ class TestTvRunner:
             [call("sdfg"), call("asdf")], any_order=True
         )
         assert 2 == self.tvRunner.buildLocalFileSet.call_count
-        self.tvRunner.buildRemoteFileSetForPathIDs.assert_has_calls(
+        self.tvRunner.build_remote_media_file_set.assert_has_calls(
             [call([1]), call([12, 23])], any_order=True
         )
-        assert 2 == self.tvRunner.buildRemoteFileSetForPathIDs.call_count
+        assert 2 == self.tvRunner.build_remote_media_file_set.call_count
 
         self.tvRunner.updateFileRecords.assert_has_calls(
             [
