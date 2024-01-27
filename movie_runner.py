@@ -64,7 +64,7 @@ class MovieRunner:
 
             tokens = self._getLocalMoviePaths(moviepath)
             for token in tokens:
-                localpath = os.path.join(moviepath, token)
+                localpath = moviepath / token
                 if localpath not in remote_paths:
                     log.info(f"Found {localpath}")
                     log.info(f"Starting re-encoding of {localpath}...")

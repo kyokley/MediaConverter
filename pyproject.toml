@@ -32,3 +32,6 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff]
 select = ["E", "F"]
 ignore = ["E501"]
+
+[tool.pytest.ini_options]
+addopts = "--disable-socket"
