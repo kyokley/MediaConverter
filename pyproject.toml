@@ -23,6 +23,7 @@ pytest-mock = "^3.6.1"
 
 [tool.poetry.group.dev.dependencies]
 blessings = "^1.7"
+pytest-socket = "^0.6.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
