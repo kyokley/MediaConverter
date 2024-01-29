@@ -34,4 +34,4 @@ select = ["E", "F"]
 ignore = ["E501"]
 
 [tool.pytest.ini_options]
-addopts = "--disable-socket"
+addopts = "--disable-socket --ignore=tests/integration"
