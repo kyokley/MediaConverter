@@ -70,16 +70,17 @@ class TestTvRunner:
         assert expectedSet == actualSet
 
     def test_updateFileRecords(self, mocker):
-        mock_file = mocker.patch("tv_runner.File")
+        mock_post_media_file = mocker.patch(
+            "tv_runner.MediaFile.post_media_file")
         mock_makeFileStreamable = mocker.patch("tv_runner.makeFileStreamable")
-        mock_getOrCreateRemotePath = mocker.patch(
-            "tv_runner.TvRunner.getOrCreateRemotePath"
+        mock_get_or_create_media_path = mocker.patch(
+            "tv_runner.TvRunner.get_or_create_media_path"
         )
         mock_os_path_exists = mocker.patch("tv_runner.os.path.exists")
         mock_os_path_getsize = mocker.patch("tv_runner.os.path.getsize")
         mock_os_path_basename = mocker.patch("tv_runner.os.path.basename")
 
-        mock_getOrCreateRemotePath.return_value = 1
+        mock_get_or_create_media_path.return_value = 1
         mock_os_path_exists.return_value = True
         mock_os_path_getsize.return_value = 1
         mock_os_path_basename.return_value = "basename"
@@ -110,7 +111,11 @@ class TestTvRunner:
             removeOriginal=True,
             dryRun=False,
         )
-        mock_file.assert_called_with("basename", 1, 1, True)
+        mock_post_media_file.assert_called_once_with(
+            mock_makeFileStreamable().name,
+            1,
+            mock_makeFileStreamable().stat().st_size,
+        )
 
     def test_run(self):
         test_data = {
@@ -118,7 +123,7 @@ class TestTvRunner:
             "sdfg": [12, 23],
         }
         self.tvRunner.paths = test_data
-        self.tvRunner.loadPaths = mock.MagicMock()
+        self.tvRunner.load_paths = mock.MagicMock()
 
         self.tvRunner.buildLocalFileSet = mock.MagicMock()
         self.tvRunner.buildLocalFileSet.return_value = set(["some", "paths"])
