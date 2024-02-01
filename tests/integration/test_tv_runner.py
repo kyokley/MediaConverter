@@ -18,9 +18,7 @@ class TestTvRunner:
         self.tv_dir.mkdir()
 
     def test_run(self, create_video_file):
-        dst = create_video_file(self.tv_dir,
-                                'mov_bbb.mp4')
+        create_video_file(self.tv_dir, 'mov_bbb.mp4')
 
         tv_runner = TvRunner()
         tv_runner.load_paths()
-        pass

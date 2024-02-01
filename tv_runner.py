@@ -12,6 +12,7 @@ from settings import (
     UNSORTED_PATHS,
     MINIMUM_FILE_SIZE,
     DOMAIN,
+    LOCAL_TV_SHOWS_PATHS,
 )
 from convert import makeFileStreamable, SkipProcessing, AlreadyEncoded
 from utils import (
@@ -53,8 +54,15 @@ class MediaPathMixin:
 
 
 class Tv(MediaPathMixin):
-    MEDIAVIEWER_TV_URL = f"{DOMAIN}/mediaviewer/api/tv/"
-    MEDIAVIEWER_MEDIAPATH_URL = DOMAIN + "/mediaviewer/api/tvmediapath/"
+    @classmethod
+    @property
+    def MEDIAVIEWER_TV_URL(cls):
+        return f"{DOMAIN}/mediaviewer/api/tv/"
+
+    @classmethod
+    @property
+    def MEDIAVIEWER_MEDIAPATH_URL(cls):
+        return DOMAIN + "/mediaviewer/api/tvmediapath/"
 
     @classmethod
     def get_all_tv(cls):
@@ -73,6 +81,8 @@ class Tv(MediaPathMixin):
                     for media_path in media_paths:
                         if BASE_PATH not in media_path:
                             local_path = BASE_PATH / media_path
+                        else:
+                            local_path = Path(media_path)
 
                         val = paths.setdefault(
                             local_path, {"pks": set(), "finished": result["finished"]}
@@ -82,7 +92,9 @@ class Tv(MediaPathMixin):
 
 
 class MediaFile:
-    MEDIAVIEWER_MEDIAFILE_URL = f"{DOMAIN}/mediaviewer/api/mediafile/"
+    @property
+    def MEDIAVIEWER_MEDIAFILE_URL():
+        return f"{DOMAIN}/mediaviewer/api/mediafile/"
 
     @classmethod
     def post_media_file(
@@ -110,6 +122,9 @@ class TvRunner:
             for key, val in Tv.get_all_tv().items()
             if not val["finished"]
         }
+
+        for path in LOCAL_TV_SHOWS_PATHS:
+            self.paths.setdefault(Path(path), []).append(-1)
 
     @staticmethod
     def get_or_create_media_path(local_path):
