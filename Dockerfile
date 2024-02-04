@@ -1,6 +1,7 @@
 ARG BASE_IMAGE=python:3.12-slim
 
-FROM ${BASE_IMAGE} AS builder
+
+FROM ${BASE_IMAGE} AS base-builder
 
 ENV FFMPEG_VERSION=6.0
 
@@ -8,10 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 ENV POETRY_VENV=/poetry_venv
-RUN python3 -m venv $POETRY_VENV
-
 ENV VIRTUAL_ENV=/venv
-RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 RUN sed -i -e's/ main/ main contrib non-free non-free-firmware/g' /etc/apt/sources.list.d/debian.sources && \
@@ -36,12 +34,17 @@ RUN sed -i -e's/ main/ main contrib non-free non-free-firmware/g' /etc/apt/sourc
         libtheora-dev
 
 WORKDIR /build
+
+
+FROM base-builder AS x265-builder
 RUN git clone --depth=1 https://github.com/videolan/x265.git
 WORKDIR  /build/x265
 RUN cmake source && \
         make && \
         make install
 
+
+FROM base-builder AS ffmpeg-builder
 WORKDIR /build/ffmpeg_sources
 RUN wget https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.gz && \
         tar xvzf ffmpeg-${FFMPEG_VERSION}.tar.gz
@@ -71,6 +74,7 @@ RUN PKG_CONFIG_PATH="/usr/bin/pkg-config" ./configure \
         ldconfig
 
 
+FROM base-builder AS srt-vtt-builder
 WORKDIR /build/ffmpeg_sources
 RUN git clone --depth=1 https://github.com/nwoltman/srt-to-vtt-cl.git
 WORKDIR /build/ffmpeg_sources/srt-to-vtt-cl
@@ -81,12 +85,17 @@ RUN make && \
             xargs -I{} cp {} /usr/local/bin/srt-vtt
 
 
-RUN $POETRY_VENV/bin/pip install -U pip poetry && $VIRTUAL_ENV/bin/pip install -U pip
+FROM base-builder AS python-builder
+RUN python3 -m venv $POETRY_VENV && \
+        python3 -m venv $VIRTUAL_ENV && \
+        $POETRY_VENV/bin/pip install -U pip poetry && \
+        $VIRTUAL_ENV/bin/pip install -U pip
 
 WORKDIR /code
 COPY poetry.lock pyproject.toml /code/
 
-RUN $POETRY_VENV/bin/pip install poetry && $POETRY_VENV/bin/poetry install --only main
+RUN $POETRY_VENV/bin/pip install poetry && \
+        $POETRY_VENV/bin/poetry install --only main
 
 
 FROM ${BASE_IMAGE} AS base
@@ -113,13 +122,14 @@ RUN sed -i -e's/ main/ main contrib non-free non-free-firmware/g' /etc/apt/sourc
         libopus-dev \
         libtheora-dev
 
-COPY --from=builder /venv /venv
-COPY --from=builder /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
-COPY --from=builder /usr/local/bin/srt-vtt /usr/local/bin/srt-vtt
-COPY --from=builder /usr/local/lib/libx265* /usr/local/lib/
+COPY --from=srt-vtt-builder /usr/local/bin/srt-vtt /usr/local/bin/srt-vtt
+COPY --from=python-builder $VIRTUAL_ENV $VIRTUAL_ENV
+COPY --from=x265-builder /usr/local/lib/libx265* /usr/local/lib/
+COPY --from=ffmpeg-builder /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
 
 RUN ldconfig
 WORKDIR /code
+
 
 # ********************* Begin Prod Image ******************
 FROM base AS prod
@@ -127,6 +137,7 @@ FROM base AS prod
 COPY . /code
 
 CMD ["/venv/bin/celery", "-A", "main", "worker", "--loglevel=info", "--concurrency=1"]
+
 
 # ********************* Begin Dev Image ******************
 FROM base AS dev
