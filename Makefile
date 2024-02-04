@@ -1,32 +1,38 @@
 .PHONY: autoformat build build-dev ci-tests down exec publish shell tests up
 
+DOCKER_COMPOSE_EXECUTABLE=$$(which docker-compose >/dev/null 2>&1 && echo "docker-compose" || echo "docker compose")
+NO_CACHE?=0
 
 build:
-	docker build -t kyokley/mediaconverter --target=prod .
+	docker build -t kyokley/mediaconverter \
+		$$(test ${NO_CACHE} -ne 0 && echo "--no-cache" || echo "") \
+		--target=prod .
 
 build-dev:
-	docker build -t kyokley/mediaconverter --target=dev .
+	docker build -t kyokley/mediaconverter \
+		$$(test ${NO_CACHE} -ne 0 && echo "--no-cache" || echo "") \
+		--target=dev .
 
 publish: build
 	docker push kyokley/mediaconverter
 
-shell: up
-	docker-compose exec mediaconverter /bin/bash
+shell:
+	${DOCKER_COMPOSE_EXECUTABLE} run mediaconverter /bin/bash
 
 tests: build-dev up
-	docker-compose exec mediaconverter pytest
+	${DOCKER_COMPOSE_EXECUTABLE} exec mediaconverter pytest
 
 ci-tests: build-dev up
-	docker-compose exec -T mediaconverter pytest
+	${DOCKER_COMPOSE_EXECUTABLE} exec -T mediaconverter pytest
 
 autoformat: build-dev
-	docker-compose run --no-deps mediaconverter /venv/bin/black .
+	${DOCKER_COMPOSE_EXECUTABLE} run --no-deps mediaconverter /venv/bin/black .
 
 up:
-	docker-compose up -d
+	${DOCKER_COMPOSE_EXECUTABLE} up -d
 
 down:
-	docker-compose down -v
+	${DOCKER_COMPOSE_EXECUTABLE} down -v
 
 exec:
-	docker-compose exec mediaconverter /venv/bin/python /code/main.py
+	${DOCKER_COMPOSE_EXECUTABLE} exec mediaconverter /venv/bin/python /code/main.py
