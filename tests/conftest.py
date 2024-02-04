@@ -69,3 +69,14 @@ def temp_directory():
     temp_dir_path = Path(temp_dir)
     yield temp_dir_path
     shutil.rmtree(temp_dir_path)
+
+
+@pytest.fixture
+def create_video_file():
+    def _create_video_file(dir, src_name, dst_name):
+        src = DATA_DIR_PATH / src_name
+        dst = dir / dst_name
+
+        shutil.copy(src, dst)
+        return dst
+    return _create_video_file

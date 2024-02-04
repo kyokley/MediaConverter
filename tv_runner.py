@@ -79,21 +79,24 @@ class Tv(MediaPathMixin):
                     media_paths = result['media_paths']
 
                     for media_path in media_paths:
-                        if BASE_PATH not in media_path:
-                            local_path = BASE_PATH / media_path
+                        mp = media_path['path']
+                        if BASE_PATH not in mp:
+                            local_path = Path(BASE_PATH) / mp
                         else:
-                            local_path = Path(media_path)
+                            local_path = Path(mp)
 
                         val = paths.setdefault(
                             local_path, {"pks": set(), "finished": result["finished"]}
                         )
-                        val["pks"].add(result["pk"])
+                        val["pks"].add(media_path["pk"])
                         paths[local_path] = val
+        return paths
 
 
 class MediaFile:
+    @classmethod
     @property
-    def MEDIAVIEWER_MEDIAFILE_URL():
+    def MEDIAVIEWER_MEDIAFILE_URL(cls):
         return f"{DOMAIN}/mediaviewer/api/mediafile/"
 
     @classmethod
@@ -123,8 +126,10 @@ class TvRunner:
             if not val["finished"]
         }
 
-        for path in LOCAL_TV_SHOWS_PATHS:
-            self.paths.setdefault(Path(path), []).append(-1)
+        for path_str in LOCAL_TV_SHOWS_PATHS:
+            path = Path(path_str)
+            for dir in path.iterdir():
+                self.paths.setdefault(Path(dir), []).append(-1)
 
     @staticmethod
     def get_or_create_media_path(local_path):
@@ -219,15 +224,15 @@ class TvRunner:
         return localFileSet
 
     def handleDirs(self, path):
-        if os.path.exists(path):
+        if path.exists():
             paths = []
             dir_set = set()
-            for root, dirs, files in os.walk(path):
+            for root, dirs, files in path.walk():
                 for file in files:
-                    paths.append(os.path.join(root, file))
+                    paths.append(root / file)
 
             for fullpath in paths:
-                dirs = fullpath.split(path)[1].split(os.path.sep)
+                dirs = str(fullpath).split(str(path))[1].split(os.path.sep)
                 top, episode, file = path, dirs[1], dirs[-1]
                 file_ext = os.path.splitext(file)[-1].lower()
 

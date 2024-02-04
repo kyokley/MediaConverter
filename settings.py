@@ -4,7 +4,7 @@ logging.getLogger().setLevel(level=logging.DEBUG)
 
 CELERY_VHOST = ""
 
-WAITER_USERNAME = "user"
+WAITER_USERNAME = "waiter"
 WAITER_PASSWORD = "password"
 
 LOCAL_MOVIE_PATHS = ["movies"]
