@@ -122,10 +122,7 @@ RUN sed -i -e's/ main/ main contrib non-free non-free-firmware/g' /etc/apt/sourc
         libopus-dev \
         libtheora-dev
 
-COPY --from=srt-vtt-builder /usr/local/bin/srt-vtt /usr/local/bin/srt-vtt
 COPY --from=python-builder $VIRTUAL_ENV $VIRTUAL_ENV
-COPY --from=x265-builder /usr/local/lib/libx265* /usr/local/lib/
-COPY --from=ffmpeg-builder /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
 
 RUN ldconfig
 WORKDIR /code
@@ -137,6 +134,10 @@ FROM base AS prod
 COPY . /code
 
 CMD ["/venv/bin/celery", "-A", "main", "worker", "--loglevel=info", "--concurrency=1"]
+
+COPY --from=srt-vtt-builder /usr/local/bin/srt-vtt /usr/local/bin/srt-vtt
+COPY --from=x265-builder /usr/local/lib/libx265* /usr/local/lib/
+COPY --from=ffmpeg-builder /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
 
 
 # ********************* Begin Dev Image ******************
@@ -150,3 +151,7 @@ COPY poetry.lock pyproject.toml /code/
 RUN $POETRY_VENV/bin/pip install -U pip poetry && $VIRTUAL_ENV/bin/pip install -U pip
 
 RUN $POETRY_VENV/bin/poetry install
+
+COPY --from=srt-vtt-builder /usr/local/bin/srt-vtt /usr/local/bin/srt-vtt
+COPY --from=x265-builder /usr/local/lib/libx265* /usr/local/lib/
+COPY --from=ffmpeg-builder /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
