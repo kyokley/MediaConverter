@@ -61,6 +61,17 @@ class Tv(MediaPathMixin):
 
     @classmethod
     @property
+    def MEDIAVIEWER_TV_DETAIL_URL(cls):
+        return cls.MEDIAVIEWER_TV_URL + "{tv_id}/"
+
+    @classmethod
+    def get_tv(cls, tv_id):
+        resp = get_data(cls.MEDIAVIEWER_TV_DETAIL_URL.format(tv_id=tv_id))
+        resp.raise_for_status()
+        return resp.json()
+
+    @classmethod
+    @property
     def MEDIAVIEWER_MEDIAPATH_URL(cls):
         return DOMAIN + "/mediaviewer/api/tvmediapath/"
 
@@ -129,7 +140,7 @@ class TvRunner:
         for path_str in LOCAL_TV_SHOWS_PATHS:
             path = Path(path_str)
             for dir in path.iterdir():
-                self.paths.setdefault(Path(dir), []).append(-1)
+                self.paths.setdefault(Path(dir), set()).add(-1)
 
     @staticmethod
     def get_or_create_media_path(local_path):

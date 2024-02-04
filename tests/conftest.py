@@ -1,10 +1,9 @@
 import pytest
 import shutil
 import tempfile
-
-from pathlib import Path
 from faker import Faker
 
+from pathlib import Path
 
 DATA_DIR_PATH = Path(__file__).parent / "data"
 STREAMABLE_FILE_NAME = "mov_bbb.mp4"
@@ -14,10 +13,13 @@ UNSTREAMABLE_FILE_PATH = DATA_DIR_PATH / UNSTREAMABLE_FILE_NAME
 SRT_FILE_NAME = "2_Eng.srt"
 SRT_FILE_PATH = DATA_DIR_PATH / SRT_FILE_NAME
 
-fake = Faker()
+
+@pytest.fixture(scope='session')
+def fake():
+    return Faker()
 
 
-@pytest.fixture(autouse=True, scope='session')
+@pytest.fixture(scope='session')
 def counter():
     def _counter():
         count = 1
@@ -37,6 +39,7 @@ def create_tv_directory(temp_directory, create_media_name, create_video_file):
             tv_dir.mkdir(exist_ok=True)
 
         create_video_file(tv_dir, f'{tv_name}.S01E01.mp4')
+        return tv_dir
     return _create_tv_directory
 
 
@@ -51,7 +54,7 @@ def temp_directory(tmp_path, counter):
 
 
 @pytest.fixture
-def create_media_name():
+def create_media_name(fake):
     def _create_media_name(num_words=3):
         return '.'.join(fake.words(num_words)).title()
     return _create_media_name
