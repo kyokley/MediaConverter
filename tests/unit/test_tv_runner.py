@@ -7,7 +7,9 @@ from tv_runner import TvRunner
 
 class TestTvRunner:
     @pytest.fixture(autouse=True)
-    def setUp(self, mocker):
+    def setUp(self, mocker, temp_directory):
+        mocker.patch('tv_runner.LOCAL_TV_SHOWS_PATHS',
+                     [str(temp_directory)])
         self.mock_sort_unsorted_files = mocker.patch(
             "tv_runner.TvRunner._sort_unsorted_files"
         )
