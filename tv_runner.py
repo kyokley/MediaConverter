@@ -40,8 +40,13 @@ class MediaPathMixin:
         return cls.MEDIAVIEWER_MEDIAPATH_URL + "{media_path_id}/"
 
     @classmethod
-    def post_media_path(cls, path):
-        payload = {'path': path}
+    def post_media_path(cls,
+                        path,
+                        tv=None,
+                        movie=None):
+        payload = {'path': path,
+                   'tv': tv,
+                   'movie': movie}
         resp = post_data(payload, cls.MEDIAVIEWER_MEDIAPATH_URL)
         resp.raise_for_status()
         return resp.json()

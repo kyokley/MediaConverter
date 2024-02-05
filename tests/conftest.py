@@ -31,22 +31,23 @@ def counter():
 
 @pytest.fixture
 def create_tv_directory(temp_directory, create_media_name, create_video_file):
-    def _create_tv_directory():
+    def _create_tv_directory(directory=None):
         tv_name = create_media_name()
 
-        tv_dir = temp_directory / tv_name
+        directory = Path(directory) or temp_directory
+        tv_dir = directory / tv_name
         if not tv_dir.exists():
-            tv_dir.mkdir(exist_ok=True)
+            tv_dir.mkdir(exist_ok=True, parents=True)
 
-        create_video_file(tv_dir, f'{tv_name}.S01E01.mp4')
-        return tv_dir
+        video_file = create_video_file(tv_dir, f'{tv_name}.S01E01.mp4')
+        return tv_dir, video_file
     return _create_tv_directory
 
 
 @pytest.fixture
 def temp_directory(tmp_path, counter):
     dir = tmp_path / f'test_dir{next(counter)}'
-    dir.mkdir(exist_ok=True)
+    dir.mkdir(exist_ok=True, parents=True)
     yield dir
 
     if dir.exists():
