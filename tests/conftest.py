@@ -31,8 +31,10 @@ def counter():
 
 @pytest.fixture
 def create_tv_directory(temp_directory, create_media_name, create_video_file):
-    def _create_tv_directory(directory=None):
-        tv_name = create_media_name()
+    def _create_tv_directory(tv_name=None,
+                             directory=None):
+        if tv_name is None:
+            tv_name = create_media_name()
 
         directory = Path(directory) or temp_directory
         tv_dir = directory / tv_name

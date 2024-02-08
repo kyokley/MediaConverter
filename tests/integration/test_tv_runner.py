@@ -18,7 +18,9 @@ class BaseSettings:
         self.local_paths = self._local_tv_paths()
         mocker.patch('tv_runner.LOCAL_TV_SHOWS_PATHS',
                      self.local_paths)
-        self.tv_dir, self.video_file = create_tv_directory(self.local_paths[-1])
+        self.tv_dir, self.video_file = create_tv_directory(
+            directory=self.local_paths[-1]
+        )
 
     def _local_tv_paths(self):
         return [str(self._temp_directory)]
@@ -96,10 +98,20 @@ class TestPostMediaFile(BaseSettings):
         self.dirs = []
         tv = None
 
+        tv_name = None
         for idx, dir_str in enumerate(self.local_paths):
             new_dir = Path(dir_str) / f'TestDir{idx}'
-            tv_dir, video_file = create_tv_directory(
-                directory=new_dir)
+
+            if tv_name is None:
+                tv_dir, video_file = create_tv_directory(
+                    directory=new_dir)
+                tv_name = tv_dir.name
+            else:
+                tv_dir, video_file = create_tv_directory(
+                    tv_name=tv_name,
+                    directory=new_dir,
+                )
+
             self.video_files.append(video_file)
             self.dirs.append(tv_dir)
 
