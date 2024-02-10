@@ -23,6 +23,17 @@ class Movie(MediaPathMixin):
 
     @classmethod
     @property
+    def MEDIAVIEWER_MOVIE_DETAIL_URL(cls):
+        return cls.MEDIAVIEWER_MOVIE_URL + "{movie_id}/"
+
+    @classmethod
+    def get_movie(cls, movie_id):
+        resp = get_data(cls.MEDIAVIEWER_MOVIE_DETAIL_URL.format(movie_id=movie_id))
+        resp.raise_for_status()
+        return resp.json()
+
+    @classmethod
+    @property
     def MEDIAVIEWER_MEDIAPATH_URL(cls):
         return DOMAIN + "/mediaviewer/api/moviemediapath/"
 
