@@ -1,7 +1,11 @@
 import pytest
+import random
 
 from pathlib import Path
 from tv_runner import TvRunner, Tv, MediaFile
+
+
+rand = random.SystemRandom()
 
 
 class BaseSettings:
@@ -11,6 +15,8 @@ class BaseSettings:
               temp_directory,
               create_tv_directory,
               ):
+        self.media_file_size = rand.randint(1_000_000, 1_000_000_000)
+
         self._temp_directory = temp_directory
         mocker.patch('tv_runner.DOMAIN',
                         'http://mediaviewer:8000')
@@ -83,12 +89,12 @@ class TestPostMediaFile(BaseSettings):
         mf_resp = MediaFile.post_media_file(
             self.video_file.name,
             media_path_id,
-            123123)
+            self.media_file_size)
 
         assert mf_resp['filename'] == self.video_file.name
         assert mf_resp['media_path'] == post_resp['pk']
         assert mf_resp['ismovie'] is False
-        assert mf_resp['size'] == 123123
+        assert mf_resp['size'] == self.media_file_size
 
         get_resp = Tv.get_media_path(post_resp['pk'])
         assert self.video_file.name in get_resp['media_files']
@@ -119,7 +125,7 @@ class TestPostMediaFile(BaseSettings):
             MediaFile.post_media_file(
                 video_file.name,
                 resp['pk'],
-                123124)
+                self.media_file_size)
             if tv is None:
                 tv = resp['tv']
 
