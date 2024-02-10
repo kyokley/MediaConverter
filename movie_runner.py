@@ -41,14 +41,14 @@ class Movie(MediaPathMixin):
                     media_path = result['media_path']
 
                     if BASE_PATH not in media_path:
-                        local_path = Path(BASE_PATH) / media_path
+                        local_path = Path(BASE_PATH) / media_path['path']
                     else:
-                        local_path = Path(media_path)
+                        local_path = Path(media_path['path'])
 
                     val = paths.setdefault(
                         local_path, {"pks": set(), "finished": result["finished"]}
                     )
-                    val["pks"].add(result["pk"])
+                    val["pks"].add(media_path["pk"])
                     paths[local_path] = val
         return paths
 
