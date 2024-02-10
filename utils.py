@@ -117,7 +117,7 @@ def stripUnicode(filename, path=None):
             os.chdir(current_dir)
 
     if path:
-        return path / stripped_filename
+        return Path(path) / stripped_filename
     else:
         return stripped_path
 
