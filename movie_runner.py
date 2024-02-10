@@ -16,8 +16,15 @@ log = logging.getLogger(__name__)
 
 
 class Movie(MediaPathMixin):
-    MEDIAVIEWER_MOVIE_URL = f"{DOMAIN}/mediaviewer/api/movie/"
-    MEDIAVIEWER_MEDIAPATH_URL = DOMAIN + "/mediaviewer/api/moviemediapath/"
+    @classmethod
+    @property
+    def MEDIAVIEWER_MOVIE_URL(cls):
+        return f"{DOMAIN}/mediaviewer/api/movie/"
+
+    @classmethod
+    @property
+    def MEDIAVIEWER_MEDIAPATH_URL(cls):
+        return DOMAIN + "/mediaviewer/api/moviemediapath/"
 
     @classmethod
     def get_all_movies(cls):
@@ -31,17 +38,18 @@ class Movie(MediaPathMixin):
 
             if data["results"]:
                 for result in data["results"]:
-                    media_paths = result['media_paths']
+                    media_path = result['media_path']
 
-                    for media_path in media_paths:
-                        if BASE_PATH not in media_path:
-                            local_path = BASE_PATH / media_path
+                    if BASE_PATH not in media_path:
+                        local_path = Path(BASE_PATH) / media_path
+                    else:
+                        local_path = Path(media_path)
 
-                        val = paths.setdefault(
-                            local_path, {"pks": set(), "finished": result["finished"]}
-                        )
-                        val["pks"].add(result["pk"])
-                        paths[local_path] = val
+                    val = paths.setdefault(
+                        local_path, {"pks": set(), "finished": result["finished"]}
+                    )
+                    val["pks"].add(result["pk"])
+                    paths[local_path] = val
         return paths
 
 

@@ -47,6 +47,23 @@ def create_tv_directory(temp_directory, create_media_name, create_video_file):
 
 
 @pytest.fixture
+def create_movie_directory(temp_directory, create_media_name, create_video_file):
+    def _create_movie_directory(movie_name=None,
+                                directory=None):
+        if movie_name is None:
+            movie_name = create_media_name()
+
+        directory = Path(directory) or temp_directory
+        movie_dir = directory / movie_name
+        if not movie_dir.exists():
+            movie_dir.mkdir(exist_ok=True, parents=True)
+
+        video_file = create_video_file(movie_dir, f'{movie_name}.mp4')
+        return movie_dir, video_file
+    return _create_movie_directory
+
+
+@pytest.fixture
 def temp_directory(tmp_path, counter):
     dir = tmp_path / f'test_dir{next(counter)}'
     dir.mkdir(exist_ok=True, parents=True)

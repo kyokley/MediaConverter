@@ -101,21 +101,25 @@ def stripUnicode(filename, path=None):
     if isinstance(filename, bytes):
         filename = filename.decode("utf-8")
 
-    strippedFilename = unidecode(filename).replace("'", "")
-    if strippedFilename != filename:
+    file_path = Path(filename)
+
+    stripped_filename = unidecode(file_path.name).replace("'", "")
+    stripped_path = file_path.parent / stripped_filename
+
+    if stripped_path != file_path:
         if path:
-            currentDir = os.getcwd()
+            current_dir = Path(os.getcwd())
             os.chdir(path)
 
-        os.rename(filename, strippedFilename)
+        os.rename(filename, stripped_filename)
 
         if path:
-            os.chdir(currentDir)
+            os.chdir(current_dir)
 
     if path:
-        return os.path.join(path, strippedFilename)
+        return path / stripped_filename
     else:
-        return strippedFilename
+        return stripped_path
 
 
 def send_email(subject, body):
