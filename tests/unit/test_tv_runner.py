@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 
 import mock
 from mock import call
@@ -108,7 +109,7 @@ class TestTvRunner:
             test_path, test_localFileSet, test_remoteFileSet
         )
         mock_makeFileStreamable.assert_called_with(
-            "/a/local/path/newfile",
+            Path("/a/local/path/newfile"),
             appendSuffix=True,
             removeOriginal=True,
             dryRun=False,
