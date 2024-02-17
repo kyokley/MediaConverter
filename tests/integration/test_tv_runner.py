@@ -3,6 +3,7 @@ import random
 
 from pathlib import Path
 from tv_runner import TvRunner, Tv, MediaFile
+from settings import MEDIAVIEWER_SUFFIX
 
 
 rand = random.SystemRandom()
@@ -10,7 +11,7 @@ rand = random.SystemRandom()
 
 class BaseSettings:
     @pytest.fixture(autouse=True)
-    def setUp(self,
+    def _setUp(self,
               mocker,
               temp_directory,
               create_tv_directory,
@@ -19,6 +20,8 @@ class BaseSettings:
 
         self._temp_directory = temp_directory
         mocker.patch('tv_runner.DOMAIN',
+                        'http://mediaviewer:8000')
+        mocker.patch('utils.DOMAIN',
                         'http://mediaviewer:8000')
         mocker.patch("tv_runner.MINIMUM_FILE_SIZE", 100)
         self.local_paths = self._local_tv_paths()
@@ -33,9 +36,35 @@ class BaseSettings:
 
 
 class TestRun(BaseSettings):
+    @pytest.fixture(autouse=True)
+    def setUp(self, mocker):
+        Tv.post_media_path(self.tv_dir)
+
+        self.unsorted_dir = self._temp_directory / 'test_unsorted'
+        self.unsorted_dir.mkdir()
+
+        mocker.patch('tv_runner.UNSORTED_PATHS',
+                     [str(self.unsorted_dir)])
+
     def test_run(self):
         tv_runner = TvRunner()
         tv_runner.run()
+
+    def test_unsorted(self, create_video_file):
+        filename = f'{self.video_file.parent.name}.S02E01.mp4'
+        unsorted_video_file = create_video_file(self.unsorted_dir,
+                                                filename)
+        assert unsorted_video_file.exists()
+
+        expected_new_file_location = (
+            self.tv_dir / f'{unsorted_video_file.name}.{MEDIAVIEWER_SUFFIX}')
+        assert not expected_new_file_location.exists()
+
+        tv_runner = TvRunner()
+        tv_runner.run()
+
+        assert not unsorted_video_file.exists()
+        assert expected_new_file_location.exists()
 
 
 class TestPostMediaPath(BaseSettings):

@@ -21,8 +21,6 @@ from settings import (
 
 log = logging.getLogger(__name__)
 
-MEDIAVIEWER_INFER_SCRAPERS_URL = f"{DOMAIN}/mediaviewer/api/inferscrapers/"
-
 EXTERNAL_REQUEST_COOLDOWN = 0.25
 
 
@@ -34,13 +32,17 @@ class MissingPathException(Exception):
     pass
 
 
+def mediaviewer_infer_scrapers_url():
+    return f"{DOMAIN}/mediaviewer/api/inferscrapers/"
+
+
 def post_data(values, url):
     try:
         request = _make_request('POST', url, values=values)
 
         try:
             requests.post(
-                MEDIAVIEWER_INFER_SCRAPERS_URL,
+                mediaviewer_infer_scrapers_url(),
                 data={},
                 auth=(WAITER_USERNAME, WAITER_PASSWORD),
                 verify=VERIFY_REQUESTS,
@@ -150,7 +152,7 @@ def is_valid_media_file(path):
 
 def get_localpath_by_filename(filename):
     resp = requests.get(
-        MEDIAVIEWER_INFER_SCRAPERS_URL,
+        mediaviewer_infer_scrapers_url(),
         params={"title": filename},
         auth=(WAITER_USERNAME, WAITER_PASSWORD),
     )
@@ -163,4 +165,4 @@ def get_localpath_by_filename(filename):
         return
 
     data = resp.json()
-    return data["localpath"]
+    return data["path"]

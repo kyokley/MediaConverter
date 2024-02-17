@@ -293,8 +293,8 @@ class TvRunner:
                 localFileSet = self.buildLocalFileSet(path)
                 log.info(f"Done building local file set for {path}")
             except MissingPathException as e:
-                log.error(e)
-                log.error("Continuing...")
+                log.warn(e)
+                log.warn("Continuing...")
                 continue
 
             log.info(f"Attempting to get remote files for {path}")
@@ -315,7 +315,7 @@ class TvRunner:
         for unsorted_path in UNSORTED_PATHS:
             if not os.path.exists(unsorted_path):
                 log.info(f"Unsorted file path {unsorted_path} does not exist")
-                return
+                continue
 
             for filename in os.listdir(unsorted_path):
                 src = os.path.join(unsorted_path, filename)
