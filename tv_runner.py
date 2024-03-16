@@ -160,7 +160,6 @@ class TvRunner:
             # Skip local paths
             if pathid == -1:
                 continue
-            # TODO: Get MediaFiles for this MediaPath!
             res = Tv.get_media_path(pathid)
             fileSet.update(res['media_files'])
         log.info("Built remote fileSet")

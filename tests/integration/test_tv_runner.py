@@ -12,10 +12,10 @@ rand = random.SystemRandom()
 class BaseSettings:
     @pytest.fixture(autouse=True)
     def _setUp(self,
-              mocker,
-              temp_directory,
-              create_tv_directory,
-              ):
+               mocker,
+               temp_directory,
+               create_tv_directory,
+               ):
         self.media_file_size = rand.randint(1_000_000, 1_000_000_000)
 
         self._temp_directory = temp_directory
