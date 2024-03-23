@@ -286,8 +286,8 @@ class TvRunner:
                 localFileSet = self.buildLocalFileSet(path)
                 log.info(f"Done building local file set for {path}")
             except MissingPathException as e:
-                log.warn(e)
-                log.warn("Continuing...")
+                log.warning(e)
+                log.warning("Continuing...")
                 continue
 
             log.info(f"Attempting to get remote files for {path}")
