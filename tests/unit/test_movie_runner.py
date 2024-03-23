@@ -13,15 +13,15 @@ class TestPostMovies:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker, temp_directory):
         self.tmp_dir = temp_directory
-        movie_dir = self.tmp_dir / 'movies'
+        movie_dir = self.tmp_dir / "movies"
         movie_dir.mkdir(parents=True)
-        mocker.patch('movie_runner.BASE_PATH', self.tmp_dir)
-        mocker.patch('utils.requests')
-        self.mock_get_data = mocker.patch('movie_runner.get_data')
+        mocker.patch("movie_runner.BASE_PATH", self.tmp_dir)
+        mocker.patch("utils.requests")
+        self.mock_get_data = mocker.patch("movie_runner.get_data")
         self.mock_response = mock.MagicMock()
         self.mock_response.json.return_value = {
-            'results': [],
-            'next': '',
+            "results": [],
+            "next": "",
         }
         self.mock_get_data.return_value = self.mock_response
 
@@ -30,7 +30,6 @@ class TestPostMovies:
         self.mock_promoteSubtitles = mocker.patch(
             "movie_runner.MovieRunner.promoteSubtitles"
         )
-
 
         self.mock_exists = mocker.patch("movie_runner.os.path.exists")
 

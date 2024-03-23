@@ -277,7 +277,7 @@ class TestOverwriteExistingFile(TouchFileMixin):
             appendSuffix=True,
         )
         assert not self.mock_move.called
-        assert res == temp_directory / f'{self.source.name}.suffix.mp4'
+        assert res == temp_directory / f"{self.source.name}.suffix.mp4"
 
 
 class TestMakeFileStreamable(TouchFileMixin):

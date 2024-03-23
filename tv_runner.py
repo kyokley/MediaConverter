@@ -40,20 +40,17 @@ class MediaPathMixin:
         return cls.MEDIAVIEWER_MEDIAPATH_URL + "{media_path_id}/"
 
     @classmethod
-    def post_media_path(cls,
-                        path,
-                        tv=None,
-                        movie=None):
-        payload = {'path': path,
-                   'tv': tv,
-                   'movie': movie}
+    def post_media_path(cls, path, tv=None, movie=None):
+        payload = {"path": path, "tv": tv, "movie": movie}
         resp = post_data(payload, cls.MEDIAVIEWER_MEDIAPATH_URL)
         resp.raise_for_status()
         return resp.json()
 
     @classmethod
     def get_media_path(cls, media_path_id):
-        resp = get_data(cls.MEDIAVIEWER_MEDIAPATH_DETAIL_URL.format(media_path_id=media_path_id))
+        resp = get_data(
+            cls.MEDIAVIEWER_MEDIAPATH_DETAIL_URL.format(media_path_id=media_path_id)
+        )
         resp.raise_for_status()
         return resp.json()
 
@@ -86,16 +83,16 @@ class Tv(MediaPathMixin):
 
         data = {"next": cls.MEDIAVIEWER_TV_URL}
         while data["next"]:
-            request = get_data(data['next'])
+            request = get_data(data["next"])
             request.raise_for_status()
             data = request.json()
 
             if data["results"]:
                 for result in data["results"]:
-                    media_paths = result['media_paths']
+                    media_paths = result["media_paths"]
 
                     for media_path in media_paths:
-                        mp = media_path['path']
+                        mp = media_path["path"]
                         if BASE_PATH not in mp:
                             local_path = Path(BASE_PATH) / mp
                         else:
@@ -122,9 +119,7 @@ class MediaFile:
         media_path_id,
         size,
     ):
-        payload = {'filename': filename,
-                   'media_path': media_path_id,
-                   'size': size}
+        payload = {"filename": filename, "media_path": media_path_id, "size": size}
         resp = post_data(payload, cls.MEDIAVIEWER_MEDIAFILE_URL)
         resp.raise_for_status()
         return resp.json()
@@ -151,7 +146,7 @@ class TvRunner:
     def get_or_create_media_path(local_path):
         log.info(f"Get or create MediaPath for {local_path}")
         media_path_data = Tv.post_media_path(local_path)
-        return media_path_data['pk']
+        return media_path_data["pk"]
 
     @staticmethod
     def build_remote_media_file_set(pathIDs):
@@ -161,7 +156,7 @@ class TvRunner:
             if pathid == -1:
                 continue
             res = Tv.get_media_path(pathid)
-            fileSet.update(res['media_files'])
+            fileSet.update(res["media_files"])
         log.info("Built remote fileSet")
 
         return fileSet
@@ -194,9 +189,8 @@ class TvRunner:
 
                 if fullPath.exists():
                     MediaFile.post_media_file(
-                        fullPath.name,
-                        media_path_id,
-                        fullPath.stat().st_size)
+                        fullPath.name, media_path_id, fullPath.stat().st_size
+                    )
             except Exception as e:
                 errorMsg = (
                     f"Something bad happened attempting to make {fullPath} streamable"

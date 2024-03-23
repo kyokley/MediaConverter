@@ -36,12 +36,12 @@ class TestStripUnicode(CreateFileMixin):
         os.chdir(self.current_dir)
 
     @pytest.mark.parametrize(
-        'test_filename,expected',
+        "test_filename,expected",
         (
-            ('test_filename', 'test_filename'),
-            ("test_filenameÐÆ", 'test_filenameDAE'),
-            ("it's got an apostrophe", 'its got an apostrophe'),
-        )
+            ("test_filename", "test_filename"),
+            ("test_filenameÐÆ", "test_filenameDAE"),
+            ("it's got an apostrophe", "its got an apostrophe"),
+        ),
     )
     def test_filenames(self, use_bytes, test_filename, expected):
         self._create_file(test_filename)
@@ -61,7 +61,7 @@ class TestStripUnicode(CreateFileMixin):
         if use_bytes:
             test_filename = test_filename.encode("utf-8")
 
-        expected = Path('new_path') / 'test_filenameDAE'
+        expected = Path("new_path") / "test_filenameDAE"
         actual = stripUnicode(test_filename, path="new_path")
 
         assert expected == actual

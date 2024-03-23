@@ -38,7 +38,7 @@ def mediaviewer_infer_scrapers_url():
 
 def post_data(values, url):
     try:
-        request = _make_request('POST', url, values=values)
+        request = _make_request("POST", url, values=values)
 
         try:
             requests.post(
@@ -60,7 +60,7 @@ def post_data(values, url):
 
 def get_data(url):
     try:
-        return _make_request('GET', url)
+        return _make_request("GET", url)
     except Exception as e:
         log.error(e)
         raise
@@ -77,12 +77,12 @@ def _make_request(verb, url, values=None):
             log.info(f"{verb}-ing to {url}")
 
         request_method = None
-        if verb == 'GET':
+        if verb == "GET":
             request_method = requests.get
-        elif verb == 'POST':
+        elif verb == "POST":
             request_method = requests.post
         else:
-            raise ValueError(f'Got invalid verb {verb}')
+            raise ValueError(f"Got invalid verb {verb}")
 
         request = request_method(
             url,

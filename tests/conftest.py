@@ -14,25 +14,25 @@ SRT_FILE_NAME = "2_Eng.srt"
 SRT_FILE_PATH = DATA_DIR_PATH / SRT_FILE_NAME
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def fake():
     return Faker()
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def counter():
     def _counter():
         count = 1
         while True:
             yield count
             count += 1
+
     return _counter()
 
 
 @pytest.fixture
 def create_tv_directory(temp_directory, create_media_name, create_video_file):
-    def _create_tv_directory(tv_name=None,
-                             directory=None):
+    def _create_tv_directory(tv_name=None, directory=None):
         if tv_name is None:
             tv_name = create_media_name()
 
@@ -41,15 +41,15 @@ def create_tv_directory(temp_directory, create_media_name, create_video_file):
         if not tv_dir.exists():
             tv_dir.mkdir(exist_ok=True, parents=True)
 
-        video_file = create_video_file(tv_dir, f'{tv_name}.S01E01.mp4')
+        video_file = create_video_file(tv_dir, f"{tv_name}.S01E01.mp4")
         return tv_dir, video_file
+
     return _create_tv_directory
 
 
 @pytest.fixture
 def create_movie_directory(temp_directory, create_media_name, create_video_file):
-    def _create_movie_directory(movie_name=None,
-                                directory=None):
+    def _create_movie_directory(movie_name=None, directory=None):
         if movie_name is None:
             movie_name = create_media_name()
 
@@ -58,14 +58,15 @@ def create_movie_directory(temp_directory, create_media_name, create_video_file)
         if not movie_dir.exists():
             movie_dir.mkdir(exist_ok=True, parents=True)
 
-        video_file = create_video_file(movie_dir, f'{movie_name}.mp4')
+        video_file = create_video_file(movie_dir, f"{movie_name}.mp4")
         return movie_dir, video_file
+
     return _create_movie_directory
 
 
 @pytest.fixture
 def temp_directory(tmp_path, counter):
-    dir = tmp_path / f'test_dir{next(counter)}'
+    dir = tmp_path / f"test_dir{next(counter)}"
     dir.mkdir(exist_ok=True, parents=True)
     yield dir
 
@@ -76,7 +77,8 @@ def temp_directory(tmp_path, counter):
 @pytest.fixture
 def create_media_name(fake):
     def _create_media_name(num_words=3):
-        return '.'.join(fake.words(num_words)).title()
+        return ".".join(fake.words(num_words)).title()
+
     return _create_media_name
 
 
@@ -137,4 +139,5 @@ def create_video_file():
 
         shutil.copy(src, dst)
         return dst
+
     return _create_video_file

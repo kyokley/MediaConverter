@@ -43,18 +43,18 @@ class Movie(MediaPathMixin):
 
         data = {"next": cls.MEDIAVIEWER_MOVIE_URL}
         while data["next"]:
-            request = get_data(data['next'])
+            request = get_data(data["next"])
             request.raise_for_status()
             data = request.json()
 
             if data["results"]:
                 for result in data["results"]:
-                    media_path = result['media_path']
+                    media_path = result["media_path"]
 
                     if BASE_PATH not in media_path:
-                        local_path = Path(BASE_PATH) / media_path['path']
+                        local_path = Path(BASE_PATH) / media_path["path"]
                     else:
-                        local_path = Path(media_path['path'])
+                        local_path = Path(media_path["path"])
 
                     val = paths.setdefault(
                         local_path, {"pks": set(), "finished": result["finished"]}

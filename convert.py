@@ -242,9 +242,7 @@ def _moveSubtitleFile(source, dest, dryRun=False):
         log.warning(f"File not found: {source_vtt_path}")
 
 
-def overwriteExistingFile(
-    source, directory, dryRun=False, appendSuffix=True
-):
+def overwriteExistingFile(source, directory, dryRun=False, appendSuffix=True):
     dest = directory / source.name
     dest = appendSuffix and Path(f"{dest}.{MEDIAVIEWER_SUFFIX}") or dest
 

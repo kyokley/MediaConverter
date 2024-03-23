@@ -9,8 +9,7 @@ from tv_runner import TvRunner
 class TestTvRunner:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker, temp_directory):
-        mocker.patch('tv_runner.LOCAL_TV_SHOWS_PATHS',
-                     [str(temp_directory)])
+        mocker.patch("tv_runner.LOCAL_TV_SHOWS_PATHS", [str(temp_directory)])
         self.mock_sort_unsorted_files = mocker.patch(
             "tv_runner.TvRunner._sort_unsorted_files"
         )
@@ -55,10 +54,10 @@ class TestTvRunner:
         mock_tv = mocker.patch("tv_runner.Tv")
 
         testData = {
-            -1: {'media_files': ["invalid"]},
-            1: {'media_files': ["test1"]},
-            12: {'media_files': ["test12"]},
-            123: {'media_files': ["test123"]},
+            -1: {"media_files": ["invalid"]},
+            1: {"media_files": ["test1"]},
+            12: {"media_files": ["test12"]},
+            123: {"media_files": ["test123"]},
         }
         expectedSet = set(
             [
@@ -73,8 +72,7 @@ class TestTvRunner:
         assert expectedSet == actualSet
 
     def test_updateFileRecords(self, mocker):
-        mock_post_media_file = mocker.patch(
-            "tv_runner.MediaFile.post_media_file")
+        mock_post_media_file = mocker.patch("tv_runner.MediaFile.post_media_file")
         mock_makeFileStreamable = mocker.patch("tv_runner.makeFileStreamable")
         mock_get_or_create_media_path = mocker.patch(
             "tv_runner.TvRunner.get_or_create_media_path"

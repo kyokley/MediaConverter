@@ -142,7 +142,6 @@ class TestHandleDirs:
 
         self.tv_runner = TvRunner()
 
-
     def test_path_does_not_exist(self):
         shutil.rmtree(self.tv_dir)
 
