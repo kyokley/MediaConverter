@@ -4,14 +4,15 @@ import subprocess  # nosec
 import shlex
 import shutil
 
-from pathlib import Path as PLPath
-from file import File
-from path import Path
+from pathlib import Path
 from settings import (
+    BASE_PATH,
     SEND_EMAIL,
     MEDIA_FILE_EXTENSIONS,
     UNSORTED_PATHS,
     MINIMUM_FILE_SIZE,
+    DOMAIN,
+    LOCAL_TV_SHOWS_PATHS,
 )
 from convert import makeFileStreamable, SkipProcessing, AlreadyEncoded
 from utils import (
@@ -20,6 +21,8 @@ from utils import (
     MissingPathException,
     send_email,
     get_localpath_by_filename,
+    post_data,
+    get_data,
 )
 
 import logging
@@ -30,51 +33,143 @@ FIND_FAIL_STRING = b"No such file or directory"
 IGNORED_FILE_EXTENSIONS = (".vtt", ".srt")
 
 
+class MediaPathMixin:
+    @classmethod
+    @property
+    def MEDIAVIEWER_MEDIAPATH_DETAIL_URL(cls):
+        return cls.MEDIAVIEWER_MEDIAPATH_URL + "{media_path_id}/"
+
+    @classmethod
+    def post_media_path(cls, path, tv=None, movie=None):
+        payload = {"path": path, "tv": tv, "movie": movie}
+        resp = post_data(payload, cls.MEDIAVIEWER_MEDIAPATH_URL)
+        resp.raise_for_status()
+        return resp.json()
+
+    @classmethod
+    def get_media_path(cls, media_path_id):
+        resp = get_data(
+            cls.MEDIAVIEWER_MEDIAPATH_DETAIL_URL.format(media_path_id=media_path_id)
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+
+class Tv(MediaPathMixin):
+    @classmethod
+    @property
+    def MEDIAVIEWER_TV_URL(cls):
+        return f"{DOMAIN}/mediaviewer/api/tv/"
+
+    @classmethod
+    @property
+    def MEDIAVIEWER_TV_DETAIL_URL(cls):
+        return cls.MEDIAVIEWER_TV_URL + "{tv_id}/"
+
+    @classmethod
+    def get_tv(cls, tv_id):
+        resp = get_data(cls.MEDIAVIEWER_TV_DETAIL_URL.format(tv_id=tv_id))
+        resp.raise_for_status()
+        return resp.json()
+
+    @classmethod
+    @property
+    def MEDIAVIEWER_MEDIAPATH_URL(cls):
+        return DOMAIN + "/mediaviewer/api/tvmediapath/"
+
+    @classmethod
+    def get_all_tv(cls):
+        paths = dict()
+
+        data = {"next": cls.MEDIAVIEWER_TV_URL}
+        while data["next"]:
+            request = get_data(data["next"])
+            request.raise_for_status()
+            data = request.json()
+
+            if data["results"]:
+                for result in data["results"]:
+                    media_paths = result["media_paths"]
+
+                    for media_path in media_paths:
+                        mp = media_path["path"]
+                        if BASE_PATH not in mp:
+                            local_path = Path(BASE_PATH) / mp
+                        else:
+                            local_path = Path(mp)
+
+                        val = paths.setdefault(
+                            local_path, {"pks": set(), "finished": result["finished"]}
+                        )
+                        val["pks"].add(media_path["pk"])
+                        paths[local_path] = val
+        return paths
+
+
+class MediaFile:
+    @classmethod
+    @property
+    def MEDIAVIEWER_MEDIAFILE_URL(cls):
+        return f"{DOMAIN}/mediaviewer/api/mediafile/"
+
+    @classmethod
+    def post_media_file(
+        cls,
+        filename,
+        media_path_id,
+        size,
+    ):
+        payload = {"filename": filename, "media_path": media_path_id, "size": size}
+        resp = post_data(payload, cls.MEDIAVIEWER_MEDIAFILE_URL)
+        resp.raise_for_status()
+        return resp.json()
+
+
 class TvRunner:
     def __init__(self):
         self.paths = dict()
         self.errors = []
 
-    def loadPaths(self):
+    def load_paths(self):
         self.paths = {
             key: val["pks"]
-            for key, val in Path.getAllTVPaths().items()
+            for key, val in Tv.get_all_tv().items()
             if not val["finished"]
         }
 
-    @staticmethod
-    def getOrCreateRemotePath(localPath):
-        log.info(f"Get or create path for {localPath}")
-        newPath = Path(localPath, localPath)
-        newPath.postTVShow()
-        data = Path.getTVPathByLocalPathAndRemotePath(localPath, localPath)
-        pathid = data["results"][0]["pk"]
-        log.info("Got path")
-
-        return pathid
+        for path_str in LOCAL_TV_SHOWS_PATHS:
+            path = Path(path_str)
+            for dir in path.iterdir():
+                self.paths.setdefault(Path(dir), set()).add(-1)
 
     @staticmethod
-    def buildRemoteFileSetForPathIDs(pathIDs):
+    def get_or_create_media_path(local_path):
+        log.info(f"Get or create MediaPath for {local_path}")
+        media_path_data = Tv.post_media_path(local_path)
+        return media_path_data["pk"]
+
+    @staticmethod
+    def build_remote_media_file_set(pathIDs):
         fileSet = set()
         for pathid in pathIDs:
             # Skip local paths
             if pathid == -1:
                 continue
-            remoteFilenames = File.getTVFileSet(pathid)
-            fileSet.update(remoteFilenames)
+            res = Tv.get_media_path(pathid)
+            fileSet.update(res["media_files"])
         log.info("Built remote fileSet")
 
         return fileSet
 
     def updateFileRecords(self, path, localFileSet, remoteFileSet):
-        pathid = None
+        media_path_id = None
         for localFile in localFileSet.difference(remoteFileSet):
             if not localFile:
                 continue
 
             try:
-                if not pathid:
-                    pathid = self.getOrCreateRemotePath(path)
+                if not media_path_id:
+                    media_path_id = self.get_or_create_media_path(path)
 
                 log.info(f"Attempting to add {localFile}")
                 fullPath = stripUnicode(localFile, path=path)
@@ -92,15 +187,10 @@ class TvRunner:
                     log.warning(e)
                     continue
 
-                if os.path.exists(fullPath):
-                    newFile = File(
-                        os.path.basename(fullPath),
-                        pathid,
-                        os.path.getsize(fullPath),
-                        True,
+                if fullPath.exists():
+                    MediaFile.post_media_file(
+                        fullPath.name, media_path_id, fullPath.stat().st_size
                     )
-
-                    newFile.postTVFile()
             except Exception as e:
                 errorMsg = (
                     f"Something bad happened attempting to make {fullPath} streamable"
@@ -143,19 +233,19 @@ class TvRunner:
         return localFileSet
 
     def handleDirs(self, path):
-        if os.path.exists(path):
+        if path.exists():
             paths = []
             dir_set = set()
-            for root, dirs, files in os.walk(path):
+            for root, dirs, files in path.walk():
                 for file in files:
-                    paths.append(os.path.join(root, file))
+                    paths.append(root / file)
 
             for fullpath in paths:
-                dirs = fullpath.split(path)[1].split(os.path.sep)
+                dirs = str(fullpath).split(str(path))[1].split(os.path.sep)
                 top, episode, file = path, dirs[1], dirs[-1]
                 file_ext = os.path.splitext(file)[-1].lower()
 
-                dir_path = PLPath(top) / episode
+                dir_path = Path(top) / episode
                 if dir_path.is_dir():
                     dir_set.add(dir_path)
 
@@ -164,7 +254,7 @@ class TvRunner:
                     for srt_path in english_subtitle_paths:
                         # Move subtitle to show directory and rename
                         log.info(f"Found subtitle file in {episode}")
-                        new = PLPath(top) / f"{episode}-{count}.srt"
+                        new = Path(top) / f"{episode}-{count}.srt"
                         os.rename(srt_path, new)
                         count += 1
 
@@ -186,7 +276,7 @@ class TvRunner:
         self._sort_unsorted_files()
 
         log.info("Attempting to get paths")
-        self.loadPaths()
+        self.load_paths()
         log.info("Got paths")
         for path, pathIDs in self.paths.items():
             try:
@@ -196,12 +286,12 @@ class TvRunner:
                 localFileSet = self.buildLocalFileSet(path)
                 log.info(f"Done building local file set for {path}")
             except MissingPathException as e:
-                log.error(e)
-                log.error("Continuing...")
+                log.warning(e)
+                log.warning("Continuing...")
                 continue
 
             log.info(f"Attempting to get remote files for {path}")
-            remoteFileSet = self.buildRemoteFileSetForPathIDs(pathIDs)
+            remoteFileSet = self.build_remote_media_file_set(pathIDs)
             log.info(f"Done building remote file set for {path}")
 
             self.updateFileRecords(path, localFileSet, remoteFileSet)
@@ -218,7 +308,7 @@ class TvRunner:
         for unsorted_path in UNSORTED_PATHS:
             if not os.path.exists(unsorted_path):
                 log.info(f"Unsorted file path {unsorted_path} does not exist")
-                return
+                continue
 
             for filename in os.listdir(unsorted_path):
                 src = os.path.join(unsorted_path, filename)

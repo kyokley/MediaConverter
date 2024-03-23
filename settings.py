@@ -1,10 +1,11 @@
 import logging
 
 logging.getLogger().setLevel(level=logging.DEBUG)
+logging.getLogger("faker").setLevel(logging.WARN)
 
 CELERY_VHOST = ""
 
-WAITER_USERNAME = "user"
+WAITER_USERNAME = "waiter"
 WAITER_PASSWORD = "password"
 
 LOCAL_MOVIE_PATHS = ["movies"]

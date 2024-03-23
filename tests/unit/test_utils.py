@@ -12,7 +12,7 @@ class TestGetLocalpathByFilename:
 
         mocker.patch("utils.WAITER_PASSWORD", "waiter_password")
 
-        mocker.patch("utils.MEDIAVIEWER_INFER_SCRAPERS_URL", "test_url")
+        mocker.patch("utils.mediaviewer_infer_scrapers_url", lambda: "test_url")
 
         self.mock_get = mocker.patch("utils.requests.get")
 
@@ -20,13 +20,7 @@ class TestGetLocalpathByFilename:
 
         self.mock_response = mock.MagicMock(requests.models.Response)
         self.mock_response.json.return_value = {
-            "is_movie": False,
-            "localpath": "/path/to/media/test_filename",
-            "number_of_unwatched_shows": 0,
-            "pk": 161,
-            "remotepath": "/path/to/media/test_filename",
-            "server": "localhost",
-            "skip": True,
+            "path": "/path/to/media/test_filename",
         }
 
         self.mock_get.return_value = self.mock_response

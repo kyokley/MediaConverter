@@ -105,11 +105,10 @@ class TestSortUnsortedFiles:
 
 class TestHandleDirs:
     @pytest.fixture(autouse=True)
-    def setUp(self, mocker):
+    def setUp(self, mocker, temp_directory):
         mocker.patch("tv_runner.MINIMUM_FILE_SIZE", 100)
 
-        self.temp_dir = tempfile.mkdtemp()
-        self.temp_dir_path = Path(self.temp_dir)
+        self.temp_dir_path = temp_directory
 
         self.tv_dir = self.temp_dir_path / "Test.Dir.Path"
         self.tv_dir.mkdir()
@@ -143,19 +142,16 @@ class TestHandleDirs:
 
         self.tv_runner = TvRunner()
 
-        yield
-        shutil.rmtree(self.temp_dir)
-
     def test_path_does_not_exist(self):
         shutil.rmtree(self.tv_dir)
 
-        self.tv_runner.handleDirs(str(self.tv_dir))
+        self.tv_runner.handleDirs(self.tv_dir)
         assert not self.expected_media_file.exists()
         assert not self.expected_sub_file.exists()
         assert not self.non_existent_small_file.exists()
 
     def test_handleDirs(self):
-        self.tv_runner.handleDirs(str(self.tv_dir))
+        self.tv_runner.handleDirs(self.tv_dir)
         assert self.expected_media_file.exists()
         assert self.expected_sub_file.exists()
         assert not self.non_existent_small_file.exists()
