@@ -23,6 +23,7 @@ from utils import (
     get_localpath_by_filename,
     post_data,
     get_data,
+    put_data,
 )
 
 import logging
@@ -43,7 +44,6 @@ class MediaPathMixin:
     def post_media_path(cls, path, tv=None, movie=None):
         payload = {"path": path, "tv": tv, "movie": movie}
         resp = post_data(payload, cls.MEDIAVIEWER_MEDIAPATH_URL)
-        resp.raise_for_status()
         return resp.json()
 
     @classmethod
@@ -51,7 +51,15 @@ class MediaPathMixin:
         resp = get_data(
             cls.MEDIAVIEWER_MEDIAPATH_DETAIL_URL.format(media_path_id=media_path_id)
         )
-        resp.raise_for_status()
+        return resp.json()
+
+    @classmethod
+    def put_media_path(cls, media_path_id, skip=False):
+        payload = {"skip": skip}
+        resp = put_data(
+            payload,
+            cls.MEDIAVIEWER_MEDIAPATH_DETAIL_URL.format(media_path_id=media_path_id)
+        )
         return resp.json()
 
 
@@ -69,7 +77,13 @@ class Tv(MediaPathMixin):
     @classmethod
     def get_tv(cls, tv_id):
         resp = get_data(cls.MEDIAVIEWER_TV_DETAIL_URL.format(tv_id=tv_id))
-        resp.raise_for_status()
+        return resp.json()
+
+    @classmethod
+    def put_tv(cls, tv_id, finished=False):
+        payload = {"finished": finished}
+        resp = put_data(payload,
+                        cls.MEDIAVIEWER_TV_DETAIL_URL.format(tv_id=tv_id))
         return resp.json()
 
     @classmethod
@@ -84,7 +98,6 @@ class Tv(MediaPathMixin):
         data = {"next": cls.MEDIAVIEWER_TV_URL}
         while data["next"]:
             request = get_data(data["next"])
-            request.raise_for_status()
             data = request.json()
 
             if data["results"]:
@@ -141,7 +154,8 @@ class TvRunner:
         for path_str in LOCAL_TV_SHOWS_PATHS:
             path = Path(path_str)
             for dir in path.iterdir():
-                if tv_entries[dir]["finished"]:
+                if "unsorted" in str(dir).lower() or (
+                    dir in tv_entries and tv_entries[dir]["finished"]):
                     continue
                 self.paths.setdefault(dir, set()).add(-1)
 

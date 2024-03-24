@@ -36,6 +36,10 @@ def mediaviewer_infer_scrapers_url():
     return f"{DOMAIN}/mediaviewer/api/inferscrapers/"
 
 
+def _external_request_cooldown():
+    return EXTERNAL_REQUEST_COOLDOWN
+
+
 def post_data(values, url):
     try:
         request = _make_request("POST", url, values=values)
@@ -47,7 +51,7 @@ def post_data(values, url):
                 auth=(WAITER_USERNAME, WAITER_PASSWORD),
                 verify=VERIFY_REQUESTS,
             )
-            time.sleep(EXTERNAL_REQUEST_COOLDOWN)
+            time.sleep(_external_request_cooldown())
         except Exception as e:
             log.error(e)
             log.warning("Ignoring error generated during scraping")
@@ -61,6 +65,15 @@ def post_data(values, url):
 def get_data(url):
     try:
         return _make_request("GET", url)
+    except Exception as e:
+        log.error(e)
+        raise
+
+
+def put_data(values, url):
+    try:
+        request = _make_request("PUT", url, values=values)
+        return request
     except Exception as e:
         log.error(e)
         raise
@@ -81,6 +94,8 @@ def _make_request(verb, url, values=None):
             request_method = requests.get
         elif verb == "POST":
             request_method = requests.post
+        elif verb == "PUT":
+            request_method = requests.put
         else:
             raise ValueError(f"Got invalid verb {verb}")
 
@@ -91,7 +106,7 @@ def _make_request(verb, url, values=None):
             verify=VERIFY_REQUESTS,
         )
         request.raise_for_status()
-        time.sleep(EXTERNAL_REQUEST_COOLDOWN)
+        time.sleep(_external_request_cooldown())
 
         return request
     except Exception as e:
