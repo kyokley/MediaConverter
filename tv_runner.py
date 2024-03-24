@@ -131,22 +131,27 @@ class TvRunner:
         self.errors = []
 
     def load_paths(self):
+        tv_entries = Tv.get_all_tv()
         self.paths = {
             key: val["pks"]
-            for key, val in Tv.get_all_tv().items()
+            for key, val in tv_entries.items()
             if not val["finished"]
         }
 
         for path_str in LOCAL_TV_SHOWS_PATHS:
             path = Path(path_str)
             for dir in path.iterdir():
-                self.paths.setdefault(Path(dir), set()).add(-1)
+                if tv_entries[dir]["finished"]:
+                    continue
+                self.paths.setdefault(dir, set()).add(-1)
 
     @staticmethod
     def get_or_create_media_path(local_path):
         log.info(f"Get or create MediaPath for {local_path}")
         media_path_data = Tv.post_media_path(local_path)
-        return media_path_data["pk"]
+        return {"pk": media_path_data["pk"],
+                "skip": media_path_data["skip"],
+                }
 
     @staticmethod
     def build_remote_media_file_set(pathIDs):
@@ -169,7 +174,11 @@ class TvRunner:
 
             try:
                 if not media_path_id:
-                    media_path_id = self.get_or_create_media_path(path)
+                    media_path_data = self.get_or_create_media_path(path)
+                    if media_path_data["skip"]:
+                        break
+
+                    media_path_id = media_path_data["pk"]
 
                 log.info(f"Attempting to add {localFile}")
                 fullPath = stripUnicode(localFile, path=path)
