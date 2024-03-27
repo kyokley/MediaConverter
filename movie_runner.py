@@ -7,7 +7,7 @@ from settings import (
     BASE_PATH,
 )
 from convert import reencodeFilesInDirectory
-from utils import get_data
+from utils import get_data, put_data
 from tv_runner import MediaPathMixin
 
 import logging
@@ -30,6 +30,13 @@ class Movie(MediaPathMixin):
     def get_movie(cls, movie_id):
         resp = get_data(cls.MEDIAVIEWER_MOVIE_DETAIL_URL.format(movie_id=movie_id))
         resp.raise_for_status()
+        return resp.json()
+
+    @classmethod
+    def put_movie(cls, movie_id, finished=False):
+        payload = {"finished": finished}
+        resp = put_data(payload,
+                        cls.MEDIAVIEWER_MOVIE_DETAIL_URL.format(movie_id=movie_id))
         return resp.json()
 
     @classmethod
