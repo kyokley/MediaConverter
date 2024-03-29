@@ -194,14 +194,14 @@ class TvRunner:
                 log.debug(f'Would process {localFile}')
                 continue
 
+            if not media_path_id:
+                media_path_data = self.get_or_create_media_path(path)
+                if media_path_data["skip"]:
+                    break
+
+                media_path_id = media_path_data["pk"]
+
             try:
-                if not media_path_id:
-                    media_path_data = self.get_or_create_media_path(path)
-                    if media_path_data["skip"]:
-                        break
-
-                    media_path_id = media_path_data["pk"]
-
                 log.info(f"Attempting to add {localFile}")
                 fullPath = stripUnicode(localFile, path=path)
                 try:
