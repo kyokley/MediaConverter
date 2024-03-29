@@ -74,6 +74,7 @@ class TestPostMediaPath(BaseSettings):
         assert tv_resp["pk"] == resp["tv"]
         assert resp["pk"] in media_paths
 
+
     def test_post_media_path_existing(self):
         first_resp = Tv.post_media_path(self.tv_dir)
         assert str(self.tv_dir) == first_resp["path"]
@@ -82,6 +83,23 @@ class TestPostMediaPath(BaseSettings):
         assert str(self.tv_dir) == second_resp["path"]
         assert first_resp["pk"] == second_resp["pk"]
         assert first_resp["tv"] == second_resp["tv"]
+
+
+class TestPutMediaPath(BaseSettings):
+    def test_put_media_path(self):
+        resp = Tv.post_media_path(self.tv_dir)
+        assert not resp["skip"]
+
+        mp_data = Tv.get_media_path(resp["pk"])
+        assert resp["pk"] == mp_data["pk"]
+        assert not mp_data["skip"]
+
+        second_resp = Tv.put_media_path(resp["pk"],
+                                        skip=True)
+
+        mp_data = Tv.get_media_path(second_resp["pk"])
+        assert second_resp["pk"] == mp_data["pk"]
+        assert mp_data["skip"]
 
 
 class TestGetMediaPath(BaseSettings):
@@ -153,3 +171,23 @@ class TestPostMediaFile(BaseSettings):
 
         for dir in self.dirs:
             assert str(dir) in media_paths
+
+class TestFinishedTv(BaseSettings):
+    def test_finished_tv(self):
+        resp = Tv.post_media_path(self.tv_dir)
+        tv_id = resp["tv"]
+        assert str(self.tv_dir) == resp["path"]
+        assert not resp["skip"]
+
+        tv = Tv.get_tv(tv_id)
+        assert not tv["finished"]
+
+        all_mps = Tv.get_all_tv()
+        assert not all_mps[self.tv_dir]["finished"]
+
+        Tv.put_tv(tv_id, finished=True)
+        tv = Tv.get_tv(tv_id)
+        assert tv["finished"]
+
+        all_mps = Tv.get_all_tv()
+        assert all_mps[self.tv_dir]["finished"]

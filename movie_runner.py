@@ -7,7 +7,7 @@ from settings import (
     BASE_PATH,
 )
 from convert import reencodeFilesInDirectory
-from utils import get_data
+from utils import get_data, put_data
 from tv_runner import MediaPathMixin
 
 import logging
@@ -30,6 +30,13 @@ class Movie(MediaPathMixin):
     def get_movie(cls, movie_id):
         resp = get_data(cls.MEDIAVIEWER_MOVIE_DETAIL_URL.format(movie_id=movie_id))
         resp.raise_for_status()
+        return resp.json()
+
+    @classmethod
+    def put_movie(cls, movie_id, finished=False):
+        payload = {"finished": finished}
+        resp = put_data(payload,
+                        cls.MEDIAVIEWER_MOVIE_DETAIL_URL.format(movie_id=movie_id))
         return resp.json()
 
     @classmethod
@@ -69,7 +76,7 @@ class MovieRunner:
         self.movies = set()
         self.errors = []
 
-    def postMovies(self):
+    def postMovies(self, dry_run=False):
         base_path = Path(BASE_PATH)
 
         remote_paths = set(Movie.get_all_movies().keys())
@@ -88,8 +95,11 @@ class MovieRunner:
                     log.info(f"Found {localpath}")
                     log.info(f"Starting re-encoding of {localpath}...")
                     try:
-                        self.promoteSubtitles(localpath)
-                        errors = reencodeFilesInDirectory(localpath)
+                        self.promoteSubtitles(localpath, dry_run=dry_run)
+                        if dry_run:
+                            log.debug(f'Would re-encode files in {localpath}')
+                        else:
+                            errors = reencodeFilesInDirectory(localpath)
 
                         if errors:
                             self.errors.extend(errors)
@@ -99,10 +109,13 @@ class MovieRunner:
                         log.error(str(e))
                         raise
                     log.info(f"Posting {localpath}")
-                    Movie.post_media_path(localpath)
+                    if dry_run:
+                        log.debug(f'Would post path for {localpath}')
+                    else:
+                        Movie.post_media_path(localpath)
 
     @staticmethod
-    def promoteSubtitles(localpath):
+    def promoteSubtitles(localpath, dry_run=False):
         path = None
         if os.path.exists(localpath):
             for root, dirs, files in os.walk(localpath):
@@ -113,7 +126,11 @@ class MovieRunner:
 
             if path and path != os.path.join(localpath, file):
                 dest = os.path.join(localpath, file)
-                os.rename(path, dest)
+
+                if dry_run:
+                    log.debug(f'Would rename {path} to {dest}')
+                else:
+                    os.rename(path, dest)
 
     @staticmethod
     def _getLocalMoviePaths(moviepath):
@@ -122,7 +139,7 @@ class MovieRunner:
 
         return set(os.listdir(moviepath))
 
-    def run(self):
-        self.postMovies()
+    def run(self, dry_run=False):
+        self.postMovies(dry_run=dry_run)
         log.info("Done running movies")
         return self.errors

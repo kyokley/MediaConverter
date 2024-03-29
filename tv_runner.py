@@ -23,6 +23,7 @@ from utils import (
     get_localpath_by_filename,
     post_data,
     get_data,
+    put_data,
 )
 
 import logging
@@ -43,7 +44,6 @@ class MediaPathMixin:
     def post_media_path(cls, path, tv=None, movie=None):
         payload = {"path": path, "tv": tv, "movie": movie}
         resp = post_data(payload, cls.MEDIAVIEWER_MEDIAPATH_URL)
-        resp.raise_for_status()
         return resp.json()
 
     @classmethod
@@ -51,7 +51,15 @@ class MediaPathMixin:
         resp = get_data(
             cls.MEDIAVIEWER_MEDIAPATH_DETAIL_URL.format(media_path_id=media_path_id)
         )
-        resp.raise_for_status()
+        return resp.json()
+
+    @classmethod
+    def put_media_path(cls, media_path_id, skip=False):
+        payload = {"skip": skip}
+        resp = put_data(
+            payload,
+            cls.MEDIAVIEWER_MEDIAPATH_DETAIL_URL.format(media_path_id=media_path_id)
+        )
         return resp.json()
 
 
@@ -69,7 +77,13 @@ class Tv(MediaPathMixin):
     @classmethod
     def get_tv(cls, tv_id):
         resp = get_data(cls.MEDIAVIEWER_TV_DETAIL_URL.format(tv_id=tv_id))
-        resp.raise_for_status()
+        return resp.json()
+
+    @classmethod
+    def put_tv(cls, tv_id, finished=False):
+        payload = {"finished": finished}
+        resp = put_data(payload,
+                        cls.MEDIAVIEWER_TV_DETAIL_URL.format(tv_id=tv_id))
         return resp.json()
 
     @classmethod
@@ -84,7 +98,6 @@ class Tv(MediaPathMixin):
         data = {"next": cls.MEDIAVIEWER_TV_URL}
         while data["next"]:
             request = get_data(data["next"])
-            request.raise_for_status()
             data = request.json()
 
             if data["results"]:
@@ -131,22 +144,28 @@ class TvRunner:
         self.errors = []
 
     def load_paths(self):
+        tv_entries = Tv.get_all_tv()
         self.paths = {
             key: val["pks"]
-            for key, val in Tv.get_all_tv().items()
+            for key, val in tv_entries.items()
             if not val["finished"]
         }
 
         for path_str in LOCAL_TV_SHOWS_PATHS:
             path = Path(path_str)
             for dir in path.iterdir():
-                self.paths.setdefault(Path(dir), set()).add(-1)
+                if "unsorted" in str(dir).lower() or (
+                    dir in tv_entries and tv_entries[dir]["finished"]):
+                    continue
+                self.paths.setdefault(dir, set()).add(-1)
 
     @staticmethod
     def get_or_create_media_path(local_path):
         log.info(f"Get or create MediaPath for {local_path}")
         media_path_data = Tv.post_media_path(local_path)
-        return media_path_data["pk"]
+        return {"pk": media_path_data["pk"],
+                "skip": media_path_data["skip"],
+                }
 
     @staticmethod
     def build_remote_media_file_set(pathIDs):
@@ -161,16 +180,28 @@ class TvRunner:
 
         return fileSet
 
-    def updateFileRecords(self, path, localFileSet, remoteFileSet):
+    def updateFileRecords(self,
+                          path,
+                          localFileSet,
+                          remoteFileSet,
+                          dry_run=False):
         media_path_id = None
         for localFile in localFileSet.difference(remoteFileSet):
             if not localFile:
                 continue
 
-            try:
-                if not media_path_id:
-                    media_path_id = self.get_or_create_media_path(path)
+            if dry_run:
+                log.debug(f'Would process {localFile}')
+                continue
 
+            if not media_path_id:
+                media_path_data = self.get_or_create_media_path(path)
+                if media_path_data["skip"]:
+                    break
+
+                media_path_id = media_path_data["pk"]
+
+            try:
                 log.info(f"Attempting to add {localFile}")
                 fullPath = stripUnicode(localFile, path=path)
                 try:
@@ -232,7 +263,7 @@ class TvRunner:
         log.info(localFileSet)
         return localFileSet
 
-    def handleDirs(self, path):
+    def handleDirs(self, path, dry_run=False):
         if path.exists():
             paths = []
             dir_set = set()
@@ -255,7 +286,10 @@ class TvRunner:
                         # Move subtitle to show directory and rename
                         log.info(f"Found subtitle file in {episode}")
                         new = Path(top) / f"{episode}-{count}.srt"
-                        os.rename(srt_path, new)
+                        if dry_run:
+                            log.debug(f'Would rename {srt_path} to {new}')
+                        else:
+                            os.rename(srt_path, new)
                         count += 1
 
                     if (
@@ -265,15 +299,22 @@ class TvRunner:
                         # Move media file to show directory
                         log.info(f"Found media file in {episode}")
                         new = os.path.join(top, file)
-                        os.rename(fullpath, new)
+
+                        if dry_run:
+                            log.debug(f'Would rename {fullpath} to {new}')
+                        else:
+                            os.rename(fullpath, new)
 
             for directory in dir_set:
                 log.info(f"Deleting {directory}")
-                shutil.rmtree(directory)
+                if dry_run:
+                    log.debug(f'Would remove {directory}')
+                else:
+                    shutil.rmtree(directory)
 
-    def run(self):
+    def run(self, dry_run=False):
         log.info("Attempting to sort unsorted files")
-        self._sort_unsorted_files()
+        self._sort_unsorted_files(dry_run=dry_run)
 
         log.info("Attempting to get paths")
         self.load_paths()
@@ -281,7 +322,7 @@ class TvRunner:
         for path, pathIDs in self.paths.items():
             try:
                 log.info(f"Handling directories in {path}")
-                self.handleDirs(path)
+                self.handleDirs(path, dry_run=dry_run)
                 log.info(f"Building local file set for {path}")
                 localFileSet = self.buildLocalFileSet(path)
                 log.info(f"Done building local file set for {path}")
@@ -294,7 +335,10 @@ class TvRunner:
             remoteFileSet = self.build_remote_media_file_set(pathIDs)
             log.info(f"Done building remote file set for {path}")
 
-            self.updateFileRecords(path, localFileSet, remoteFileSet)
+            self.updateFileRecords(path,
+                                   localFileSet,
+                                   remoteFileSet,
+                                   dry_run=dry_run)
 
         if self.errors:
             log.error("Errors occured in the following files:")
@@ -304,7 +348,7 @@ class TvRunner:
         return self.errors
 
     @staticmethod
-    def _sort_unsorted_files():
+    def _sort_unsorted_files(dry_run=False):
         for unsorted_path in UNSORTED_PATHS:
             if not os.path.exists(unsorted_path):
                 log.info(f"Unsorted file path {unsorted_path} does not exist")
@@ -318,4 +362,8 @@ class TvRunner:
                     continue
 
                 dst = os.path.join(localpath, filename)
-                shutil.move(src, dst)
+
+                if dry_run:
+                    log.debug(f'Would move {src} to {dst}')
+                else:
+                    shutil.move(src, dst)

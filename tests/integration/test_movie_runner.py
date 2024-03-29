@@ -94,3 +94,24 @@ class TestPostMediaFile(BaseSettings):
             media_path = resp["media_path"]
 
             assert movie_dir == Path(media_path["path"])
+
+
+class TestFinishedMovie(BaseSettings):
+    def test_finished_movie(self):
+        resp = Movie.post_media_path(self.movie_dir)
+        movie_id = resp["movie"]
+        assert str(self.movie_dir) == resp["path"]
+        assert not resp["skip"]
+
+        movie = Movie.get_movie(movie_id)
+        assert not movie["finished"]
+
+        all_mps = Movie.get_all_movies()
+        assert not all_mps[self.movie_dir]["finished"]
+
+        Movie.put_movie(movie_id, finished=True)
+        movie = Movie.get_movie(movie_id)
+        assert movie["finished"]
+
+        all_mps = Movie.get_all_movies()
+        assert all_mps[self.movie_dir]["finished"]
