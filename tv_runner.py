@@ -180,10 +180,18 @@ class TvRunner:
 
         return fileSet
 
-    def updateFileRecords(self, path, localFileSet, remoteFileSet):
+    def updateFileRecords(self,
+                          path,
+                          localFileSet,
+                          remoteFileSet,
+                          dry_run=False):
         media_path_id = None
         for localFile in localFileSet.difference(remoteFileSet):
             if not localFile:
+                continue
+
+            if dry_run:
+                log.debug(f'Would process {localFile}')
                 continue
 
             try:
@@ -255,7 +263,7 @@ class TvRunner:
         log.info(localFileSet)
         return localFileSet
 
-    def handleDirs(self, path):
+    def handleDirs(self, path, dry_run=False):
         if path.exists():
             paths = []
             dir_set = set()
@@ -278,7 +286,10 @@ class TvRunner:
                         # Move subtitle to show directory and rename
                         log.info(f"Found subtitle file in {episode}")
                         new = Path(top) / f"{episode}-{count}.srt"
-                        os.rename(srt_path, new)
+                        if dry_run:
+                            log.debug(f'Would rename {srt_path} to {new}')
+                        else:
+                            os.rename(srt_path, new)
                         count += 1
 
                     if (
@@ -288,15 +299,22 @@ class TvRunner:
                         # Move media file to show directory
                         log.info(f"Found media file in {episode}")
                         new = os.path.join(top, file)
-                        os.rename(fullpath, new)
+
+                        if dry_run:
+                            log.debug(f'Would rename {fullpath} to {new}')
+                        else:
+                            os.rename(fullpath, new)
 
             for directory in dir_set:
                 log.info(f"Deleting {directory}")
-                shutil.rmtree(directory)
+                if dry_run:
+                    log.debug(f'Would remove {directory}')
+                else:
+                    shutil.rmtree(directory)
 
-    def run(self):
+    def run(self, dry_run=False):
         log.info("Attempting to sort unsorted files")
-        self._sort_unsorted_files()
+        self._sort_unsorted_files(dry_run=dry_run)
 
         log.info("Attempting to get paths")
         self.load_paths()
@@ -304,7 +322,7 @@ class TvRunner:
         for path, pathIDs in self.paths.items():
             try:
                 log.info(f"Handling directories in {path}")
-                self.handleDirs(path)
+                self.handleDirs(path, dry_run=dry_run)
                 log.info(f"Building local file set for {path}")
                 localFileSet = self.buildLocalFileSet(path)
                 log.info(f"Done building local file set for {path}")
@@ -317,7 +335,10 @@ class TvRunner:
             remoteFileSet = self.build_remote_media_file_set(pathIDs)
             log.info(f"Done building remote file set for {path}")
 
-            self.updateFileRecords(path, localFileSet, remoteFileSet)
+            self.updateFileRecords(path,
+                                   localFileSet,
+                                   remoteFileSet,
+                                   dry_run=dry_run)
 
         if self.errors:
             log.error("Errors occured in the following files:")
@@ -327,7 +348,7 @@ class TvRunner:
         return self.errors
 
     @staticmethod
-    def _sort_unsorted_files():
+    def _sort_unsorted_files(dry_run=False):
         for unsorted_path in UNSORTED_PATHS:
             if not os.path.exists(unsorted_path):
                 log.info(f"Unsorted file path {unsorted_path} does not exist")
@@ -341,4 +362,8 @@ class TvRunner:
                     continue
 
                 dst = os.path.join(localpath, filename)
-                shutil.move(src, dst)
+
+                if dry_run:
+                    log.debug(f'Would move {src} to {dst}')
+                else:
+                    shutil.move(src, dst)
