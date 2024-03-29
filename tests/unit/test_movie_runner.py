@@ -64,9 +64,9 @@ class TestPostMovies:
 
         self.mock_promoteSubtitles.assert_has_calls(
             [
-                mock.call(Path(f"{self.tmp_dir}/movies/movie1")),
-                mock.call(Path(f"{self.tmp_dir}/movies/movie2")),
-                mock.call(Path(f"{self.tmp_dir}/movies/movie3")),
+                mock.call(Path(f"{self.tmp_dir}/movies/movie1"), dry_run=False),
+                mock.call(Path(f"{self.tmp_dir}/movies/movie2"), dry_run=False),
+                mock.call(Path(f"{self.tmp_dir}/movies/movie3"), dry_run=False),
             ]
         )
         self.mock_reencodeFilesInDirectory.assert_has_calls(
@@ -104,9 +104,9 @@ class TestPostMovies:
         )
         self.mock_promoteSubtitles.assert_has_calls(
             [
-                mock.call(Path(f"{self.tmp_dir}/movies/movie1")),
-                mock.call(Path(f"{self.tmp_dir}/movies/movie2")),
-                mock.call(Path(f"{self.tmp_dir}/movies/movie3")),
+                mock.call(Path(f"{self.tmp_dir}/movies/movie1"), dry_run=False),
+                mock.call(Path(f"{self.tmp_dir}/movies/movie2"), dry_run=False),
+                mock.call(Path(f"{self.tmp_dir}/movies/movie3"), dry_run=False),
             ]
         )
 
@@ -138,7 +138,7 @@ class TestPostMovies:
         )
         self.mock_promoteSubtitles.assert_has_calls(
             [
-                mock.call(Path(f"{self.tmp_dir}/movies/movie1")),
+                mock.call(Path(f"{self.tmp_dir}/movies/movie1"), dry_run=False),
             ]
         )
 
@@ -159,7 +159,7 @@ class TestRun:
         actual = self.movieRunner.run()
 
         assert expected == actual
-        self.mock_postMovies.assert_called_once_with()
+        self.mock_postMovies.assert_called_once_with(dry_run=False)
         self.mock_info.assert_called_once_with("Done running movies")
 
 
