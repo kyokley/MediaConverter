@@ -366,4 +366,5 @@ class TvRunner:
                 if dry_run:
                     log.debug(f'Would move {src} to {dst}')
                 else:
+                    log.info(f'Moving {src} to {dst}')
                     shutil.move(src, dst)
