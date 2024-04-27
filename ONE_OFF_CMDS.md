@@ -14,4 +14,5 @@ ffmpeg -y -i ${file}-0.vtt ${file}-0.ass
 ffmpeg -y -i ${file} -vf ass=${file}-0.ass out.mp4
 mv -fv out.mp4 ${file}
 done
+rm *.vtt *.ass
 ```
