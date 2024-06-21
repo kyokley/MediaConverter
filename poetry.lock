@@ -997,16 +997,6 @@ files = [
 ]
 
 [[package]]
-name = "qtfaststart"
-version = "1.8"
-description = "Quicktime atom positioning in Python for fast streaming."
-optional = false
-python-versions = "*"
-files = [
-    {file = "qtfaststart-1.8.tar.gz", hash = "sha256:b0442315311f1c1130a34e4e6b04557f5f4aa332ac40bfb1d761418866749241"},
-]
-
-[[package]]
 name = "requests"
 version = "2.32.3"
 description = "Python HTTP for Humans."
@@ -1187,4 +1177,4 @@ test = ["pytest"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "c667daa4c5f46cc1328d0021049ae3a563a27a2ea7d8ef57fe36be885a44601c"
+content-hash = "d552e3dcfde43d4c386b7737824b216ddfb9b90e0bf5a44c16f1a4a5f27611d6"
