@@ -349,22 +349,24 @@ class TvRunner:
 
     @staticmethod
     def _sort_unsorted_files(dry_run=False):
-        for unsorted_path in UNSORTED_PATHS:
-            if not os.path.exists(unsorted_path):
+        for unsorted_path_str in UNSORTED_PATHS:
+            unsorted_path = Path(unsorted_path_str)
+
+            if not unsorted_path.exists():
                 log.info(f"Unsorted file path {unsorted_path} does not exist")
                 continue
 
-            for filename in os.listdir(unsorted_path):
-                src = os.path.join(unsorted_path, filename)
+            for src in unsorted_path.iterdir():
+                filename = src.name
 
                 localpath = get_localpath_by_filename(filename)
-                if not localpath or not os.path.exists(localpath):
+                if not localpath or not localpath.exists():
                     continue
 
-                dst = os.path.join(localpath, filename)
+                dst = localpath / filename
 
                 if dry_run:
-                    log.debug(f'Would move {src} to {dst}')
+                    log.info(f'Would move {src} to {dst}')
                 else:
                     log.info(f'Moving {src} to {dst}')
                     shutil.move(src, dst)

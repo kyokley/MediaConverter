@@ -180,4 +180,4 @@ def get_localpath_by_filename(filename):
         return
 
     data = resp.json()
-    return data["path"]
+    return Path(data["path"])

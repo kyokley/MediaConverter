@@ -82,7 +82,7 @@ class TestSortUnsortedFiles:
 
     def test_localpath_does_not_exist(self):
         self.local_path.rmdir()
-        self.mock_get_localpath_by_filename.return_value = str(self.local_path)
+        self.mock_get_localpath_by_filename.return_value = Path(self.local_path)
         new_path = self.local_path / "new.show.s02e10"
 
         unsorted_file_path = self.unsorted_path / "new.show.s02e10"
@@ -93,7 +93,7 @@ class TestSortUnsortedFiles:
         assert not new_path.exists()
 
     def test_localpath_for_filename(self):
-        self.mock_get_localpath_by_filename.return_value = str(self.local_path)
+        self.mock_get_localpath_by_filename.return_value = Path(self.local_path)
         new_path = self.local_path / "new.show.s02e10"
 
         unsorted_file_path = self.unsorted_path / "new.show.s02e10"
