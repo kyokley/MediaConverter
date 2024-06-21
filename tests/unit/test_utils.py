@@ -1,6 +1,7 @@
 import pytest
 import mock
 import requests
+from pathlib import Path
 
 from utils import get_localpath_by_filename
 
@@ -26,7 +27,7 @@ class TestGetLocalpathByFilename:
         self.mock_get.return_value = self.mock_response
 
     def test_success(self):
-        expected = "/path/to/media/test_filename"
+        expected = Path("/path/to/media/test_filename")
         actual = get_localpath_by_filename(self.test_filename)
 
         assert expected == actual
