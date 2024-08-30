@@ -120,7 +120,8 @@ RUN sed -i -e's/ main/ main contrib non-free non-free-firmware/g' /etc/apt/sourc
         libfdk-aac-dev \
         libmp3lame-dev \
         libopus-dev \
-        libtheora-dev
+        libtheora-dev \
+        unrar
 
 COPY --from=python-builder $VIRTUAL_ENV $VIRTUAL_ENV
 
