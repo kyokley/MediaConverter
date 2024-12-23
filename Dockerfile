@@ -1,6 +1,5 @@
 ARG BASE_IMAGE=python:3.12-slim
 
-
 FROM ${BASE_IMAGE} AS base-builder
 
 ENV FFMPEG_VERSION=7.0.2
@@ -102,6 +101,10 @@ FROM ${BASE_IMAGE} AS base
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+RUN groupadd -r user && \
+        useradd -r -g user user && \
+        chown -R user:user /app
+
 ENV POETRY_VENV=/poetry_venv
 RUN python3 -m venv $POETRY_VENV
 
@@ -131,7 +134,7 @@ WORKDIR /code
 
 # ********************* Begin Prod Image ******************
 FROM base AS prod
-
+USER user
 COPY . /code
 
 CMD ["/venv/bin/celery", "-A", "main", "worker", "--loglevel=info", "--concurrency=1"]
@@ -142,7 +145,7 @@ COPY --from=ffmpeg-builder /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
 
 
 # ********************* Begin Dev Image ******************
-FROM base AS dev
+FROM base AS dev-root
 
 RUN apt-get install -y g++
 
@@ -156,3 +159,6 @@ RUN $POETRY_VENV/bin/poetry install
 COPY --from=srt-vtt-builder /usr/local/bin/srt-vtt /usr/local/bin/srt-vtt
 COPY --from=x265-builder /usr/local/lib/libx265* /usr/local/lib/
 COPY --from=ffmpeg-builder /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
+
+FROM dev-root AS dev
+USER user
