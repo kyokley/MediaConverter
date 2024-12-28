@@ -101,9 +101,10 @@ FROM ${BASE_IMAGE} AS base
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+WORKDIR /code
 RUN groupadd -r user && \
         useradd -r -g user user && \
-        chown -R user:user /app
+        chown -R user:user /code
 
 ENV POETRY_VENV=/poetry_venv
 RUN python3 -m venv $POETRY_VENV
