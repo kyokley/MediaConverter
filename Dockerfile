@@ -98,12 +98,13 @@ RUN $POETRY_VENV/bin/pip install poetry && \
 
 
 FROM ${BASE_IMAGE} AS base
+ARG UID=1001
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 WORKDIR /code
-RUN groupadd -r user && \
-        useradd -r -g user user && \
+RUN groupadd -g ${UID} -r user && \
+        useradd -r -u ${UID} -g user user && \
         chown -R user:user /code
 
 ENV POETRY_VENV=/poetry_venv
