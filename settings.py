@@ -10,8 +10,8 @@ WAITER_USERNAME = os.getenv('MC_WAITER_USERNAME', "waiter")
 WAITER_PASSWORD = os.getenv('MC_WAITER_PASSWORD', "password")
 
 LOCAL_MOVIE_PATHS = os.getenv('MC_LOCAL_MOVIE_PATHS').split(',') if os.getenv('MC_LOCAL_MOVIE_PATHS') else ["movies"]
-LOCAL_TV_SHOWS_PATHS = os.getenv('MC_LOCAL_MOVIE_PATHS').split(',') if os.getenv('MC_LOCAL_MOVIE_PATHS') else ["tv_shows"]
-UNSORTED_PATHS = os.getenv('MC_LOCAL_MOVIE_PATHS').split(',') if os.getenv('MC_LOCAL_MOVIE_PATHS') else ["unsorted"]
+LOCAL_TV_SHOWS_PATHS = os.getenv('MC_LOCAL_TV_SHOWS_PATHS').split(',') if os.getenv('MC_LOCAL_TV_SHOWS_PATHS') else ["tv_shows"]
+UNSORTED_PATHS = os.getenv('MC_UNSORTED_PATHS').split(',') if os.getenv('MC_UNSORTED_PATHS') else ["unsorted"]
 BASE_PATH = os.getenv('MC_BASE_PATH', "/home/user")
 
 DOMAIN = os.getenv('MC_DOMAIN', "https://127.0.0.1:8001")  # Do not include trailing slash
