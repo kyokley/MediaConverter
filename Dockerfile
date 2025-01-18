@@ -94,7 +94,7 @@ WORKDIR /code
 COPY poetry.lock pyproject.toml /code/
 
 RUN $POETRY_VENV/bin/pip install poetry && \
-        $POETRY_VENV/bin/poetry install --only main
+        $POETRY_VENV/bin/poetry install --no-root --only main
 
 
 FROM ${BASE_IMAGE} AS base
@@ -156,7 +156,7 @@ COPY poetry.lock pyproject.toml /code/
 
 RUN $POETRY_VENV/bin/pip install -U pip poetry && $VIRTUAL_ENV/bin/pip install -U pip
 
-RUN $POETRY_VENV/bin/poetry install
+RUN $POETRY_VENV/bin/poetry install --no-root
 
 COPY --from=srt-vtt-builder /usr/local/bin/srt-vtt /usr/local/bin/srt-vtt
 COPY --from=x265-builder /usr/local/lib/libx265* /usr/local/lib/
