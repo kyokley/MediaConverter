@@ -16,3 +16,11 @@ mv -fv out.mp4 ${file}
 done
 rm *.vtt *.ass
 ```
+
+Remove all streams except audio and video
+```
+for file in *
+do
+ffmpeg -i ${file} -c:v copy -c:a copy ${file}.no-sub.mkv
+done
+```

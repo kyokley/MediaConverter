@@ -115,6 +115,7 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 RUN sed -i -e's/ main/ main contrib non-free non-free-firmware/g' /etc/apt/sources.list.d/debian.sources && \
     apt-get update && apt-get install -y \
+        less \
         libavcodec-dev \
         libvorbis-dev \
         libx264-dev \
