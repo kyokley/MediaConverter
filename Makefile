@@ -1,4 +1,4 @@
-.PHONY: autoformat build build-dev ci-tests down exec publish shell tests up
+.PHONY: autoformat build build-dev ci-tests down exec publish shell tests up all clean test
 
 DOCKER_COMPOSE_EXECUTABLE=$$(command -v docker-compose >/dev/null 2>&1 && echo "docker-compose" || echo "docker compose")
 NO_CACHE?=0

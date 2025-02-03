@@ -1,15 +1,11 @@
 name: 'Build Images'
-
-on:
+"on":
   push:
     branches:
       - main
-
 jobs:
-
   publish:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
       - name: Docker Login
