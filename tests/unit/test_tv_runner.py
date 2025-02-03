@@ -69,8 +69,7 @@ class TestTvRunner:
         mock_os_path_getsize = mocker.patch("tv_runner.os.path.getsize")
         mock_os_path_basename = mocker.patch("tv_runner.os.path.basename")
 
-        mock_get_or_create_media_path.return_value = {"pk": 1,
-                                                      "skip": False}
+        mock_get_or_create_media_path.return_value = {"pk": 1, "skip": False}
         mock_os_path_exists.return_value = True
         mock_os_path_getsize.return_value = 1
         mock_os_path_basename.return_value = "basename"
@@ -141,12 +140,23 @@ class TestTvRunner:
 
         self.tvRunner.updateFileRecords.assert_has_calls(
             [
-                call("sdfg", set(["paths", "some"]), set(["remote", "some", "paths"]), dry_run=False),
-                call("asdf", set(["paths", "some"]), set(["remote", "some", "paths"]), dry_run=False),
+                call(
+                    "sdfg",
+                    set(["paths", "some"]),
+                    set(["remote", "some", "paths"]),
+                    dry_run=False,
+                ),
+                call(
+                    "asdf",
+                    set(["paths", "some"]),
+                    set(["remote", "some", "paths"]),
+                    dry_run=False,
+                ),
             ],
             any_order=True,
         )
         assert 2 == self.tvRunner.updateFileRecords.call_count
 
-        self.tvRunner.handleDirs.assert_has_calls([call("asdf", dry_run=False),
-                                                   call("sdfg", dry_run=False)])
+        self.tvRunner.handleDirs.assert_has_calls(
+            [call("asdf", dry_run=False), call("sdfg", dry_run=False)]
+        )

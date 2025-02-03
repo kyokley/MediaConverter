@@ -8,5 +8,4 @@ def _enable_sockets_for_integration(socket_enabled):
 
 @pytest.fixture(autouse=True)
 def _set_external_request_cooldown_for_test(mocker):
-    mocker.patch("utils._external_request_cooldown",
-                 lambda: 0)
+    mocker.patch("utils._external_request_cooldown", lambda: 0)
