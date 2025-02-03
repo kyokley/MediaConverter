@@ -58,7 +58,7 @@ class MediaPathMixin:
         payload = {"skip": skip}
         resp = put_data(
             payload,
-            cls.MEDIAVIEWER_MEDIAPATH_DETAIL_URL.format(media_path_id=media_path_id)
+            cls.MEDIAVIEWER_MEDIAPATH_DETAIL_URL.format(media_path_id=media_path_id),
         )
         return resp.json()
 
@@ -82,8 +82,7 @@ class Tv(MediaPathMixin):
     @classmethod
     def put_tv(cls, tv_id, finished=False):
         payload = {"finished": finished}
-        resp = put_data(payload,
-                        cls.MEDIAVIEWER_TV_DETAIL_URL.format(tv_id=tv_id))
+        resp = put_data(payload, cls.MEDIAVIEWER_TV_DETAIL_URL.format(tv_id=tv_id))
         return resp.json()
 
     @classmethod
@@ -146,16 +145,15 @@ class TvRunner:
     def load_paths(self):
         tv_entries = Tv.get_all_tv()
         self.paths = {
-            key: val["pks"]
-            for key, val in tv_entries.items()
-            if not val["finished"]
+            key: val["pks"] for key, val in tv_entries.items() if not val["finished"]
         }
 
         for path_str in LOCAL_TV_SHOWS_PATHS:
             path = Path(path_str)
             for dir in path.iterdir():
                 if "unsorted" in str(dir).lower() or (
-                    dir in tv_entries and tv_entries[dir]["finished"]):
+                    dir in tv_entries and tv_entries[dir]["finished"]
+                ):
                     continue
                 self.paths.setdefault(dir, set()).add(-1)
 
@@ -163,9 +161,10 @@ class TvRunner:
     def get_or_create_media_path(local_path):
         log.info(f"Get or create MediaPath for {local_path}")
         media_path_data = Tv.post_media_path(local_path)
-        return {"pk": media_path_data["pk"],
-                "skip": media_path_data["skip"],
-                }
+        return {
+            "pk": media_path_data["pk"],
+            "skip": media_path_data["skip"],
+        }
 
     @staticmethod
     def build_remote_media_file_set(pathIDs):
@@ -180,18 +179,14 @@ class TvRunner:
 
         return fileSet
 
-    def updateFileRecords(self,
-                          path,
-                          localFileSet,
-                          remoteFileSet,
-                          dry_run=False):
+    def updateFileRecords(self, path, localFileSet, remoteFileSet, dry_run=False):
         media_path_id = None
         for localFile in localFileSet.difference(remoteFileSet):
             if not localFile:
                 continue
 
             if dry_run:
-                log.debug(f'Would process {localFile}')
+                log.debug(f"Would process {localFile}")
                 continue
 
             if not media_path_id:
@@ -287,7 +282,7 @@ class TvRunner:
                         log.info(f"Found subtitle file in {episode}")
                         new = Path(top) / f"{episode}-{count}.srt"
                         if dry_run:
-                            log.debug(f'Would rename {srt_path} to {new}')
+                            log.debug(f"Would rename {srt_path} to {new}")
                         else:
                             os.rename(srt_path, new)
                         count += 1
@@ -301,14 +296,14 @@ class TvRunner:
                         new = os.path.join(top, file)
 
                         if dry_run:
-                            log.debug(f'Would rename {fullpath} to {new}')
+                            log.debug(f"Would rename {fullpath} to {new}")
                         else:
                             os.rename(fullpath, new)
 
             for directory in dir_set:
                 log.info(f"Deleting {directory}")
                 if dry_run:
-                    log.debug(f'Would remove {directory}')
+                    log.debug(f"Would remove {directory}")
                 else:
                     shutil.rmtree(directory)
 
@@ -335,10 +330,7 @@ class TvRunner:
             remoteFileSet = self.build_remote_media_file_set(pathIDs)
             log.info(f"Done building remote file set for {path}")
 
-            self.updateFileRecords(path,
-                                   localFileSet,
-                                   remoteFileSet,
-                                   dry_run=dry_run)
+            self.updateFileRecords(path, localFileSet, remoteFileSet, dry_run=dry_run)
 
         if self.errors:
             log.error("Errors occured in the following files:")
@@ -366,7 +358,7 @@ class TvRunner:
                 dst = localpath / filename
 
                 if dry_run:
-                    log.info(f'Would move {src} to {dst}')
+                    log.info(f"Would move {src} to {dst}")
                 else:
-                    log.info(f'Moving {src} to {dst}')
+                    log.info(f"Moving {src} to {dst}")
                     shutil.move(src, dst)

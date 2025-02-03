@@ -74,7 +74,6 @@ class TestPostMediaPath(BaseSettings):
         assert tv_resp["pk"] == resp["tv"]
         assert resp["pk"] in media_paths
 
-
     def test_post_media_path_existing(self):
         first_resp = Tv.post_media_path(self.tv_dir)
         assert str(self.tv_dir) == first_resp["path"]
@@ -94,8 +93,7 @@ class TestPutMediaPath(BaseSettings):
         assert resp["pk"] == mp_data["pk"]
         assert not mp_data["skip"]
 
-        second_resp = Tv.put_media_path(resp["pk"],
-                                        skip=True)
+        second_resp = Tv.put_media_path(resp["pk"], skip=True)
 
         mp_data = Tv.get_media_path(second_resp["pk"])
         assert second_resp["pk"] == mp_data["pk"]
@@ -171,6 +169,7 @@ class TestPostMediaFile(BaseSettings):
 
         for dir in self.dirs:
             assert str(dir) in media_paths
+
 
 class TestFinishedTv(BaseSettings):
     def test_finished_tv(self):

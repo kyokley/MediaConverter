@@ -4,7 +4,6 @@ services:
     environment:
       - RABBITMQ_DEFAULT_USER=user
       - RABBITMQ_DEFAULT_PASS=password
-
   mediaconverter:
     build:
       context: .
@@ -16,7 +15,6 @@ services:
     stdin_open: true
     environment:
       - BROKER=amqp://user:password@rabbitmq:5672/
-    command:
-      bash -c "sleep 15 && /venv/bin/celery -A main worker --concurrency=1"
+    command: bash -c "sleep 15 && celery -A main worker --concurrency=1"
     volumes:
       - .:/code

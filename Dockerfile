@@ -2,15 +2,6 @@ ARG BASE_IMAGE=python:3.12-slim
 
 FROM ${BASE_IMAGE} AS base-builder
 
-ENV FFMPEG_VERSION=7.0.2
-
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-ENV POETRY_VENV=/poetry_venv
-ENV VIRTUAL_ENV=/venv
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-
 RUN sed -i -e's/ main/ main contrib non-free non-free-firmware/g' /etc/apt/sources.list.d/debian.sources && \
     apt-get update && apt-get install -y \
         g++ \
@@ -44,6 +35,8 @@ RUN cmake source && \
 
 
 FROM base-builder AS ffmpeg-builder
+ENV FFMPEG_VERSION=7.0.2
+
 WORKDIR /build/ffmpeg_sources
 RUN wget https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.gz && \
         tar xvzf ffmpeg-${FFMPEG_VERSION}.tar.gz
@@ -84,34 +77,18 @@ RUN make && \
             xargs -I{} cp {} /usr/local/bin/srt-vtt
 
 
-FROM base-builder AS python-builder
-RUN python3 -m venv $POETRY_VENV && \
-        python3 -m venv $VIRTUAL_ENV && \
-        $POETRY_VENV/bin/pip install -U pip poetry && \
-        $VIRTUAL_ENV/bin/pip install -U pip
-
-WORKDIR /code
-COPY poetry.lock pyproject.toml /code/
-
-RUN $POETRY_VENV/bin/pip install poetry && \
-        $POETRY_VENV/bin/poetry install --no-root --only main
-
-
 FROM ${BASE_IMAGE} AS base
 ARG UID=1000
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV UV_PROJECT_DIR=/mc
+ENV VIRTUAL_ENV=${UV_PROJECT_DIR}/.venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 WORKDIR /code
 RUN groupadd -g ${UID} -r user && \
         useradd -r -u ${UID} -g user user && \
         chown -R user:user /code
-
-ENV POETRY_VENV=/poetry_venv
-RUN python3 -m venv $POETRY_VENV
-
-ENV VIRTUAL_ENV=/venv
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 RUN sed -i -e's/ main/ main contrib non-free non-free-firmware/g' /etc/apt/sources.list.d/debian.sources && \
     apt-get update && apt-get install -y \
@@ -126,12 +103,21 @@ RUN sed -i -e's/ main/ main contrib non-free non-free-firmware/g' /etc/apt/sourc
         libmp3lame-dev \
         libopus-dev \
         libtheora-dev \
-        unrar
+        unrar && \
+        pip install --upgrade --no-cache-dir pip uv && \
+        uv venv --seed ${VIRTUAL_ENV}
 
-COPY --from=python-builder $VIRTUAL_ENV $VIRTUAL_ENV
+WORKDIR /code
+COPY uv.lock pyproject.toml ${UV_PROJECT_DIR}
+
+RUN uv sync --no-dev --project ${VIRTUAL_ENV}
 
 RUN ldconfig
 WORKDIR /code
+
+COPY --from=srt-vtt-builder /usr/local/bin/srt-vtt /usr/local/bin/srt-vtt
+COPY --from=x265-builder /usr/local/lib/libx265* /usr/local/lib/
+COPY --from=ffmpeg-builder /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
 
 
 # ********************* Begin Prod Image ******************
@@ -139,11 +125,8 @@ FROM base AS prod
 USER user
 COPY . /code
 
-CMD ["/venv/bin/celery", "-A", "main", "worker", "--loglevel=info", "--concurrency=1"]
+CMD ["celery", "-A", "main", "worker", "--loglevel=info", "--concurrency=1"]
 
-COPY --from=srt-vtt-builder /usr/local/bin/srt-vtt /usr/local/bin/srt-vtt
-COPY --from=x265-builder /usr/local/lib/libx265* /usr/local/lib/
-COPY --from=ffmpeg-builder /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
 
 
 # ********************* Begin Dev Image ******************
@@ -152,15 +135,8 @@ FROM base AS dev-root
 RUN apt-get install -y g++
 
 COPY pdbrc.py /root/.pdbrc.py
-COPY poetry.lock pyproject.toml /code/
 
-RUN $POETRY_VENV/bin/pip install -U pip poetry && $VIRTUAL_ENV/bin/pip install -U pip
-
-RUN $POETRY_VENV/bin/poetry install --no-root
-
-COPY --from=srt-vtt-builder /usr/local/bin/srt-vtt /usr/local/bin/srt-vtt
-COPY --from=x265-builder /usr/local/lib/libx265* /usr/local/lib/
-COPY --from=ffmpeg-builder /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
+RUN uv sync --project "${VIRTUAL_ENV}"
 
 FROM dev-root AS dev
 USER user

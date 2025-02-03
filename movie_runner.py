@@ -35,8 +35,9 @@ class Movie(MediaPathMixin):
     @classmethod
     def put_movie(cls, movie_id, finished=False):
         payload = {"finished": finished}
-        resp = put_data(payload,
-                        cls.MEDIAVIEWER_MOVIE_DETAIL_URL.format(movie_id=movie_id))
+        resp = put_data(
+            payload, cls.MEDIAVIEWER_MOVIE_DETAIL_URL.format(movie_id=movie_id)
+        )
         return resp.json()
 
     @classmethod
@@ -97,7 +98,7 @@ class MovieRunner:
                     try:
                         self.promoteSubtitles(localpath, dry_run=dry_run)
                         if dry_run:
-                            log.debug(f'Would re-encode files in {localpath}')
+                            log.debug(f"Would re-encode files in {localpath}")
                         else:
                             errors = reencodeFilesInDirectory(localpath)
 
@@ -110,7 +111,7 @@ class MovieRunner:
                         raise
                     log.info(f"Posting {localpath}")
                     if dry_run:
-                        log.debug(f'Would post path for {localpath}')
+                        log.debug(f"Would post path for {localpath}")
                     else:
                         Movie.post_media_path(localpath)
 
@@ -128,7 +129,7 @@ class MovieRunner:
                 dest = os.path.join(localpath, file)
 
                 if dry_run:
-                    log.debug(f'Would rename {path} to {dest}')
+                    log.debug(f"Would rename {path} to {dest}")
                 else:
                     os.rename(path, dest)
 
