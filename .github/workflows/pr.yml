@@ -1,15 +1,25 @@
 name: Test
-on:
+"on":
   pull_request:
-
 jobs:
   test:
     name: Run test suite
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Run tests
-      run: make ci-tests
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Run tests
+        run: make ci-tests
+  format-checks:
+    name: Run devenv format checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v26
+      - uses: cachix/cachix-action@v14
+        with:
+          name: devenv
+      - name: Install devenv.sh
+        run: nix profile install nixpkgs#devenv
+      - name: Build the devenv shell and run any pre-commit hooks
+        run: devenv test
