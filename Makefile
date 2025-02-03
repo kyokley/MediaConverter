@@ -29,7 +29,7 @@ ci-tests: build-dev up
 	${DOCKER_COMPOSE_EXECUTABLE} exec -T mediaconverter pytest
 
 autoformat: build-dev
-	${DOCKER_COMPOSE_EXECUTABLE} run --no-deps mediaconverter /venv/bin/black .
+	${DOCKER_COMPOSE_EXECUTABLE} run --no-deps mediaconverter black .
 
 up:
 	${DOCKER_COMPOSE_EXECUTABLE} up -d
@@ -38,4 +38,4 @@ down:
 	${DOCKER_COMPOSE_EXECUTABLE} down -v
 
 exec:
-	${DOCKER_COMPOSE_EXECUTABLE} exec mediaconverter /venv/bin/python /code/main.py
+	${DOCKER_COMPOSE_EXECUTABLE} exec mediaconverter python /code/main.py
