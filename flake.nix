@@ -101,15 +101,48 @@
           nativeBuildInputs = [ pkgs.makeWrapper ];
           buildInputs = [ appPythonEnv ] ++ osDeps; # Runtime Python environment
 
+          # Skip the build phase to avoid running Makefile
+          dontBuild = true;
+
           installPhase = ''
-            mkdir -p $out/bin
-            cp main.py $out/bin/${thisProjectAsNixPkg.pname}-script
-            chmod +x $out/bin/${thisProjectAsNixPkg.pname}-script
+            mkdir -p $out/bin $out/lib
+            # Copy all Python modules to lib directory
+            cp *.py $out/lib/
+            chmod +x $out/lib/main.py
+            # Create wrapper that sets PYTHONPATH to include our modules
             makeWrapper ${appPythonEnv}/bin/python $out/bin/${thisProjectAsNixPkg.pname} \
-              --add-flags $out/bin/${thisProjectAsNixPkg.pname}-script
+              --add-flags $out/lib/main.py \
+              --prefix PYTHONPATH : $out/lib
           '';
         };
         packages.${thisProjectAsNixPkg.pname} = self.packages.${system}.default;
+
+        # Docker image for MediaConverter
+        packages.mc-image = pkgs.dockerTools.buildImage {
+          name = "kyokley/MediaConverter";
+          tag = thisProjectAsNixPkg.version;
+          created = "now";
+
+          copyToRoot = pkgs.buildEnv {
+            name = "image-root";
+            paths = [
+              self.packages.${system}.default
+              appPythonEnv
+            ] ++ osDeps;
+            pathsToLink = [ "/bin" ];
+          };
+
+          config = {
+            Cmd = [ "${self.packages.${system}.default}/bin/${thisProjectAsNixPkg.pname}" ];
+            WorkingDir = "/data";
+            Volumes = {
+              "/data" = {};
+            };
+            Env = [
+              "PYTHONPATH=${self.packages.${system}.default}/lib:${appPythonEnv}/lib/python3.12/site-packages"
+            ];
+          };
+        };
 
         # App for `nix run`
         apps.default = {

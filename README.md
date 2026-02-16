@@ -74,3 +74,48 @@ The flake includes a custom build of `ffmpeg-full` with **libfdk_aac** codec sup
 - This provides high-quality AAC encoding capabilities for media conversion
 
 The flake supports multiple platforms: x86_64-linux, aarch64-linux, x86_64-darwin, and aarch64-darwin.
+
+### Building Docker Image
+
+The flake includes a Docker image output that bundles the application with all dependencies including FFmpeg with libfdk_aac support.
+
+To build the Docker image:
+
+```bash
+nix build .#mc-image
+```
+
+This creates a `./result` file containing the Docker image tarball.
+
+### Loading and Running the Docker Image
+
+Load the image into Docker:
+
+```bash
+docker load < result
+```
+
+The image will be tagged as `kyokley/mediaconverter:0.1.0` (version from pyproject.toml).
+
+Run the container:
+
+```bash
+# Run the default application
+docker run --rm -v /path/to/data:/data kyokley/mediaconverter:0.1.0
+
+# Run with celery worker (as intended for the application)
+docker run --rm -e BROKER=redis://redis:6379 kyokley/mediaconverter:0.1.0 celery -A main worker --loglevel=info
+
+# Test with Python imports
+docker run --rm kyokley/mediaconverter:0.1.0 python -c "from tv_runner import TvRunner; print('OK')"
+
+# Check FFmpeg with FDK AAC support
+docker run --rm --entrypoint ffmpeg kyokley/mediaconverter:0.1.0 -codecs 2>&1 | grep fdk
+```
+
+The Docker image includes:
+- Python 3.12 with all application dependencies
+- FFmpeg with libfdk_aac codec support
+- srt-to-vtt-cl for subtitle conversion
+- Working directory mounted at `/data`
+- All Python modules properly configured in PYTHONPATH
