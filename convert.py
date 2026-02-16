@@ -211,12 +211,14 @@ def _reencodeVideo(source, dest, vres, ares, surround, dryRun=False):
     log.info(command)
     if not dryRun:
         process = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE)  # nosec
-        process.communicate()
+        _, stderr = process.communicate()
 
         if process.returncode != 0:
             if dest.exists():
                 dest.unlink()
-            raise EncoderException("Encoding failed")
+            raise EncoderException(
+                f"Encoding failed:\n{command}\n{stderr.decode('utf-8')}"
+            )
 
 
 def _moveSubtitleFile(source, dest, dryRun=False):

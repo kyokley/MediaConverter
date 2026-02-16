@@ -361,6 +361,7 @@ class TestReencodeVideo:
     def setUp(self, mocker):
         self.mock_Popen = mocker.patch("convert.Popen")
         self.mock_Popen.return_value.returncode = 0
+        self.mock_Popen.return_value.communicate.return_value = ("stdout", "stderr")
 
         mocker.patch("convert.ENCODER", "test_encoder")
 

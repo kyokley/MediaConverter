@@ -21,8 +21,18 @@
   outputs = { self, nixpkgs, flake-utils, uv2nix, pyproject-nix, pyproject-build-systems, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs { inherit system; };
+        # Import nixpkgs with unfree packages enabled (needed for libfdk_aac)
+        pkgs = import nixpkgs {
+          inherit system;
+          config.allowUnfree = true;
+        };
         python = pkgs.python312; # Your desired Python version
+
+        # Override ffmpeg-full to include libfdk_aac support
+        ffmpeg-full-fdk = pkgs.ffmpeg-full.override {
+          withFdkAac = true;  # Enable FDK AAC codec
+          withUnfree = true;  # Required for FDK AAC
+        };
 
         # 1. Load Project Workspace (parses pyproject.toml, uv.lock)
         workspace = uv2nix.lib.workspace.loadWorkspace {
@@ -58,15 +68,26 @@
           (thisProjectAsNixPkg.pname + "-env")
           workspace.deps.default; # Uses deps from pyproject.toml [project.dependencies]
 
+        # 6. Create the Development Python Environment with dev dependencies
+        # Merge default and dev dependencies
+        allDeps = workspace.deps.default // (workspace.deps.dev or {});
+        devPythonEnv = pythonSet.mkVirtualEnv
+          (thisProjectAsNixPkg.pname + "-dev-env")
+          allDeps; # Includes both default and dev deps
+
+        osDeps = with pkgs; [
+          srt-to-vtt-cl
+          ffmpeg-full-fdk  # Use the custom ffmpeg with libfdk_aac
+        ];
       in
       {
         # Development Shell
         devShells.default = pkgs.mkShell {
-          packages = [ appPythonEnv pkgs.ruff pkgs.uv ];
+          packages = [ devPythonEnv pkgs.ruff pkgs.uv ] ++ osDeps;
           shellHook = ''
             echo "MediaConverter development environment"
             echo "Python version: ${python.version}"
-            echo "Environment with dependencies from uv.lock"
+            echo "Environment with dependencies from uv.lock (including dev dependencies)"
             export PYTHONPATH="$PWD:$PYTHONPATH"
           '';
         };
@@ -78,7 +99,7 @@
           src = ./.; # Source of your main script
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
-          buildInputs = [ appPythonEnv ]; # Runtime Python environment
+          buildInputs = [ appPythonEnv ] ++ osDeps; # Runtime Python environment
 
           installPhase = ''
             mkdir -p $out/bin
