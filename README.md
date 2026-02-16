@@ -106,6 +106,12 @@ docker run --rm -v /path/to/data:/data kyokley/mediaconverter:0.1.0
 # Run with celery worker (as intended for the application)
 docker run --rm -e BROKER=redis://redis:6379 kyokley/mediaconverter:0.1.0 celery -A main worker --loglevel=info
 
+# Run interactive bash shell
+docker run --rm -it --entrypoint bash kyokley/mediaconverter:0.1.0
+
+# Execute commands via bash
+docker run --rm kyokley/mediaconverter:0.1.0 bash -c "python --version && celery --version"
+
 # Test with Python imports
 docker run --rm kyokley/mediaconverter:0.1.0 python -c "from tv_runner import TvRunner; print('OK')"
 
@@ -114,6 +120,7 @@ docker run --rm --entrypoint ffmpeg kyokley/mediaconverter:0.1.0 -codecs 2>&1 | 
 ```
 
 The Docker image includes:
+- Bash shell for interactive sessions and scripting
 - Python 3.12 with all application dependencies
 - FFmpeg with libfdk_aac codec support
 - srt-to-vtt-cl for subtitle conversion

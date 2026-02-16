@@ -128,6 +128,7 @@
             paths = [
               self.packages.${system}.default
               appPythonEnv
+              pkgs.bash
             ] ++ osDeps;
             pathsToLink = [ "/bin" ];
           };
