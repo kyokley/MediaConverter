@@ -150,6 +150,10 @@ class TestPostMovies:
         mocker.patch("utils.S3_KEY_PREFIX", "prefix/")
         mock_upload = mocker.patch("movie_runner.s3.get_s3_client")
         mock_post_media_path = mocker.patch("movie_runner.Movie.post_media_path")
+        mock_upload_subtitle_files = mocker.patch(
+            "movie_runner.upload_subtitle_files",
+            return_value=["Movie1.mp4.mv-encoded.mp4-0.vtt"],
+        )
         mocker.patch(
             "movie_runner.MovieRunner._get_largest_video_file",
             return_value=Path(f"{self.tmp_dir}/movies/movie1/Movie1.mp4"),
@@ -177,11 +181,39 @@ class TestPostMovies:
                 ),
             ]
         )
+        mock_upload_subtitle_files.assert_has_calls(
+            [
+                mock.call(
+                    Path(f"{self.tmp_dir}/movies/movie1/Movie1.mp4"),
+                    Path(f"{self.tmp_dir}/movies/movie1"),
+                ),
+                mock.call(
+                    Path(f"{self.tmp_dir}/movies/movie1/Movie1.mp4"),
+                    Path(f"{self.tmp_dir}/movies/movie2"),
+                ),
+                mock.call(
+                    Path(f"{self.tmp_dir}/movies/movie1/Movie1.mp4"),
+                    Path(f"{self.tmp_dir}/movies/movie3"),
+                ),
+            ]
+        )
         mock_post_media_path.assert_has_calls(
             [
-                mock.call("s3://bucket/prefix/movie1/", filename="Movie1.mp4"),
-                mock.call("s3://bucket/prefix/movie2/", filename="Movie1.mp4"),
-                mock.call("s3://bucket/prefix/movie3/", filename="Movie1.mp4"),
+                mock.call(
+                    "s3://bucket/prefix/movie1/",
+                    filename="Movie1.mp4",
+                    subtitle_files=["Movie1.mp4.mv-encoded.mp4-0.vtt"],
+                ),
+                mock.call(
+                    "s3://bucket/prefix/movie2/",
+                    filename="Movie1.mp4",
+                    subtitle_files=["Movie1.mp4.mv-encoded.mp4-0.vtt"],
+                ),
+                mock.call(
+                    "s3://bucket/prefix/movie3/",
+                    filename="Movie1.mp4",
+                    subtitle_files=["Movie1.mp4.mv-encoded.mp4-0.vtt"],
+                ),
             ]
         )
 

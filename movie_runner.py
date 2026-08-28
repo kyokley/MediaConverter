@@ -17,6 +17,7 @@ from utils import (
     get_s3_uri_for_local_path,
     get_local_path_from_media_path,
     is_valid_media_file,
+    upload_subtitle_files,
 )
 from tv_runner import MediaPathMixin
 
@@ -131,9 +132,11 @@ class MovieRunner:
                             continue
                         key = f"{S3_KEY_PREFIX}{localpath.name}/{video_file.name}"
                         s3.get_s3_client().upload_file(video_file, S3_BUCKET_NAME, key)
+                        subtitle_files = upload_subtitle_files(video_file, localpath)
                         Movie.post_media_path(
                             get_s3_uri_for_local_path(localpath),
                             filename=video_file.name,
+                            subtitle_files=subtitle_files,
                         )
                     else:
                         Movie.post_media_path(localpath)

@@ -1,4 +1,5 @@
 import os
+import json
 import traceback
 import subprocess  # nosec
 import shlex
@@ -29,6 +30,7 @@ from utils import (
     put_data,
     get_s3_uri_for_local_path,
     get_local_path_from_media_path,
+    upload_subtitle_files,
 )
 
 import logging
@@ -46,8 +48,16 @@ class MediaPathMixin:
         return cls.MEDIAVIEWER_MEDIAPATH_URL + "{media_path_id}/"
 
     @classmethod
-    def post_media_path(cls, path, tv=None, movie=None, filename=None):
-        payload = {"path": path, "tv": tv, "movie": movie, "filename": filename}
+    def post_media_path(
+        cls, path, tv=None, movie=None, filename=None, subtitle_files=None
+    ):
+        payload = {
+            "path": path,
+            "tv": tv,
+            "movie": movie,
+            "filename": filename,
+            "subtitle_files": json.dumps(subtitle_files or []),
+        }
         resp = post_data(payload, cls.MEDIAVIEWER_MEDIAPATH_URL)
         return resp.json()
 
@@ -133,8 +143,14 @@ class MediaFile:
         filename,
         media_path_id,
         size,
+        subtitle_files=None,
     ):
-        payload = {"filename": filename, "media_path": media_path_id, "size": size}
+        payload = {
+            "filename": filename,
+            "media_path": media_path_id,
+            "size": size,
+            "subtitle_files": json.dumps(subtitle_files or []),
+        }
         resp = post_data(payload, cls.MEDIAVIEWER_MEDIAFILE_URL)
         resp.raise_for_status()
         return resp.json()
@@ -221,11 +237,16 @@ class TvRunner:
                     continue
 
                 if fullPath.exists():
+                    subtitle_files = []
                     if S3_ENABLED:
                         key = f"{S3_KEY_PREFIX}{Path(path).name}/{fullPath.name}"
                         s3.get_s3_client().upload_file(fullPath, S3_BUCKET_NAME, key)
+                        subtitle_files = upload_subtitle_files(fullPath, path)
                     MediaFile.post_media_file(
-                        fullPath.name, media_path_id, fullPath.stat().st_size
+                        fullPath.name,
+                        media_path_id,
+                        fullPath.stat().st_size,
+                        subtitle_files=subtitle_files,
                     )
             except Exception as e:
                 errorMsg = (

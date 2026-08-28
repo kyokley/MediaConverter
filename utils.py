@@ -8,6 +8,8 @@ import smtplib
 
 import logging
 
+import s3
+
 from settings import (
     WAITER_USERNAME,
     WAITER_PASSWORD,
@@ -189,6 +191,20 @@ def get_localpath_by_filename(filename):
 def get_s3_uri_for_local_path(local_path):
     """Build the s3:// URI MediaViewer should store for a local directory."""
     return f"s3://{S3_BUCKET_NAME}/{S3_KEY_PREFIX}{local_path.name}/"
+
+
+def upload_subtitle_files(video_path, media_path):
+    """Upload .vtt subtitle files matching the video to S3.
+
+    Returns the list of uploaded subtitle file names.
+    """
+    subtitle_files = []
+    for subtitle_file in Path(video_path).parent.glob("*.vtt"):
+        if str(Path(video_path).stem) in subtitle_file.name:
+            key = f"{S3_KEY_PREFIX}{Path(media_path).name}/{subtitle_file.name}"
+            s3.get_s3_client().upload_file(subtitle_file, S3_BUCKET_NAME, key)
+            subtitle_files.append(subtitle_file.name)
+    return subtitle_files
 
 
 def get_local_path_from_media_path(media_path, local_roots):

@@ -104,6 +104,7 @@ class TestTvRunner:
             mock_makeFileStreamable().name,
             1,
             mock_makeFileStreamable().stat().st_size,
+            subtitle_files=[],
         )
 
     def test_run(self):
@@ -190,6 +191,9 @@ class TestTvRunner:
         mocker.patch("tv_runner.S3_KEY_PREFIX", "prefix/")
         mock_upload = mocker.patch("tv_runner.s3.get_s3_client")
         mock_post_media_file = mocker.patch("tv_runner.MediaFile.post_media_file")
+        mock_upload_subtitle_files = mocker.patch(
+            "tv_runner.upload_subtitle_files", return_value=["subtitle.vtt"]
+        )
         mock_makeFileStreamable = mocker.patch("tv_runner.makeFileStreamable")
         mock_get_or_create_media_path = mocker.patch(
             "tv_runner.TvRunner.get_or_create_media_path"
@@ -214,10 +218,14 @@ class TestTvRunner:
         mock_upload.return_value.upload_file.assert_called_once_with(
             mock_makeFileStreamable(), "bucket", "prefix/path/newfile"
         )
+        mock_upload_subtitle_files.assert_called_once_with(
+            mock_makeFileStreamable(), test_path
+        )
         mock_post_media_file.assert_called_once_with(
             mock_makeFileStreamable().name,
             1,
             mock_makeFileStreamable().stat().st_size,
+            subtitle_files=["subtitle.vtt"],
         )
 
     def test_get_all_tv_s3_reverse_mapping(self, mocker, temp_directory):
