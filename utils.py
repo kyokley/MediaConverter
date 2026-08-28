@@ -17,6 +17,9 @@ from settings import (
     VERIFY_REQUESTS,
     MEDIA_FILE_EXTENSIONS,
     DOMAIN,
+    BASE_PATH,
+    S3_BUCKET_NAME,
+    S3_KEY_PREFIX,
 )
 
 log = logging.getLogger(__name__)
@@ -181,3 +184,28 @@ def get_localpath_by_filename(filename):
 
     data = resp.json()
     return Path(data["path"])
+
+
+def get_s3_uri_for_local_path(local_path):
+    """Build the s3:// URI MediaViewer should store for a local directory."""
+    return f"s3://{S3_BUCKET_NAME}/{S3_KEY_PREFIX}{local_path.name}/"
+
+
+def get_local_path_from_media_path(media_path, local_roots):
+    """Map a MediaViewer media_path value back to a local filesystem path.
+
+    Handles local paths (absolute, or relative to BASE_PATH) and s3:// URIs.
+    S3 URIs are matched back to a local directory by name under one of the
+    given local roots; the first root whose candidate exists wins, falling
+    back to the first root.
+    """
+    if media_path.startswith("s3://"):
+        dirname = media_path.rstrip("/").rsplit("/", 1)[-1]
+        for root in local_roots:
+            candidate = Path(BASE_PATH) / root / dirname
+            if candidate.exists():
+                return candidate
+        return Path(BASE_PATH) / local_roots[0] / dirname
+    if BASE_PATH not in media_path:
+        return Path(BASE_PATH) / media_path
+    return Path(media_path)

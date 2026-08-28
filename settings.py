@@ -61,6 +61,14 @@ VERIFY_REQUESTS = True
 
 MINIMUM_FILE_SIZE = int(os.getenv("MC_MINIMUM_FILE_SIZE", 10000000))
 
+S3_ENABLED = os.getenv("MC_S3_ENABLED", "").lower() in ("1", "true", "yes")
+S3_ENDPOINT_URL = os.getenv("MC_S3_ENDPOINT_URL", "")
+S3_ACCESS_KEY_ID = os.getenv("MC_S3_ACCESS_KEY_ID", "")
+S3_SECRET_ACCESS_KEY = os.getenv("MC_S3_SECRET_ACCESS_KEY", "")
+S3_REGION_NAME = os.getenv("MC_S3_REGION_NAME", "")
+S3_BUCKET_NAME = os.getenv("MC_S3_BUCKET_NAME", "")
+S3_KEY_PREFIX = os.getenv("MC_S3_KEY_PREFIX", "")
+
 # DON'T MAKE ANY EDITS BELOW THIS LINE!!!!
 try:
     from local_settings import *  # noqa

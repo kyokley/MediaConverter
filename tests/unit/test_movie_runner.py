@@ -2,7 +2,7 @@ import mock
 import pytest
 
 from pathlib import Path
-from movie_runner import MovieRunner
+from movie_runner import MovieRunner, Movie
 
 
 def gen_data(num):
@@ -142,6 +142,90 @@ class TestPostMovies:
             ]
         )
 
+    def test_postMovies_s3_enabled(self, mocker):
+        mocker.patch("movie_runner.S3_ENABLED", True)
+        mocker.patch("movie_runner.S3_BUCKET_NAME", "bucket")
+        mocker.patch("movie_runner.S3_KEY_PREFIX", "prefix/")
+        mocker.patch("utils.S3_BUCKET_NAME", "bucket")
+        mocker.patch("utils.S3_KEY_PREFIX", "prefix/")
+        mock_upload = mocker.patch("movie_runner.s3.get_s3_client")
+        mock_post_media_path = mocker.patch("movie_runner.Movie.post_media_path")
+        mocker.patch(
+            "movie_runner.MovieRunner._get_largest_video_file",
+            return_value=Path(f"{self.tmp_dir}/movies/movie1/Movie1.mp4"),
+        )
+
+        assert self.movieRunner.postMovies() is None
+        assert not self.movieRunner.errors
+
+        mock_upload.return_value.upload_file.assert_has_calls(
+            [
+                mock.call(
+                    Path(f"{self.tmp_dir}/movies/movie1/Movie1.mp4"),
+                    "bucket",
+                    "prefix/movie1/Movie1.mp4",
+                ),
+                mock.call(
+                    Path(f"{self.tmp_dir}/movies/movie1/Movie1.mp4"),
+                    "bucket",
+                    "prefix/movie2/Movie1.mp4",
+                ),
+                mock.call(
+                    Path(f"{self.tmp_dir}/movies/movie1/Movie1.mp4"),
+                    "bucket",
+                    "prefix/movie3/Movie1.mp4",
+                ),
+            ]
+        )
+        mock_post_media_path.assert_has_calls(
+            [
+                mock.call("s3://bucket/prefix/movie1/", filename="Movie1.mp4"),
+                mock.call("s3://bucket/prefix/movie2/", filename="Movie1.mp4"),
+                mock.call("s3://bucket/prefix/movie3/", filename="Movie1.mp4"),
+            ]
+        )
+
+    def test_postMovies_s3_enabled_no_video_file(self, mocker):
+        mocker.patch("movie_runner.S3_ENABLED", True)
+        mocker.patch("movie_runner.s3.get_s3_client")
+        mock_post_media_path = mocker.patch("movie_runner.Movie.post_media_path")
+        mocker.patch(
+            "movie_runner.MovieRunner._get_largest_video_file", return_value=None
+        )
+
+        assert self.movieRunner.postMovies() is None
+        assert self.movieRunner.errors == [
+            f"No video file found in {self.tmp_dir}/movies/movie1. Continuing...",
+            f"No video file found in {self.tmp_dir}/movies/movie2. Continuing...",
+            f"No video file found in {self.tmp_dir}/movies/movie3. Continuing...",
+        ]
+        assert not mock_post_media_path.called
+
+    def test_get_all_movies_s3_reverse_mapping(self, mocker, temp_directory):
+        mocker.patch("utils.BASE_PATH", temp_directory)
+        mocker.patch("movie_runner.LOCAL_MOVIE_PATHS", ["movies"])
+        local_dir = temp_directory / "movies" / "Movie.Name"
+        local_dir.mkdir(parents=True)
+
+        mock_response = mock.MagicMock()
+        mock_response.json.return_value = {
+            "results": [
+                {
+                    "media_path": {
+                        "pk": 1,
+                        "path": "s3://bucket/prefix/Movie.Name/",
+                    },
+                    "finished": False,
+                }
+            ],
+            "next": "",
+        }
+        mocker.patch("movie_runner.get_data", return_value=mock_response)
+
+        paths = Movie.get_all_movies()
+
+        assert paths == {local_dir: {"pks": {1}, "finished": False}}
+
 
 class TestRun:
     @pytest.fixture(autouse=True)
@@ -269,3 +353,21 @@ class TestGetLocalMoviePaths:
         assert expected == actual
         self.mock_exists.assert_called_once_with("test_path")
         self.mock_listdir.assert_called_once_with("test_path")
+
+
+class TestGetLargestVideoFile:
+    def test_returns_largest_video_file(self, temp_directory):
+        (temp_directory / "movie1.mp4").write_bytes(b"a" * 100)
+        (temp_directory / "movie2.mkv").write_bytes(b"b" * 200)
+        (temp_directory / "notes.txt").write_bytes(b"c" * 300)
+
+        result = MovieRunner._get_largest_video_file(temp_directory)
+
+        assert result == temp_directory / "movie2.mkv"
+
+    def test_no_video_files_returns_none(self, temp_directory):
+        (temp_directory / "notes.txt").write_bytes(b"c")
+
+        result = MovieRunner._get_largest_video_file(temp_directory)
+
+        assert result is None
