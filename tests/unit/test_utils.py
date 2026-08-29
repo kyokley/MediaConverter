@@ -55,9 +55,9 @@ class TestGetLocalpathByFilename:
 
 class TestUploadSubtitleFiles:
     def test_uploads_matching_vtt_files(self, mocker, temp_directory):
-        mocker.patch("utils.S3_BUCKET_NAME", "bucket")
-        mocker.patch("utils.S3_KEY_PREFIX", "prefix/")
-        mock_upload = mocker.patch("utils.s3.get_s3_client")
+        mocker.patch("utils.B2_BUCKET_NAME", "bucket")
+        mocker.patch("utils.B2_NAME_PREFIX", "prefix/")
+        mock_upload = mocker.patch("utils.b2.get_b2_client")
 
         video_dir = temp_directory / "Show.Name"
         video_dir.mkdir(parents=True)
@@ -78,9 +78,9 @@ class TestUploadSubtitleFiles:
         )
 
     def test_no_matching_vtt_files(self, mocker, temp_directory):
-        mocker.patch("utils.S3_BUCKET_NAME", "bucket")
-        mocker.patch("utils.S3_KEY_PREFIX", "prefix/")
-        mock_upload = mocker.patch("utils.s3.get_s3_client")
+        mocker.patch("utils.B2_BUCKET_NAME", "bucket")
+        mocker.patch("utils.B2_NAME_PREFIX", "prefix/")
+        mock_upload = mocker.patch("utils.b2.get_b2_client")
 
         video_dir = temp_directory / "Show.Name"
         video_dir.mkdir(parents=True)

@@ -142,13 +142,13 @@ class TestPostMovies:
             ]
         )
 
-    def test_postMovies_s3_enabled(self, mocker):
-        mocker.patch("movie_runner.S3_ENABLED", True)
-        mocker.patch("movie_runner.S3_BUCKET_NAME", "bucket")
-        mocker.patch("movie_runner.S3_KEY_PREFIX", "prefix/")
-        mocker.patch("utils.S3_BUCKET_NAME", "bucket")
-        mocker.patch("utils.S3_KEY_PREFIX", "prefix/")
-        mock_upload = mocker.patch("movie_runner.s3.get_s3_client")
+    def test_postMovies_b2_enabled(self, mocker):
+        mocker.patch("movie_runner.B2_ENABLED", True)
+        mocker.patch("movie_runner.B2_BUCKET_NAME", "bucket")
+        mocker.patch("movie_runner.B2_NAME_PREFIX", "prefix/")
+        mocker.patch("utils.B2_BUCKET_NAME", "bucket")
+        mocker.patch("utils.B2_NAME_PREFIX", "prefix/")
+        mock_upload = mocker.patch("movie_runner.b2.get_b2_client")
         mock_post_media_path = mocker.patch("movie_runner.Movie.post_media_path")
         mock_upload_subtitle_files = mocker.patch(
             "movie_runner.upload_subtitle_files",
@@ -200,26 +200,26 @@ class TestPostMovies:
         mock_post_media_path.assert_has_calls(
             [
                 mock.call(
-                    "s3://bucket/prefix/movie1/",
+                    "b2://bucket/prefix/movie1/",
                     filename="Movie1.mp4",
                     subtitle_files=["Movie1.mp4.mv-encoded.mp4-0.vtt"],
                 ),
                 mock.call(
-                    "s3://bucket/prefix/movie2/",
+                    "b2://bucket/prefix/movie2/",
                     filename="Movie1.mp4",
                     subtitle_files=["Movie1.mp4.mv-encoded.mp4-0.vtt"],
                 ),
                 mock.call(
-                    "s3://bucket/prefix/movie3/",
+                    "b2://bucket/prefix/movie3/",
                     filename="Movie1.mp4",
                     subtitle_files=["Movie1.mp4.mv-encoded.mp4-0.vtt"],
                 ),
             ]
         )
 
-    def test_postMovies_s3_enabled_no_video_file(self, mocker):
-        mocker.patch("movie_runner.S3_ENABLED", True)
-        mocker.patch("movie_runner.s3.get_s3_client")
+    def test_postMovies_b2_enabled_no_video_file(self, mocker):
+        mocker.patch("movie_runner.B2_ENABLED", True)
+        mocker.patch("movie_runner.b2.get_b2_client")
         mock_post_media_path = mocker.patch("movie_runner.Movie.post_media_path")
         mocker.patch(
             "movie_runner.MovieRunner._get_largest_video_file", return_value=None
@@ -233,7 +233,7 @@ class TestPostMovies:
         ]
         assert not mock_post_media_path.called
 
-    def test_get_all_movies_s3_reverse_mapping(self, mocker, temp_directory):
+    def test_get_all_movies_b2_reverse_mapping(self, mocker, temp_directory):
         mocker.patch("utils.BASE_PATH", temp_directory)
         mocker.patch("movie_runner.LOCAL_MOVIE_PATHS", ["movies"])
         local_dir = temp_directory / "movies" / "Movie.Name"
@@ -245,7 +245,7 @@ class TestPostMovies:
                 {
                     "media_path": {
                         "pk": 1,
-                        "path": "s3://bucket/prefix/Movie.Name/",
+                        "path": "b2://bucket/prefix/Movie.Name/",
                     },
                     "finished": False,
                 }

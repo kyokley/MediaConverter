@@ -1,20 +1,20 @@
 import os
 from pathlib import Path
-import s3
+import b2
 from settings import (
     LOCAL_MOVIE_PATHS,
     SUBTITLE_FILES,
     DOMAIN,
     BASE_PATH,
-    S3_ENABLED,
-    S3_BUCKET_NAME,
-    S3_KEY_PREFIX,
+    B2_ENABLED,
+    B2_BUCKET_NAME,
+    B2_NAME_PREFIX,
 )
 from convert import reencodeFilesInDirectory
 from utils import (
     get_data,
     put_data,
-    get_s3_uri_for_local_path,
+    get_b2_uri_for_local_path,
     get_local_path_from_media_path,
     is_valid_media_file,
     upload_subtitle_files,
@@ -123,18 +123,18 @@ class MovieRunner:
                     if dry_run:
                         log.debug(f"Would post path for {localpath}")
                         continue
-                    if S3_ENABLED:
+                    if B2_ENABLED:
                         video_file = self._get_largest_video_file(localpath)
                         if video_file is None:
                             self.errors.append(
                                 f"No video file found in {localpath}. Continuing..."
                             )
                             continue
-                        key = f"{S3_KEY_PREFIX}{localpath.name}/{video_file.name}"
-                        s3.get_s3_client().upload_file(video_file, S3_BUCKET_NAME, key)
+                        key = f"{B2_NAME_PREFIX}{localpath.name}/{video_file.name}"
+                        b2.get_b2_client().upload_file(video_file, B2_BUCKET_NAME, key)
                         subtitle_files = upload_subtitle_files(video_file, localpath)
                         Movie.post_media_path(
-                            get_s3_uri_for_local_path(localpath),
+                            get_b2_uri_for_local_path(localpath),
                             filename=video_file.name,
                             subtitle_files=subtitle_files,
                         )

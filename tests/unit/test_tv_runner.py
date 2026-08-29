@@ -162,21 +162,21 @@ class TestTvRunner:
             [call("asdf", dry_run=False), call("sdfg", dry_run=False)]
         )
 
-    def test_get_or_create_media_path_s3_enabled(self, mocker):
-        mocker.patch("tv_runner.S3_ENABLED", True)
+    def test_get_or_create_media_path_b2_enabled(self, mocker):
+        mocker.patch("tv_runner.B2_ENABLED", True)
         mock_post = mocker.patch("tv_runner.Tv.post_media_path")
         mock_post.return_value = {"pk": 1, "skip": False}
-        mock_uri = mocker.patch("tv_runner.get_s3_uri_for_local_path")
-        mock_uri.return_value = "s3://bucket/prefix/Show.Name/"
+        mock_uri = mocker.patch("tv_runner.get_b2_uri_for_local_path")
+        mock_uri.return_value = "b2://bucket/prefix/Show.Name/"
 
         result = TvRunner.get_or_create_media_path(Path("/base/tv_shows/Show.Name"))
 
         assert result == {"pk": 1, "skip": False}
         mock_uri.assert_called_once_with(Path("/base/tv_shows/Show.Name"))
-        mock_post.assert_called_once_with("s3://bucket/prefix/Show.Name/")
+        mock_post.assert_called_once_with("b2://bucket/prefix/Show.Name/")
 
-    def test_get_or_create_media_path_s3_disabled(self, mocker):
-        mocker.patch("tv_runner.S3_ENABLED", False)
+    def test_get_or_create_media_path_b2_disabled(self, mocker):
+        mocker.patch("tv_runner.B2_ENABLED", False)
         mock_post = mocker.patch("tv_runner.Tv.post_media_path")
         mock_post.return_value = {"pk": 1, "skip": False}
 
@@ -185,11 +185,11 @@ class TestTvRunner:
         assert result == {"pk": 1, "skip": False}
         mock_post.assert_called_once_with(Path("/base/tv_shows/Show.Name"))
 
-    def test_updateFileRecords_s3_enabled(self, mocker):
-        mocker.patch("tv_runner.S3_ENABLED", True)
-        mocker.patch("tv_runner.S3_BUCKET_NAME", "bucket")
-        mocker.patch("tv_runner.S3_KEY_PREFIX", "prefix/")
-        mock_upload = mocker.patch("tv_runner.s3.get_s3_client")
+    def test_updateFileRecords_b2_enabled(self, mocker):
+        mocker.patch("tv_runner.B2_ENABLED", True)
+        mocker.patch("tv_runner.B2_BUCKET_NAME", "bucket")
+        mocker.patch("tv_runner.B2_NAME_PREFIX", "prefix/")
+        mock_upload = mocker.patch("tv_runner.b2.get_b2_client")
         mock_post_media_file = mocker.patch("tv_runner.MediaFile.post_media_file")
         mock_upload_subtitle_files = mocker.patch(
             "tv_runner.upload_subtitle_files", return_value=["subtitle.vtt"]
@@ -228,7 +228,7 @@ class TestTvRunner:
             subtitle_files=["subtitle.vtt"],
         )
 
-    def test_get_all_tv_s3_reverse_mapping(self, mocker, temp_directory):
+    def test_get_all_tv_b2_reverse_mapping(self, mocker, temp_directory):
         mocker.patch("utils.BASE_PATH", temp_directory)
         mocker.patch("tv_runner.LOCAL_TV_SHOWS_PATHS", ["tv_shows"])
         local_dir = temp_directory / "tv_shows" / "Show.Name"
@@ -238,7 +238,7 @@ class TestTvRunner:
         mock_response.json.return_value = {
             "results": [
                 {
-                    "media_paths": [{"pk": 1, "path": "s3://bucket/prefix/Show.Name/"}],
+                    "media_paths": [{"pk": 1, "path": "b2://bucket/prefix/Show.Name/"}],
                     "finished": False,
                 }
             ],

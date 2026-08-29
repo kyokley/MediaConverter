@@ -8,7 +8,7 @@ import smtplib
 
 import logging
 
-import s3
+import b2
 
 from settings import (
     WAITER_USERNAME,
@@ -20,8 +20,8 @@ from settings import (
     MEDIA_FILE_EXTENSIONS,
     DOMAIN,
     BASE_PATH,
-    S3_BUCKET_NAME,
-    S3_KEY_PREFIX,
+    B2_BUCKET_NAME,
+    B2_NAME_PREFIX,
 )
 
 log = logging.getLogger(__name__)
@@ -188,21 +188,21 @@ def get_localpath_by_filename(filename):
     return Path(data["path"])
 
 
-def get_s3_uri_for_local_path(local_path):
-    """Build the s3:// URI MediaViewer should store for a local directory."""
-    return f"s3://{S3_BUCKET_NAME}/{S3_KEY_PREFIX}{local_path.name}/"
+def get_b2_uri_for_local_path(local_path):
+    """Build the b2:// URI MediaViewer should store for a local directory."""
+    return f"b2://{B2_BUCKET_NAME}/{B2_NAME_PREFIX}{local_path.name}/"
 
 
 def upload_subtitle_files(video_path, media_path):
-    """Upload .vtt subtitle files matching the video to S3.
+    """Upload .vtt subtitle files matching the video to B2.
 
     Returns the list of uploaded subtitle file names.
     """
     subtitle_files = []
     for subtitle_file in Path(video_path).parent.glob("*.vtt"):
         if str(Path(video_path).stem) in subtitle_file.name:
-            key = f"{S3_KEY_PREFIX}{Path(media_path).name}/{subtitle_file.name}"
-            s3.get_s3_client().upload_file(subtitle_file, S3_BUCKET_NAME, key)
+            key = f"{B2_NAME_PREFIX}{Path(media_path).name}/{subtitle_file.name}"
+            b2.get_b2_client().upload_file(subtitle_file, B2_BUCKET_NAME, key)
             subtitle_files.append(subtitle_file.name)
     return subtitle_files
 
@@ -210,12 +210,12 @@ def upload_subtitle_files(video_path, media_path):
 def get_local_path_from_media_path(media_path, local_roots):
     """Map a MediaViewer media_path value back to a local filesystem path.
 
-    Handles local paths (absolute, or relative to BASE_PATH) and s3:// URIs.
-    S3 URIs are matched back to a local directory by name under one of the
+    Handles local paths (absolute, or relative to BASE_PATH) and b2:// URIs.
+    B2 URIs are matched back to a local directory by name under one of the
     given local roots; the first root whose candidate exists wins, falling
     back to the first root.
     """
-    if media_path.startswith("s3://"):
+    if media_path.startswith("b2://"):
         dirname = media_path.rstrip("/").rsplit("/", 1)[-1]
         for root in local_roots:
             candidate = Path(BASE_PATH) / root / dirname

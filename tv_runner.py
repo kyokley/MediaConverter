@@ -6,7 +6,7 @@ import shlex
 import shutil
 
 from pathlib import Path
-import s3
+import b2
 from settings import (
     SEND_EMAIL,
     MEDIA_FILE_EXTENSIONS,
@@ -14,9 +14,9 @@ from settings import (
     MINIMUM_FILE_SIZE,
     DOMAIN,
     LOCAL_TV_SHOWS_PATHS,
-    S3_ENABLED,
-    S3_BUCKET_NAME,
-    S3_KEY_PREFIX,
+    B2_ENABLED,
+    B2_BUCKET_NAME,
+    B2_NAME_PREFIX,
 )
 from convert import makeFileStreamable, SkipProcessing, AlreadyEncoded
 from utils import (
@@ -28,7 +28,7 @@ from utils import (
     post_data,
     get_data,
     put_data,
-    get_s3_uri_for_local_path,
+    get_b2_uri_for_local_path,
     get_local_path_from_media_path,
     upload_subtitle_files,
 )
@@ -179,8 +179,8 @@ class TvRunner:
     @staticmethod
     def get_or_create_media_path(local_path):
         log.info(f"Get or create MediaPath for {local_path}")
-        if S3_ENABLED:
-            media_path = get_s3_uri_for_local_path(local_path)
+        if B2_ENABLED:
+            media_path = get_b2_uri_for_local_path(local_path)
         else:
             media_path = local_path
         media_path_data = Tv.post_media_path(media_path)
@@ -238,9 +238,9 @@ class TvRunner:
 
                 if fullPath.exists():
                     subtitle_files = []
-                    if S3_ENABLED:
-                        key = f"{S3_KEY_PREFIX}{Path(path).name}/{fullPath.name}"
-                        s3.get_s3_client().upload_file(fullPath, S3_BUCKET_NAME, key)
+                    if B2_ENABLED:
+                        key = f"{B2_NAME_PREFIX}{Path(path).name}/{fullPath.name}"
+                        b2.get_b2_client().upload_file(fullPath, B2_BUCKET_NAME, key)
                         subtitle_files = upload_subtitle_files(fullPath, path)
                     MediaFile.post_media_file(
                         fullPath.name,
