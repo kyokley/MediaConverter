@@ -126,7 +126,7 @@ class B2Client:
                 part = f.read(LARGE_FILE_PART_SIZE)
                 if not part:
                     break
-                sha1 = hashlib.sha1(part).hexdigest()
+                sha1 = hashlib.sha1(part, usedforsecurity=False).hexdigest()
                 headers = {
                     "Authorization": part_upload["authorizationToken"],
                     "X-Bz-Part-Number": str(part_number),
@@ -167,7 +167,7 @@ class B2Client:
 
     @staticmethod
     def _file_sha1(local_path):
-        sha1 = hashlib.sha1()
+        sha1 = hashlib.sha1(usedforsecurity=False)
         with open(local_path, "rb") as f:
             for chunk in iter(lambda: f.read(1024 * 1024), b""):
                 sha1.update(chunk)
