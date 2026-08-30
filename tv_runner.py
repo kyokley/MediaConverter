@@ -1,18 +1,22 @@
 import os
+import json
 import traceback
 import subprocess  # nosec
 import shlex
 import shutil
 
 from pathlib import Path
+import b2
 from settings import (
-    BASE_PATH,
     SEND_EMAIL,
     MEDIA_FILE_EXTENSIONS,
     UNSORTED_PATHS,
     MINIMUM_FILE_SIZE,
     DOMAIN,
     LOCAL_TV_SHOWS_PATHS,
+    B2_ENABLED,
+    B2_BUCKET_NAME,
+    B2_NAME_PREFIX,
 )
 from convert import makeFileStreamable, SkipProcessing, AlreadyEncoded
 from utils import (
@@ -24,6 +28,9 @@ from utils import (
     post_data,
     get_data,
     put_data,
+    get_b2_uri_for_local_path,
+    get_local_path_from_media_path,
+    upload_subtitle_files,
 )
 
 import logging
@@ -41,8 +48,16 @@ class MediaPathMixin:
         return cls.MEDIAVIEWER_MEDIAPATH_URL + "{media_path_id}/"
 
     @classmethod
-    def post_media_path(cls, path, tv=None, movie=None):
-        payload = {"path": path, "tv": tv, "movie": movie}
+    def post_media_path(
+        cls, path, tv=None, movie=None, filename=None, subtitle_files=None
+    ):
+        payload = {
+            "path": path,
+            "tv": tv,
+            "movie": movie,
+            "filename": filename,
+            "subtitle_files": json.dumps(subtitle_files or []),
+        }
         resp = post_data(payload, cls.MEDIAVIEWER_MEDIAPATH_URL)
         return resp.json()
 
@@ -104,11 +119,9 @@ class Tv(MediaPathMixin):
                     media_paths = result["media_paths"]
 
                     for media_path in media_paths:
-                        mp = media_path["path"]
-                        if BASE_PATH not in mp:
-                            local_path = Path(BASE_PATH) / mp
-                        else:
-                            local_path = Path(mp)
+                        local_path = get_local_path_from_media_path(
+                            media_path["path"], LOCAL_TV_SHOWS_PATHS
+                        )
 
                         val = paths.setdefault(
                             local_path, {"pks": set(), "finished": result["finished"]}
@@ -130,8 +143,14 @@ class MediaFile:
         filename,
         media_path_id,
         size,
+        subtitle_files=None,
     ):
-        payload = {"filename": filename, "media_path": media_path_id, "size": size}
+        payload = {
+            "filename": filename,
+            "media_path": media_path_id,
+            "size": size,
+            "subtitle_files": json.dumps(subtitle_files or []),
+        }
         resp = post_data(payload, cls.MEDIAVIEWER_MEDIAFILE_URL)
         resp.raise_for_status()
         return resp.json()
@@ -160,7 +179,11 @@ class TvRunner:
     @staticmethod
     def get_or_create_media_path(local_path):
         log.info(f"Get or create MediaPath for {local_path}")
-        media_path_data = Tv.post_media_path(local_path)
+        if B2_ENABLED:
+            media_path = get_b2_uri_for_local_path(local_path)
+        else:
+            media_path = local_path
+        media_path_data = Tv.post_media_path(media_path)
         return {
             "pk": media_path_data["pk"],
             "skip": media_path_data["skip"],
@@ -214,8 +237,16 @@ class TvRunner:
                     continue
 
                 if fullPath.exists():
+                    subtitle_files = []
+                    if B2_ENABLED:
+                        key = f"{B2_NAME_PREFIX}{Path(path).name}/{fullPath.name}"
+                        b2.get_b2_client().upload_file(fullPath, B2_BUCKET_NAME, key)
+                        subtitle_files = upload_subtitle_files(fullPath, path)
                     MediaFile.post_media_file(
-                        fullPath.name, media_path_id, fullPath.stat().st_size
+                        fullPath.name,
+                        media_path_id,
+                        fullPath.stat().st_size,
+                        subtitle_files=subtitle_files,
                     )
             except Exception as e:
                 errorMsg = (
