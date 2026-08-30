@@ -68,6 +68,8 @@ B2_APPLICATION_KEY = os.getenv("MC_B2_APPLICATION_KEY", "")
 B2_BUCKET_NAME = os.getenv("MC_B2_BUCKET_NAME", "")
 B2_NAME_PREFIX = os.getenv("MC_B2_NAME_PREFIX", "")
 
+BROKER = os.getenv("MC_BROKER", "")
+
 # DON'T MAKE ANY EDITS BELOW THIS LINE!!!!
 try:
     from local_settings import *  # noqa
