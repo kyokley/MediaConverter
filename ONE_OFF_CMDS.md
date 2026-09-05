@@ -24,3 +24,8 @@ do
 ffmpeg -i "${file}" -c:v copy -c:a copy "${file}.no-sub.mkv"
 done
 ```
+
+Standard recompression
+```
+ffmpeg -hide_banner -y -i <input_file_name> -c:v libx264 -c:a libfdk_aac -ac 2 -pix_fmt yuv420p -movflags faststart <output_file_name>
+```
