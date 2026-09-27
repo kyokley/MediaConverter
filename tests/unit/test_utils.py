@@ -3,7 +3,7 @@ import mock
 import requests
 from pathlib import Path
 
-from utils import get_localpath_by_filename
+from utils import get_localpath_by_filename, upload_subtitle_files
 
 
 class TestGetLocalpathByFilename:
@@ -51,3 +51,62 @@ class TestGetLocalpathByFilename:
             params={"title": self.test_filename},
             auth=("waiter_username", "waiter_password"),
         )
+
+
+class TestUploadSubtitleFiles:
+    def test_uploads_to_explicit_destination(self, mocker, temp_directory):
+        mock_upload = mocker.patch("utils.b2.get_b2_client")
+        video = temp_directory / "Episode.mv-encoded.mp4"
+        video.write_bytes(b"video")
+        subtitle = temp_directory / "Episode.mv-encoded.mp4-0.vtt"
+        subtitle.write_bytes(b"subtitle")
+
+        result = upload_subtitle_files(
+            video,
+            temp_directory,
+            bucket="remote-bucket",
+            key_prefix="archive/nested/Show/",
+        )
+
+        assert result == [subtitle.name]
+        mock_upload.return_value.upload_file.assert_called_once_with(
+            subtitle, "remote-bucket", f"archive/nested/Show/{subtitle.name}"
+        )
+
+    def test_uploads_matching_vtt_files(self, mocker, temp_directory):
+        mocker.patch("utils.B2_BUCKET_NAME", "bucket")
+        mocker.patch("utils.B2_NAME_PREFIX", "prefix/")
+        mock_upload = mocker.patch("utils.b2.get_b2_client")
+
+        video_dir = temp_directory / "Show.Name"
+        video_dir.mkdir(parents=True)
+        video_path = video_dir / "Show.Name.S01E01.mv-encoded.mp4"
+        video_path.write_bytes(b"video")
+        matching = video_dir / "Show.Name.S01E01.mv-encoded.mp4.mv-encoded.mp4-0.vtt"
+        matching.write_bytes(b"subtitle")
+        other = video_dir / "Show.Name.S01E02.mv-encoded.mp4.mv-encoded.mp4-0.vtt"
+        other.write_bytes(b"other subtitle")
+
+        result = upload_subtitle_files(video_path, video_dir)
+
+        assert result == ["Show.Name.S01E01.mv-encoded.mp4.mv-encoded.mp4-0.vtt"]
+        mock_upload.return_value.upload_file.assert_called_once_with(
+            matching,
+            "bucket",
+            "prefix/Show.Name/Show.Name.S01E01.mv-encoded.mp4.mv-encoded.mp4-0.vtt",
+        )
+
+    def test_no_matching_vtt_files(self, mocker, temp_directory):
+        mocker.patch("utils.B2_BUCKET_NAME", "bucket")
+        mocker.patch("utils.B2_NAME_PREFIX", "prefix/")
+        mock_upload = mocker.patch("utils.b2.get_b2_client")
+
+        video_dir = temp_directory / "Show.Name"
+        video_dir.mkdir(parents=True)
+        video_path = video_dir / "Show.Name.S01E01.mv-encoded.mp4"
+        video_path.write_bytes(b"video")
+
+        result = upload_subtitle_files(video_path, video_dir)
+
+        assert result == []
+        assert not mock_upload.return_value.upload_file.called
