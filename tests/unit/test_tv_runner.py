@@ -3,7 +3,7 @@ from pathlib import Path
 
 import mock
 from mock import call
-from tv_runner import TvRunner
+from tv_runner import TvRunner, Tv
 
 
 class TestTvRunner:
@@ -104,6 +104,7 @@ class TestTvRunner:
             mock_makeFileStreamable().name,
             1,
             mock_makeFileStreamable().stat().st_size,
+            subtitle_files=[],
         )
 
     def test_run(self):
@@ -160,3 +161,91 @@ class TestTvRunner:
         self.tvRunner.handleDirs.assert_has_calls(
             [call("asdf", dry_run=False), call("sdfg", dry_run=False)]
         )
+
+    def test_get_or_create_media_path_b2_enabled(self, mocker):
+        mocker.patch("tv_runner.B2_ENABLED", True)
+        mock_post = mocker.patch("tv_runner.Tv.post_media_path")
+        mock_post.return_value = {"pk": 1, "skip": False}
+        mock_uri = mocker.patch("tv_runner.get_b2_uri_for_local_path")
+        mock_uri.return_value = "b2://bucket/prefix/Show.Name/"
+
+        result = TvRunner.get_or_create_media_path(Path("/base/tv_shows/Show.Name"))
+
+        assert result == {"pk": 1, "skip": False}
+        mock_uri.assert_called_once_with(Path("/base/tv_shows/Show.Name"))
+        mock_post.assert_called_once_with("b2://bucket/prefix/Show.Name/")
+
+    def test_get_or_create_media_path_b2_disabled(self, mocker):
+        mocker.patch("tv_runner.B2_ENABLED", False)
+        mock_post = mocker.patch("tv_runner.Tv.post_media_path")
+        mock_post.return_value = {"pk": 1, "skip": False}
+
+        result = TvRunner.get_or_create_media_path(Path("/base/tv_shows/Show.Name"))
+
+        assert result == {"pk": 1, "skip": False}
+        mock_post.assert_called_once_with(Path("/base/tv_shows/Show.Name"))
+
+    def test_updateFileRecords_b2_enabled(self, mocker):
+        mocker.patch("tv_runner.B2_ENABLED", True)
+        mocker.patch("tv_runner.B2_BUCKET_NAME", "bucket")
+        mocker.patch("tv_runner.B2_NAME_PREFIX", "prefix/")
+        mock_upload = mocker.patch("tv_runner.b2.get_b2_client")
+        mock_post_media_file = mocker.patch("tv_runner.MediaFile.post_media_file")
+        mock_upload_subtitle_files = mocker.patch(
+            "tv_runner.upload_subtitle_files", return_value=["subtitle.vtt"]
+        )
+        mock_makeFileStreamable = mocker.patch("tv_runner.makeFileStreamable")
+        mock_get_or_create_media_path = mocker.patch(
+            "tv_runner.TvRunner.get_or_create_media_path"
+        )
+        mock_os_path_exists = mocker.patch("tv_runner.os.path.exists")
+        mock_os_path_getsize = mocker.patch("tv_runner.os.path.getsize")
+        mock_os_path_basename = mocker.patch("tv_runner.os.path.basename")
+
+        mock_get_or_create_media_path.return_value = {"pk": 1, "skip": False}
+        mock_os_path_exists.return_value = True
+        mock_os_path_getsize.return_value = 1
+        mock_os_path_basename.return_value = "basename"
+        mock_makeFileStreamable.return_value.name = "newfile"
+
+        test_path = "/a/local/path"
+        test_localFileSet = set(["newfile"])
+        test_remoteFileSet = set()
+
+        self.tvRunner.updateFileRecords(
+            test_path, test_localFileSet, test_remoteFileSet
+        )
+        mock_upload.return_value.upload_file.assert_called_once_with(
+            mock_makeFileStreamable(), "bucket", "prefix/path/newfile"
+        )
+        mock_upload_subtitle_files.assert_called_once_with(
+            mock_makeFileStreamable(), test_path
+        )
+        mock_post_media_file.assert_called_once_with(
+            mock_makeFileStreamable().name,
+            1,
+            mock_makeFileStreamable().stat().st_size,
+            subtitle_files=["subtitle.vtt"],
+        )
+
+    def test_get_all_tv_b2_reverse_mapping(self, mocker, temp_directory):
+        mocker.patch("utils.BASE_PATH", temp_directory)
+        mocker.patch("tv_runner.LOCAL_TV_SHOWS_PATHS", ["tv_shows"])
+        local_dir = temp_directory / "tv_shows" / "Show.Name"
+        local_dir.mkdir(parents=True)
+
+        mock_response = mock.MagicMock()
+        mock_response.json.return_value = {
+            "results": [
+                {
+                    "media_paths": [{"pk": 1, "path": "b2://bucket/prefix/Show.Name/"}],
+                    "finished": False,
+                }
+            ],
+            "next": "",
+        }
+        mocker.patch("tv_runner.get_data", return_value=mock_response)
+
+        paths = Tv.get_all_tv()
+
+        assert paths == {local_dir: {"pks": {1}, "finished": False}}
