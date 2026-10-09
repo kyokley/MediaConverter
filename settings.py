@@ -27,7 +27,7 @@ UNSORTED_PATHS = (
 BASE_PATH = os.getenv("MC_BASE_PATH", "/home/user")
 
 DOMAIN = os.getenv(
-    "MC_DOMAIN", "https://127.0.0.1:8001"
+    "MC_DOMAIN", "https://127.0.0.1:8000"
 )  # Do not include trailing slash
 
 MEDIAVIEWER_SUFFIX = os.getenv("MC_MEDIAVIEWER_SUFFIX", "mv-encoded.mp4")

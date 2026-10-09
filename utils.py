@@ -1,26 +1,26 @@
-import requests
-import os
-import time
-
-from pathlib import Path
-from unidecode import unidecode
-import smtplib
-
 import logging
+import os
+import smtplib
+import time
+from pathlib import Path
+
+import requests
+from unidecode import unidecode
 
 import b2
 from settings import (
-    WAITER_USERNAME,
-    WAITER_PASSWORD,
-    GMAIL_USER,
-    GMAIL_PASSWORD,
-    EMAIL_RECIPIENTS,
-    VERIFY_REQUESTS,
-    MEDIA_FILE_EXTENSIONS,
-    DOMAIN,
-    BASE_PATH,
     B2_BUCKET_NAME,
     B2_NAME_PREFIX,
+    BASE_PATH,
+    DOMAIN,
+    EMAIL_RECIPIENTS,
+    GMAIL_PASSWORD,
+    GMAIL_USER,
+    MEDIA_FILE_EXTENSIONS,
+    TIMEOUT,
+    VERIFY_REQUESTS,
+    WAITER_PASSWORD,
+    WAITER_USERNAME,
 )
 
 log = logging.getLogger(__name__)
@@ -54,6 +54,7 @@ def post_data(values, url):
                 data={},
                 auth=(WAITER_USERNAME, WAITER_PASSWORD),
                 verify=VERIFY_REQUESTS,
+                timeout=TIMEOUT,
             )
             time.sleep(_external_request_cooldown())
         except Exception as e:
@@ -108,6 +109,7 @@ def _make_request(verb, url, values=None):
             data=values,
             auth=(WAITER_USERNAME, WAITER_PASSWORD),
             verify=VERIFY_REQUESTS,
+            timeout=TIMEOUT,
         )
         request.raise_for_status()
         time.sleep(_external_request_cooldown())
@@ -174,6 +176,7 @@ def get_localpath_by_filename(filename):
         mediaviewer_infer_scrapers_url(),
         params={"title": filename},
         auth=(WAITER_USERNAME, WAITER_PASSWORD),
+        timeout=TIMEOUT,
     )
 
     try:
