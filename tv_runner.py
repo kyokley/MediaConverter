@@ -399,3 +399,10 @@ class TvRunner:
                 else:
                     log.info(f"Moving {src} to {dst}")
                     shutil.move(src, dst)
+
+
+if __name__ == "__main__":
+    runner = TvRunner()
+    errors = runner.run()
+    if errors:
+        print(errors)
