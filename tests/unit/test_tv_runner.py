@@ -67,6 +67,7 @@ class TestTvRunner:
         mock_get_or_create_media_path = mocker.patch(
             "tv_runner.TvRunner.get_or_create_media_path"
         )
+        mocker.patch("tv_runner.B2_ENABLED", False)
         mock_os_path_exists = mocker.patch("tv_runner.os.path.exists")
         mock_os_path_getsize = mocker.patch("tv_runner.os.path.getsize")
         mock_os_path_basename = mocker.patch("tv_runner.os.path.basename")
@@ -120,10 +121,10 @@ class TestTvRunner:
         self.tvRunner.buildLocalFileSet = mock.MagicMock()
         self.tvRunner.buildLocalFileSet.return_value = set(["some", "paths"])
 
-        self.tvRunner.build_remote_media_file_set = mock.MagicMock()
-        self.tvRunner.build_remote_media_file_set.return_value = set(
-            ["some", "remote", "paths"]
-        )
+        self.tvRunner.fetch_remote_media_path_details = mock.MagicMock()
+        self.tvRunner.fetch_remote_media_path_details.return_value = [
+            {"pk": 1, "media_files": ["some", "remote", "paths"]}
+        ]
 
         self.tvRunner.updateFileRecords = mock.MagicMock()
 
@@ -136,10 +137,10 @@ class TestTvRunner:
             [call("sdfg"), call("asdf")], any_order=True
         )
         assert 2 == self.tvRunner.buildLocalFileSet.call_count
-        self.tvRunner.build_remote_media_file_set.assert_has_calls(
+        self.tvRunner.fetch_remote_media_path_details.assert_has_calls(
             [call([1]), call([12, 23])], any_order=True
         )
-        assert 2 == self.tvRunner.build_remote_media_file_set.call_count
+        assert 2 == self.tvRunner.fetch_remote_media_path_details.call_count
 
         self.tvRunner.updateFileRecords.assert_has_calls(
             [
@@ -148,12 +149,18 @@ class TestTvRunner:
                     set(["paths", "some"]),
                     set(["remote", "some", "paths"]),
                     dry_run=False,
+                    media_path_details=[
+                        {"pk": 1, "media_files": ["some", "remote", "paths"]}
+                    ],
                 ),
                 call(
                     "asdf",
                     set(["paths", "some"]),
                     set(["remote", "some", "paths"]),
                     dry_run=False,
+                    media_path_details=[
+                        {"pk": 1, "media_files": ["some", "remote", "paths"]}
+                    ],
                 ),
             ],
             any_order=True,

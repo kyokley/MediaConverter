@@ -4,6 +4,7 @@ import traceback
 import subprocess  # nosec
 import shlex
 import shutil
+from urllib.parse import urlsplit
 
 from pathlib import Path
 import b2
@@ -191,18 +192,69 @@ class TvRunner:
 
     @staticmethod
     def build_remote_media_file_set(pathIDs):
-        fileSet = set()
+        return {
+            filename
+            for detail in TvRunner.fetch_remote_media_path_details(pathIDs)
+            for filename in detail["media_files"]
+        }
+
+    @staticmethod
+    def fetch_remote_media_path_details(pathIDs):
+        details = []
         for pathid in pathIDs:
             # Skip local paths
             if pathid == -1:
                 continue
-            res = Tv.get_media_path(pathid)
-            fileSet.update(res["media_files"])
-        log.info("Built remote fileSet")
+            detail = Tv.get_media_path(pathid)
+            detail.setdefault("pk", pathid)
+            details.append(detail)
+        return details
 
-        return fileSet
+    @staticmethod
+    def _select_b2_destination(path, media_path_details):
+        destinations = {}
+        for detail in media_path_details or []:
+            uri = detail.get("path", "")
+            if uri.startswith("b2://"):
+                destinations.setdefault(uri, []).append(detail)
+        if not destinations:
+            return None
+        if len(destinations) > 1:
+            configured_uri = get_b2_uri_for_local_path(Path(path))
+            if configured_uri not in destinations:
+                raise ValueError(
+                    f"Ambiguous B2 media paths for {path}: {sorted(destinations)}"
+                )
+            uri = configured_uri
+        else:
+            uri = next(iter(destinations))
+        detail = min(destinations[uri], key=lambda item: item["pk"])
+        parsed = urlsplit(uri)
+        if (
+            parsed.scheme != "b2"
+            or not parsed.netloc
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError(f"Invalid B2 media path: {uri}")
+        key_prefix = parsed.path.removeprefix("/")
+        if key_prefix and not key_prefix.endswith("/"):
+            key_prefix += "/"
+        return {
+            "pk": detail["pk"],
+            "skip": detail.get("skip", False),
+            "bucket": parsed.netloc,
+            "key_prefix": key_prefix,
+        }
 
-    def updateFileRecords(self, path, localFileSet, remoteFileSet, dry_run=False):
+    def updateFileRecords(
+        self, path, localFileSet, remoteFileSet, dry_run=False, media_path_details=None
+    ):
+        destination = (
+            self._select_b2_destination(path, media_path_details)
+            if B2_ENABLED
+            else None
+        )
         media_path_id = None
         for localFile in localFileSet.difference(remoteFileSet):
             if not localFile:
@@ -213,7 +265,9 @@ class TvRunner:
                 continue
 
             if not media_path_id:
-                media_path_data = self.get_or_create_media_path(path)
+                media_path_data = destination or self.get_or_create_media_path(
+                    Path(path) if B2_ENABLED else path
+                )
                 if media_path_data["skip"]:
                     break
 
@@ -232,7 +286,11 @@ class TvRunner:
                     log.error("Attempting to recover and continue")
                     self.errors.append(errorMsg)
                     continue
-                except (AlreadyEncoded, SkipProcessing) as e:
+                except AlreadyEncoded as e:
+                    log.warning(e)
+                    if not fullPath.exists() or fullPath.suffix.lower() != ".mp4":
+                        continue
+                except SkipProcessing as e:
                     log.warning(e)
                     continue
 
@@ -364,10 +422,21 @@ class TvRunner:
                 continue
 
             log.info(f"Attempting to get remote files for {path}")
-            remoteFileSet = self.build_remote_media_file_set(pathIDs)
+            media_path_details = self.fetch_remote_media_path_details(pathIDs)
+            remoteFileSet = {
+                filename
+                for detail in media_path_details
+                for filename in detail["media_files"]
+            }
             log.info(f"Done building remote file set for {path}")
 
-            self.updateFileRecords(path, localFileSet, remoteFileSet, dry_run=dry_run)
+            self.updateFileRecords(
+                path,
+                localFileSet,
+                remoteFileSet,
+                dry_run=dry_run,
+                media_path_details=media_path_details,
+            )
 
         if self.errors:
             log.error("Errors occured in the following files:")
