@@ -1,13 +1,24 @@
 import os
 from pathlib import Path
+import b2
 from settings import (
     LOCAL_MOVIE_PATHS,
     SUBTITLE_FILES,
     DOMAIN,
     BASE_PATH,
+    B2_ENABLED,
+    B2_BUCKET_NAME,
+    B2_NAME_PREFIX,
 )
 from convert import reencodeFilesInDirectory
-from utils import get_data, put_data
+from utils import (
+    get_data,
+    put_data,
+    get_b2_uri_for_local_path,
+    get_local_path_from_media_path,
+    is_valid_media_file,
+    upload_subtitle_files,
+)
 from tv_runner import MediaPathMixin
 
 import logging
@@ -59,10 +70,9 @@ class Movie(MediaPathMixin):
                 for result in data["results"]:
                     media_path = result["media_path"]
 
-                    if BASE_PATH not in media_path:
-                        local_path = Path(BASE_PATH) / media_path["path"]
-                    else:
-                        local_path = Path(media_path["path"])
+                    local_path = get_local_path_from_media_path(
+                        media_path["path"], LOCAL_MOVIE_PATHS
+                    )
 
                     val = paths.setdefault(
                         local_path, {"pks": set(), "finished": result["finished"]}
@@ -112,6 +122,22 @@ class MovieRunner:
                     log.info(f"Posting {localpath}")
                     if dry_run:
                         log.debug(f"Would post path for {localpath}")
+                        continue
+                    if B2_ENABLED:
+                        video_file = self._get_largest_video_file(localpath)
+                        if video_file is None:
+                            self.errors.append(
+                                f"No video file found in {localpath}. Continuing..."
+                            )
+                            continue
+                        key = f"{B2_NAME_PREFIX}{localpath.name}/{video_file.name}"
+                        b2.get_b2_client().upload_file(video_file, B2_BUCKET_NAME, key)
+                        subtitle_files = upload_subtitle_files(video_file, localpath)
+                        Movie.post_media_path(
+                            get_b2_uri_for_local_path(localpath),
+                            filename=video_file.name,
+                            subtitle_files=subtitle_files,
+                        )
                     else:
                         Movie.post_media_path(localpath)
 
@@ -139,6 +165,17 @@ class MovieRunner:
             return set()
 
         return set(os.listdir(moviepath))
+
+    @staticmethod
+    def _get_largest_video_file(localpath):
+        video_files = [
+            f
+            for f in Path(localpath).iterdir()
+            if f.is_file() and is_valid_media_file(f)
+        ]
+        if not video_files:
+            return None
+        return max(video_files, key=lambda f: f.stat().st_size)
 
     def run(self, dry_run=False):
         self.postMovies(dry_run=dry_run)
