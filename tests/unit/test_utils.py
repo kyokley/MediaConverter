@@ -3,7 +3,11 @@ import mock
 import requests
 from pathlib import Path
 
-from utils import get_localpath_by_filename, upload_subtitle_files
+from utils import (
+    get_localpath_by_filename,
+    get_media_path_by_filename,
+    upload_subtitle_files,
+)
 
 
 class TestGetLocalpathByFilename:
@@ -51,6 +55,13 @@ class TestGetLocalpathByFilename:
             params={"title": self.test_filename},
             auth=("waiter_username", "waiter_password"),
         )
+
+    def test_returns_raw_b2_media_path(self):
+        uri = "b2://bucket/prefix//Show%20Name/"
+        self.mock_response.json.return_value = {"path": uri}
+
+        assert get_media_path_by_filename(self.test_filename) == uri
+        assert self.mock_get.call_args.kwargs["timeout"]
 
 
 class TestUploadSubtitleFiles:

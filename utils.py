@@ -172,6 +172,12 @@ def is_valid_media_file(path):
 
 
 def get_localpath_by_filename(filename):
+    media_path = get_media_path_by_filename(filename)
+    return Path(media_path) if media_path else None
+
+
+def get_media_path_by_filename(filename):
+    """Return the inferred MediaViewer media path without converting its type."""
     resp = requests.get(
         mediaviewer_infer_scrapers_url(),
         params={"title": filename},
@@ -187,7 +193,7 @@ def get_localpath_by_filename(filename):
         return
 
     data = resp.json()
-    return Path(data["path"])
+    return data["path"]
 
 
 def get_b2_uri_for_local_path(local_path):
