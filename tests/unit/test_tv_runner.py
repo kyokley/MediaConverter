@@ -775,6 +775,130 @@ class TestTvRunner:
         )
         mock_create.assert_not_called()
 
+    def test_unsorted_local_inference_maps_and_uses_created_destination(
+        self, mocker, temp_directory
+    ):
+        mocker.patch("tv_runner.B2_ENABLED", True)
+        mocker.patch("tv_runner.UNSORTED_PATHS", [str(temp_directory)])
+        mocker.patch("tv_runner.MINIMUM_FILE_SIZE", 0)
+        mocker.patch("utils.B2_BUCKET_NAME", "configured-bucket")
+        mocker.patch("utils.B2_NAME_PREFIX", "configured-prefix/")
+        mocker.patch(
+            "tv_runner.get_media_path_by_filename", return_value="/tv/Show.Name/"
+        )
+        mapped_uri = "b2://configured-bucket/configured-prefix/Show.Name/"
+        mocker.patch("tv_runner.Tv.get_all_media_paths", return_value=[])
+        create = mocker.patch(
+            "tv_runner.Tv.post_media_path", return_value={"pk": 77, "skip": False}
+        )
+        source = temp_directory / "Show.Name.S01E01.mkv"
+        output = temp_directory / "Show.Name.S01E01.mp4"
+        source.write_bytes(b"source")
+
+        def encode(*args, **kwargs):
+            output.write_bytes(b"encoded")
+            return output
+
+        mocker.patch("tv_runner.makeFileStreamable", side_effect=encode)
+        mocker.patch("tv_runner.stripUnicode", return_value=source)
+        upload = mocker.patch("tv_runner.b2.get_b2_client")
+        mocker.patch("tv_runner.upload_subtitle_files", return_value=[])
+        record = mocker.patch("tv_runner.MediaFile.post_media_file")
+        mocker.stop(self.mock_sort_unsorted_files)
+
+        self.tvRunner._sort_unsorted_files()
+
+        create.assert_called_once_with(mapped_uri)
+        upload.return_value.upload_file.assert_called_once_with(
+            output,
+            "configured-bucket",
+            "configured-prefix/Show.Name/Show.Name.S01E01.mp4",
+        )
+        record.assert_called_once_with(
+            output.name, 77, len(b"encoded"), subtitle_files=[]
+        )
+
+    def test_unsorted_local_inference_reuses_mapped_destination(
+        self, mocker, temp_directory
+    ):
+        mocker.patch("tv_runner.B2_ENABLED", True)
+        mocker.patch("tv_runner.UNSORTED_PATHS", [str(temp_directory)])
+        mocker.patch("tv_runner.MINIMUM_FILE_SIZE", 0)
+        mocker.patch(
+            "tv_runner.get_media_path_by_filename", return_value="/tv/Show.Name/"
+        )
+        mapped_uri = "b2://configured-bucket/configured-prefix/Show.Name/"
+        mocker.patch("utils.B2_BUCKET_NAME", "configured-bucket")
+        mocker.patch("utils.B2_NAME_PREFIX", "configured-prefix/")
+        mocker.patch(
+            "tv_runner.Tv.get_all_media_paths",
+            return_value=[{"pk": 12, "path": mapped_uri}],
+        )
+        detail = {
+            "pk": 12,
+            "path": mapped_uri,
+            "skip": False,
+            "media_files": [],
+        }
+        get_detail = mocker.patch("tv_runner.Tv.get_media_path", return_value=detail)
+        create = mocker.patch("tv_runner.Tv.post_media_path")
+        source = temp_directory / "Show.Name.S01E02.mkv"
+        output = temp_directory / "Show.Name.S01E02.mp4"
+        source.write_bytes(b"source")
+
+        def encode(*args, **kwargs):
+            output.write_bytes(b"encoded")
+            return output
+
+        mocker.patch("tv_runner.makeFileStreamable", side_effect=encode)
+        mocker.patch("tv_runner.stripUnicode", return_value=source)
+        upload = mocker.patch("tv_runner.b2.get_b2_client")
+        mocker.patch("tv_runner.upload_subtitle_files", return_value=[])
+        record = mocker.patch("tv_runner.MediaFile.post_media_file")
+        mocker.stop(self.mock_sort_unsorted_files)
+
+        self.tvRunner._sort_unsorted_files()
+
+        get_detail.assert_called_once_with(12)
+        create.assert_not_called()
+        upload.return_value.upload_file.assert_called_once_with(
+            output,
+            "configured-bucket",
+            "configured-prefix/Show.Name/Show.Name.S01E02.mp4",
+        )
+        record.assert_called_once_with(
+            output.name, 12, len(b"encoded"), subtitle_files=[]
+        )
+
+    def test_unsorted_local_inference_dry_run_does_not_write(
+        self, mocker, temp_directory
+    ):
+        mocker.patch("tv_runner.B2_ENABLED", True)
+        mocker.patch("tv_runner.UNSORTED_PATHS", [str(temp_directory)])
+        mocker.patch("tv_runner.MINIMUM_FILE_SIZE", 0)
+        mocker.patch(
+            "tv_runner.get_media_path_by_filename", return_value="/tv/Show.Name/"
+        )
+        mocker.patch(
+            "tv_runner.get_b2_uri_for_local_path",
+            return_value="b2://bucket/prefix/Show.Name/",
+        )
+        mocker.patch("tv_runner.Tv.get_all_media_paths", return_value=[])
+        source = temp_directory / "episode.mkv"
+        source.write_bytes(b"video")
+        create = mocker.patch("tv_runner.Tv.post_media_path")
+        encode = mocker.patch("tv_runner.makeFileStreamable")
+        upload = mocker.patch("tv_runner.b2.get_b2_client")
+        post_file = mocker.patch("tv_runner.MediaFile.post_media_file")
+        mocker.stop(self.mock_sort_unsorted_files)
+
+        self.tvRunner._sort_unsorted_files(dry_run=True)
+
+        create.assert_not_called()
+        encode.assert_not_called()
+        upload.assert_not_called()
+        post_file.assert_not_called()
+
     def test_unsorted_skip_and_dry_run_do_not_mutate(self, mocker, temp_directory):
         mocker.patch("tv_runner.B2_ENABLED", True)
         mocker.patch("tv_runner.UNSORTED_PATHS", [str(temp_directory)])
@@ -881,7 +1005,7 @@ class TestTvRunner:
             output.name, 8, len(b"encoded"), subtitle_files=[]
         )
 
-    @pytest.mark.parametrize("inferred", [None, "/local/show", "b2://bucket/?invalid"])
+    @pytest.mark.parametrize("inferred", [None, "b2://bucket/?invalid"])
     def test_unsorted_invalid_inference_is_ignored(
         self, mocker, temp_directory, inferred
     ):

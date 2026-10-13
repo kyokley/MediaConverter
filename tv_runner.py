@@ -496,9 +496,11 @@ class TvRunner:
                     ):
                         continue
                     inferred_uri = get_media_path_by_filename(src.name)
-                    if not inferred_uri or not inferred_uri.startswith("b2://"):
-                        log.warning(f"No B2 media path inferred for {src.name}")
+                    if not inferred_uri:
+                        log.warning(f"No media path inferred for {src.name}")
                         continue
+                    if not inferred_uri.startswith("b2://"):
+                        inferred_uri = get_b2_uri_for_local_path(Path(inferred_uri))
                     try:
                         self._select_b2_destination(
                             src.parent,

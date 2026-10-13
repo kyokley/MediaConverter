@@ -17,6 +17,8 @@ class TestGetLocalpathByFilename:
 
         mocker.patch("utils.WAITER_PASSWORD", "waiter_password")
 
+        mocker.patch("utils.TIMEOUT", 5)
+
         mocker.patch("utils.mediaviewer_infer_scrapers_url", lambda: "test_url")
 
         self.mock_get = mocker.patch("utils.requests.get")
@@ -39,6 +41,7 @@ class TestGetLocalpathByFilename:
             "test_url",
             params={"title": self.test_filename},
             auth=("waiter_username", "waiter_password"),
+            timeout=5,
         )
 
     def test_failure(self):
@@ -54,6 +57,7 @@ class TestGetLocalpathByFilename:
             "test_url",
             params={"title": self.test_filename},
             auth=("waiter_username", "waiter_password"),
+            timeout=5,
         )
 
     def test_returns_raw_b2_media_path(self):

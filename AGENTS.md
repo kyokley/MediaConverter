@@ -17,6 +17,7 @@ MediaConverter is a Python service that converts local movie and TV files into H
 
 ## Run and verify
 
+- Before considering any code changes complete, run the test suite and formatting checks using the commands below and confirm both pass. If either check fails or cannot run, report the failure or blocker and do not consider the changes complete.
 - Use Python 3.10+ (Docker uses Python 3.12). Dependencies are locked in `uv.lock`; Docker images install with `uv`.
 - `make ci-tests` builds the development image, starts Compose services, and runs pytest. CI uses this command. `make tests` runs the interactive variant. Both require Docker and Docker Compose.
 - With local development dependencies installed, `pytest` runs the default suite. `pyproject.toml` disables sockets and excludes `tests/integration` by default. Run integration tests deliberately with `pytest tests/integration -o addopts=''`; these tests allow network access and may need external services.
@@ -28,7 +29,7 @@ MediaConverter is a Python service that converts local movie and TV files into H
 - Before version-control operations, check whether Jujutsu is available with `command -v jj`. Use `jj` when available; use `git` otherwise.
 - `makeFileStreamable` in `convert.py` writes a temporary MP4 under `/tmp`, moves the result into the source directory, and removes the original by default. Preserve file safety and test changes to naming, subtitles, and cleanup with fixtures before processing real media.
 - TV uploads use an existing B2 media path's bucket, key directory, and PK; when multiple distinct B2 destinations exist, the configured URI must match one or processing fails rather than choosing arbitrarily.
-- With B2 enabled, unsorted TV files use the raw inferred MediaViewer B2 URI, so processing does not require a local show directory. Encoded outputs remain in the unsorted directory for upload retries.
+- With B2 enabled, unsorted TV files preserve inferred B2 URIs and map inferred local paths through the configured B2 bucket and prefix. Processing does not require a local show directory. Encoded outputs remain in the unsorted directory for upload retries.
 - FFmpeg and `srt-vtt` are external executables. Prefer the Docker environment for media-dependent tests; inspect `Dockerfile` when changing codec/tool assumptions.
 - Settings for broker, media roots, MediaViewer, mail, and B2 come from `MC_*` variables in `settings.py`. Do not commit secrets or machine-specific `local_settings.py` values. `settings.py` reads `MC_BROKER`, while the current Compose file sets `BROKER`; account for this mismatch when diagnosing worker connectivity.
 - RabbitMQ 4.3 rejects transient non-exclusive queues by default. `main.py` sets Celery's `control_queue_exclusive` and `event_queue_exclusive` so remote-control and event queues remain nondurable but exclusive; keep worker mingle, gossip, and remote control enabled.
