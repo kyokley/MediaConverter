@@ -26,6 +26,7 @@ from utils import (
     MissingPathException,
     send_email,
     get_localpath_by_filename,
+    get_media_path_by_filename,
     post_data,
     get_data,
     put_data,
@@ -131,6 +132,16 @@ class Tv(MediaPathMixin):
                         paths[local_path] = val
         return paths
 
+    @classmethod
+    def get_all_media_paths(cls):
+        media_paths = []
+        data = {"next": cls.MEDIAVIEWER_MEDIAPATH_URL}
+        while data["next"]:
+            response = get_data(data["next"])
+            data = response.json()
+            media_paths.extend(data["results"])
+        return media_paths
+
 
 class MediaFile:
     @classmethod
@@ -170,6 +181,9 @@ class TvRunner:
 
         for path_str in LOCAL_TV_SHOWS_PATHS:
             path = Path(path_str)
+            if not path.exists():
+                log.warning(f"Local TV path {path} does not exist")
+                continue
             for dir in path.iterdir():
                 if "unsorted" in str(dir).lower() or (
                     dir in tv_entries and tv_entries[dir]["finished"]
@@ -318,6 +332,20 @@ class TvRunner:
                         fullPath.stat().st_size,
                         subtitle_files=subtitle_files,
                     )
+                    remoteFileSet.add(fullPath.name)
+                    if media_path_details:
+                        selected_detail = next(
+                            (
+                                detail
+                                for detail in media_path_details
+                                if detail.get("pk") == media_path_id
+                            ),
+                            None,
+                        )
+                        if selected_detail is not None:
+                            media_files = selected_detail.setdefault("media_files", [])
+                            if fullPath.name not in media_files:
+                                media_files.append(fullPath.name)
             except Exception as e:
                 errorMsg = (
                     f"Something bad happened attempting to make {fullPath} streamable"
@@ -452,7 +480,12 @@ class TvRunner:
         return self.errors
 
     @staticmethod
-    def _sort_unsorted_files(dry_run=False):
+    def _normalized_media_path(uri):
+        return uri[:-1] if uri.endswith("/") else uri
+
+    def _sort_unsorted_files(self, dry_run=False):
+        media_paths = None
+        details_by_uri = {}
         for unsorted_path_str in UNSORTED_PATHS:
             unsorted_path = Path(unsorted_path_str)
 
@@ -460,7 +493,67 @@ class TvRunner:
                 log.info(f"Unsorted file path {unsorted_path} does not exist")
                 continue
 
-            for src in unsorted_path.iterdir():
+            for src in list(unsorted_path.iterdir()):
+                if B2_ENABLED:
+                    if (
+                        not src.is_file()
+                        or src.suffix.lower() not in MEDIA_FILE_EXTENSIONS
+                        or src.stat().st_size <= MINIMUM_FILE_SIZE
+                    ):
+                        continue
+                    inferred_uri = get_media_path_by_filename(src.name)
+                    if not inferred_uri or not inferred_uri.startswith("b2://"):
+                        log.warning(f"No B2 media path inferred for {src.name}")
+                        continue
+                    try:
+                        self._select_b2_destination(
+                            src.parent,
+                            [{"pk": 0, "path": inferred_uri, "skip": False}],
+                        )
+                    except ValueError as error:
+                        log.warning(f"Invalid inferred B2 path for {src.name}: {error}")
+                        continue
+
+                    normalized_uri = self._normalized_media_path(inferred_uri)
+                    if normalized_uri not in details_by_uri:
+                        if media_paths is None:
+                            media_paths = Tv.get_all_media_paths()
+                        matching_paths = [
+                            item
+                            for item in media_paths
+                            if item.get("path", "").startswith("b2://")
+                            and self._normalized_media_path(item["path"])
+                            == normalized_uri
+                        ]
+                        if matching_paths:
+                            listed_path = min(
+                                matching_paths, key=lambda item: item["pk"]
+                            )
+                            detail = Tv.get_media_path(listed_path["pk"])
+                            detail.setdefault("pk", listed_path["pk"])
+                            detail.setdefault("path", listed_path["path"])
+                        elif dry_run:
+                            log.info(
+                                f"Would create media path {inferred_uri} for {src.name}"
+                            )
+                            continue
+                        else:
+                            detail = Tv.post_media_path(inferred_uri)
+                            detail.setdefault("path", inferred_uri)
+                            detail.setdefault("media_files", [])
+                        details_by_uri[normalized_uri] = detail
+
+                    detail = details_by_uri[normalized_uri]
+                    remote_files = set(detail.get("media_files", []))
+                    self.updateFileRecords(
+                        src.parent,
+                        {src.name},
+                        remote_files,
+                        dry_run=dry_run,
+                        media_path_details=[detail],
+                    )
+                    continue
+
                 filename = src.name
 
                 localpath = get_localpath_by_filename(filename)
