@@ -4,6 +4,7 @@ import traceback
 import subprocess  # nosec
 import shlex
 import shutil
+import uuid
 from urllib.parse import urlsplit
 
 from pathlib import Path
@@ -16,8 +17,6 @@ from settings import (
     DOMAIN,
     LOCAL_TV_SHOWS_PATHS,
     B2_ENABLED,
-    B2_BUCKET_NAME,
-    B2_NAME_PREFIX,
 )
 from convert import makeFileStreamable, SkipProcessing, AlreadyEncoded
 from utils import (
@@ -33,6 +32,7 @@ from utils import (
     get_b2_uri_for_local_path,
     get_local_path_from_media_path,
     upload_subtitle_files,
+    matching_subtitle_files,
 )
 
 import logging
@@ -156,6 +156,7 @@ class MediaFile:
         media_path_id,
         size,
         subtitle_files=None,
+        b2_uuid=None,
     ):
         payload = {
             "filename": filename,
@@ -163,6 +164,8 @@ class MediaFile:
             "size": size,
             "subtitle_files": json.dumps(subtitle_files or []),
         }
+        if b2_uuid is not None:
+            payload["b2_uuid"] = b2_uuid
         resp = post_data(payload, cls.MEDIAVIEWER_MEDIAFILE_URL)
         resp.raise_for_status()
         return resp.json()
@@ -202,6 +205,8 @@ class TvRunner:
         return {
             "pk": media_path_data["pk"],
             "skip": media_path_data["skip"],
+            "bucket": media_path_data.get("bucket"),
+            "b2_upload_prefix": media_path_data.get("b2_upload_prefix"),
         }
 
     @staticmethod
@@ -251,14 +256,11 @@ class TvRunner:
             or parsed.fragment
         ):
             raise ValueError(f"Invalid B2 media path: {uri}")
-        key_prefix = parsed.path.removeprefix("/")
-        if key_prefix and not key_prefix.endswith("/"):
-            key_prefix += "/"
         return {
             "pk": detail["pk"],
             "skip": detail.get("skip", False),
-            "bucket": parsed.netloc,
-            "key_prefix": key_prefix,
+            "bucket": detail.get("bucket"),
+            "b2_upload_prefix": detail.get("b2_upload_prefix"),
         }
 
     def updateFileRecords(
@@ -282,6 +284,8 @@ class TvRunner:
                 media_path_data = destination or self.get_or_create_media_path(
                     Path(path) if B2_ENABLED else path
                 )
+                if B2_ENABLED:
+                    destination = media_path_data
                 if media_path_data["skip"]:
                     break
 
@@ -313,18 +317,28 @@ class TvRunner:
                         continue
                     subtitle_files = []
                     if B2_ENABLED:
-                        bucket = B2_BUCKET_NAME
-                        key_prefix = f"{B2_NAME_PREFIX}{Path(path).name}/"
-                        key = f"{key_prefix}{fullPath.name}"
+                        bucket = destination["bucket"]
+                        key_prefix = destination["b2_upload_prefix"]
+                        if not key_prefix:
+                            raise ValueError(
+                                "MediaPath response missing b2_upload_prefix"
+                            )
+                        if not bucket:
+                            raise ValueError("MediaPath response missing bucket")
+                        b2_uuid = str(uuid.uuid4())
+                        key = f"{key_prefix}{b2_uuid}{fullPath.suffix}"
                         b2.get_b2_client().upload_file(fullPath, bucket, key)
                         subtitle_files = upload_subtitle_files(
                             fullPath, path, bucket=bucket, key_prefix=key_prefix
                         )
+                    media_file_kwargs = {"subtitle_files": subtitle_files}
+                    if B2_ENABLED:
+                        media_file_kwargs["b2_uuid"] = b2_uuid
                     MediaFile.post_media_file(
                         fullPath.name,
                         media_path_id,
                         fullPath.stat().st_size,
-                        subtitle_files=subtitle_files,
+                        **media_file_kwargs,
                     )
                     remoteFileSet.add(fullPath.name)
                     if media_path_details:
@@ -383,52 +397,69 @@ class TvRunner:
 
     def handleDirs(self, path, dry_run=False):
         if path.exists():
-            paths = []
-            dir_set = set()
-            for root, dirs, files in path.walk():
-                for file in files:
-                    paths.append(root / file)
+            for directory in sorted((p for p in path.iterdir() if p.is_dir())):
+                videos = sorted(
+                    p
+                    for p in directory.rglob("*")
+                    if p.is_file()
+                    and p.suffix.lower() in MEDIA_FILE_EXTENSIONS
+                    and p.stat().st_size > MINIMUM_FILE_SIZE
+                )
+                generic_names = {
+                    "2_eng",
+                    "2_english",
+                    "english",
+                    "eng",
+                    "subtitle",
+                }
+                # Resolve every owner against the unchanged directory inventory.
+                plans = []
+                for video in videos:
+                    sidecars = matching_subtitle_files(video, video_inventory=videos)
+                    if len(videos) == 1:
+                        sidecars.extend(
+                            subtitle
+                            for subtitle in directory.rglob("*")
+                            if subtitle.is_file()
+                            and subtitle.suffix.lower() in (".srt", ".vtt")
+                            and subtitle.stem.casefold() in generic_names
+                            and subtitle not in sidecars
+                        )
+                    moves = [(video, path / video.name)]
+                    for sidecar in sidecars:
+                        name = sidecar.name
+                        if sidecar.stem.casefold() in generic_names:
+                            name = f"{video.stem}.{sidecar.name}"
+                        moves.append((sidecar, path / name))
+                    plans.append(moves)
 
-            for fullpath in paths:
-                dirs = str(fullpath).split(str(path))[1].split(os.path.sep)
-                top, episode, file = path, dirs[1], dirs[-1]
-                file_ext = os.path.splitext(file)[-1].lower()
-
-                dir_path = Path(top) / episode
-                if dir_path.is_dir():
-                    dir_set.add(dir_path)
-
-                    english_subtitle_paths = dir_path.rglob("*Eng*.srt")
-                    count = 0
-                    for srt_path in english_subtitle_paths:
-                        # Move subtitle to show directory and rename
-                        log.info(f"Found subtitle file in {episode}")
-                        new = Path(top) / f"{episode}-{count}.srt"
+                for moves in plans:
+                    sources = {source for source, _ in moves}
+                    targets = [target for _, target in moves]
+                    collision = len(set(targets)) != len(targets) or any(
+                        target.exists() and target not in sources for target in targets
+                    )
+                    if collision:
+                        log.warning(
+                            "Skipping directory move batch due to destination collision"
+                        )
+                        continue
+                    for source, target in moves:
                         if dry_run:
-                            log.debug(f"Would rename {srt_path} to {new}")
+                            log.debug(f"Would rename {source} to {target}")
                         else:
-                            os.rename(srt_path, new)
-                        count += 1
-
-                    if (
-                        file_ext in MEDIA_FILE_EXTENSIONS
-                        and os.path.getsize(fullpath) > MINIMUM_FILE_SIZE
-                    ):
-                        # Move media file to show directory
-                        log.info(f"Found media file in {episode}")
-                        new = os.path.join(top, file)
-
-                        if dry_run:
-                            log.debug(f"Would rename {fullpath} to {new}")
-                        else:
-                            os.rename(fullpath, new)
-
-            for directory in dir_set:
-                log.info(f"Deleting {directory}")
-                if dry_run:
-                    log.debug(f"Would remove {directory}")
-                else:
-                    shutil.rmtree(directory)
+                            shutil.move(str(source), str(target))
+                if not dry_run:
+                    for nested in sorted(directory.rglob("*"), reverse=True):
+                        if nested.is_dir():
+                            try:
+                                nested.rmdir()
+                            except OSError:
+                                pass
+                    try:
+                        directory.rmdir()
+                    except OSError:
+                        pass
 
     def run(self, dry_run=False):
         log.info("Attempting to sort unsorted files")

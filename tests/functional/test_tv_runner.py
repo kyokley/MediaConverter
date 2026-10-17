@@ -6,7 +6,7 @@ import shutil
 
 from pathlib import Path
 from tv_runner import TvRunner
-from utils import MissingPathException
+from utils import MissingPathException, matching_subtitle_files
 
 
 class TestBuildLocalFileSetFunctional:
@@ -135,9 +135,7 @@ class TestHandleDirs:
         self.expected_media_file = (
             self.tv_dir / "Test.Dir.Path.S04E01.WEBRip.x264-MV.mp4"
         )
-        self.expected_sub_file = (
-            self.tv_dir / "Test.Dir.Path.S04E01.WEBRip.x264-MV-0.srt"
-        )
+        self.expected_sub_file = self.tv_dir / f"{self.episode_file.stem}.2_Eng.srt"
         self.non_existent_small_file = self.tv_dir / "small.mp4"
 
         self.tv_runner = TvRunner()
@@ -154,4 +152,7 @@ class TestHandleDirs:
         self.tv_runner.handleDirs(self.tv_dir)
         assert self.expected_media_file.exists()
         assert self.expected_sub_file.exists()
+        assert self.expected_sub_file in matching_subtitle_files(
+            self.expected_media_file
+        )
         assert not self.non_existent_small_file.exists()

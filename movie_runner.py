@@ -1,4 +1,5 @@
 import os
+import uuid
 from pathlib import Path
 import b2
 from settings import (
@@ -7,8 +8,6 @@ from settings import (
     DOMAIN,
     BASE_PATH,
     B2_ENABLED,
-    B2_BUCKET_NAME,
-    B2_NAME_PREFIX,
 )
 from convert import reencodeFilesInDirectory
 from utils import (
@@ -19,7 +18,7 @@ from utils import (
     is_valid_media_file,
     upload_subtitle_files,
 )
-from tv_runner import MediaPathMixin
+from tv_runner import MediaPathMixin, MediaFile
 
 import logging
 
@@ -57,7 +56,7 @@ class Movie(MediaPathMixin):
         return DOMAIN + "/mediaviewer/api/moviemediapath/"
 
     @classmethod
-    def get_all_movies(cls):
+    def get_all_movies(cls, incomplete_paths=None):
         paths = dict()
 
         data = {"next": cls.MEDIAVIEWER_MOVIE_URL}
@@ -69,6 +68,27 @@ class Movie(MediaPathMixin):
             if data["results"]:
                 for result in data["results"]:
                     media_path = result["media_path"]
+
+                    if media_path.get("path", "").startswith(
+                        "b2://"
+                    ) and not media_path.get("filename"):
+                        local_path = get_local_path_from_media_path(
+                            media_path["path"], LOCAL_MOVIE_PATHS
+                        )
+                        if incomplete_paths is not None:
+                            existing = incomplete_paths.get(local_path)
+                            if existing and existing["path"] != media_path["path"]:
+                                raise ValueError(
+                                    "Multiple incomplete B2 MediaPaths map to "
+                                    f"{local_path}: {existing['path']}, "
+                                    f"{media_path['path']}"
+                                )
+                            val = incomplete_paths.setdefault(
+                                local_path,
+                                {"path": media_path["path"], "pks": set()},
+                            )
+                            val["pks"].add(media_path["pk"])
+                        continue
 
                     local_path = get_local_path_from_media_path(
                         media_path["path"], LOCAL_MOVIE_PATHS
@@ -90,7 +110,8 @@ class MovieRunner:
     def postMovies(self, dry_run=False):
         base_path = Path(BASE_PATH)
 
-        remote_paths = set(Movie.get_all_movies().keys())
+        incomplete_paths = {}
+        remote_paths = set(Movie.get_all_movies(incomplete_paths).keys())
 
         for moviepath_str in LOCAL_MOVIE_PATHS:
             moviepath = base_path / moviepath_str
@@ -112,7 +133,7 @@ class MovieRunner:
                         else:
                             errors = reencodeFilesInDirectory(localpath)
 
-                        if errors:
+                        if not dry_run and errors:
                             self.errors.extend(errors)
                             continue
                     except Exception as e:
@@ -130,13 +151,34 @@ class MovieRunner:
                                 f"No video file found in {localpath}. Continuing..."
                             )
                             continue
-                        key = f"{B2_NAME_PREFIX}{localpath.name}/{video_file.name}"
-                        b2.get_b2_client().upload_file(video_file, B2_BUCKET_NAME, key)
-                        subtitle_files = upload_subtitle_files(video_file, localpath)
-                        Movie.post_media_path(
-                            get_b2_uri_for_local_path(localpath),
-                            filename=video_file.name,
+                        incomplete_path = incomplete_paths.get(localpath)
+                        logical_path = (
+                            incomplete_path["path"]
+                            if incomplete_path
+                            else get_b2_uri_for_local_path(localpath)
+                        )
+                        media_path_data = Movie.post_media_path(logical_path)
+                        key_prefix = media_path_data.get("b2_upload_prefix")
+                        bucket = media_path_data.get("bucket")
+                        if not key_prefix or not bucket:
+                            raise ValueError(
+                                "MediaPath response missing bucket or b2_upload_prefix"
+                            )
+                        b2_uuid = str(uuid.uuid4())
+                        key = f"{key_prefix}{b2_uuid}{video_file.suffix}"
+                        b2.get_b2_client().upload_file(video_file, bucket, key)
+                        subtitle_files = upload_subtitle_files(
+                            video_file,
+                            localpath,
+                            bucket=bucket,
+                            key_prefix=key_prefix,
+                        )
+                        MediaFile.post_media_file(
+                            video_file.name,
+                            media_path_data["pk"],
+                            video_file.stat().st_size,
                             subtitle_files=subtitle_files,
+                            b2_uuid=b2_uuid,
                         )
                     else:
                         Movie.post_media_path(localpath)
