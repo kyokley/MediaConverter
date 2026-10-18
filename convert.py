@@ -280,6 +280,7 @@ def overwriteExistingFile(source, directory, dryRun=False, appendSuffix=True):
 
 
 def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal=True):
+    log.info(f"Begin processing {filename}")
     if MEDIAVIEWER_SUFFIX in str(filename):
         raise AlreadyEncoded("File appears to already have been encoded.")
 

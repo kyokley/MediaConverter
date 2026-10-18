@@ -150,6 +150,49 @@ class MediaFile:
         return f"{DOMAIN}/mediaviewer/api/mediafile/"
 
     @classmethod
+    def get_all_filenames(cls):
+        filenames = set()
+        visited = set()
+        for endpoint in (
+            f"{DOMAIN}/mediaviewer/api/tvmediapath/",
+            f"{DOMAIN}/mediaviewer/api/moviemediapath/",
+        ):
+            url = endpoint
+            while url:
+                if url in visited:
+                    raise ValueError(f"Cyclic MediaPath pagination: {url}")
+                visited.add(url)
+                response = get_data(url)
+                if hasattr(response, "raise_for_status"):
+                    response.raise_for_status()
+                data = response.json()
+                if (
+                    not isinstance(data, dict)
+                    or "next" not in data
+                    or not isinstance(data.get("results"), list)
+                ):
+                    raise ValueError(f"Malformed MediaPath response from {url}")
+                next_url = data.get("next")
+                if next_url is not None and not isinstance(next_url, str):
+                    raise ValueError(f"Malformed pagination link from {url}")
+                for path in data["results"]:
+                    if not isinstance(path, dict):
+                        raise ValueError(f"Malformed MediaPath record from {url}")
+                    media_files = path.get("media_files")
+                    if not isinstance(media_files, list) or any(
+                        not isinstance(name, str) for name in media_files
+                    ):
+                        raise ValueError(f"Malformed media_files in {url}")
+                    filenames.update(media_files)
+                    filename = path.get("filename")
+                    if filename is not None and not isinstance(filename, str):
+                        raise ValueError(f"Malformed filename in {url}")
+                    if filename:
+                        filenames.add(filename)
+                url = next_url
+        return filenames
+
+    @classmethod
     def post_media_file(
         cls,
         filename,
@@ -175,6 +218,12 @@ class TvRunner:
     def __init__(self):
         self.paths = dict()
         self.errors = []
+        self._published_filenames = None
+
+    def _get_published_filenames(self):
+        if self._published_filenames is None:
+            self._published_filenames = MediaFile.get_all_filenames()
+        return self._published_filenames
 
     def load_paths(self):
         tv_entries = Tv.get_all_tv()
@@ -276,6 +325,13 @@ class TvRunner:
             if not localFile:
                 continue
 
+            published_filenames = None
+            if B2_ENABLED and not dry_run:
+                published_filenames = self._get_published_filenames()
+                if localFile in published_filenames:
+                    log.info(f"Skipping {localFile}; filename already published")
+                    continue
+
             if dry_run:
                 log.debug(f"Would process {localFile}")
                 continue
@@ -313,7 +369,13 @@ class TvRunner:
                     continue
 
                 if fullPath.exists():
-                    if fullPath.name in remoteFileSet:
+                    if fullPath.name in remoteFileSet or (
+                        published_filenames is not None
+                        and fullPath.name in published_filenames
+                    ):
+                        log.info(
+                            f"Skipping {fullPath.name}; filename already published"
+                        )
                         continue
                     subtitle_files = []
                     if B2_ENABLED:
@@ -340,6 +402,8 @@ class TvRunner:
                         fullPath.stat().st_size,
                         **media_file_kwargs,
                     )
+                    if published_filenames is not None:
+                        published_filenames.add(fullPath.name)
                     remoteFileSet.add(fullPath.name)
                     if media_path_details:
                         selected_detail = next(
@@ -462,6 +526,9 @@ class TvRunner:
                         pass
 
     def run(self, dry_run=False):
+        self._published_filenames = None
+        if B2_ENABLED and not dry_run:
+            self._get_published_filenames()
         log.info("Attempting to sort unsorted files")
         self._sort_unsorted_files(dry_run=dry_run)
 

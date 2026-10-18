@@ -17,6 +17,7 @@ class TestTvRunner:
         self.mock_sort_unsorted_files = mocker.patch(
             "tv_runner.TvRunner._sort_unsorted_files"
         )
+        mocker.patch("tv_runner.MediaFile.get_all_filenames", return_value=set())
 
         self.tvRunner = TvRunner()
 
@@ -285,6 +286,59 @@ class TestTvRunner:
             subtitle_files=["subtitle.vtt"],
             b2_uuid=key.removeprefix("prefix/path/").removesuffix(".mp4"),
         )
+
+    def test_global_source_filename_match_skips_before_media_path_or_conversion(
+        self, mocker, temp_directory
+    ):
+        mocker.patch("tv_runner.B2_ENABLED", True)
+        mocker.patch(
+            "tv_runner.MediaFile.get_all_filenames", return_value={"episode.mkv"}
+        )
+        encode = mocker.patch("tv_runner.makeFileStreamable")
+        create_path = mocker.patch("tv_runner.TvRunner.get_or_create_media_path")
+        upload = mocker.patch("tv_runner.b2.get_b2_client")
+        post = mocker.patch("tv_runner.MediaFile.post_media_file")
+
+        self.tvRunner.updateFileRecords(temp_directory, {"episode.mkv"}, set())
+
+        encode.assert_not_called()
+        create_path.assert_not_called()
+        upload.assert_not_called()
+        post.assert_not_called()
+
+    def test_global_encoded_filename_match_skips_upload_and_publication(
+        self, mocker, temp_directory
+    ):
+        mocker.patch("tv_runner.B2_ENABLED", True)
+        source = temp_directory / "episode.mkv"
+        encoded = temp_directory / "episode.converted.mp4"
+        source.write_bytes(b"source")
+        encoded.write_bytes(b"encoded")
+        mocker.patch(
+            "tv_runner.MediaFile.get_all_filenames",
+            return_value={encoded.name},
+        )
+        mocker.patch("tv_runner.stripUnicode", return_value=source)
+        mocker.patch("tv_runner.makeFileStreamable", return_value=encoded)
+        upload = mocker.patch("tv_runner.b2.get_b2_client")
+        post = mocker.patch("tv_runner.MediaFile.post_media_file")
+
+        self.tvRunner.updateFileRecords(
+            temp_directory,
+            {source.name},
+            set(),
+            media_path_details=[
+                {
+                    "pk": 1,
+                    "path": "b2://bucket/Show/",
+                    "bucket": "bucket",
+                    "b2_upload_prefix": "tv/42/",
+                }
+            ],
+        )
+
+        upload.assert_not_called()
+        post.assert_not_called()
 
     def test_select_existing_b2_path(self, mocker):
         mocker.patch("tv_runner.B2_ENABLED", True)
@@ -990,6 +1044,47 @@ class TestTvRunner:
             call("page-2"),
         ]
 
+    def test_media_file_inventory_follows_all_pages_and_includes_primary_names(
+        self, mocker
+    ):
+        from tv_runner import MediaFile
+
+        first = mock.Mock()
+        first.json.return_value = {
+            "results": [
+                {"filename": "legacy.mp4", "media_files": ["hidden-like.mkv"]},
+                {"filename": None, "media_files": []},
+            ],
+            "next": "tv-page-2",
+        }
+        second = mock.Mock()
+        second.json.return_value = {
+            "results": [{"filename": "movie.mp4", "media_files": ["movie.vtt"]}],
+            "next": "",
+        }
+        third = mock.Mock()
+        third.json.return_value = {
+            "results": [{"filename": "old-movie.mp4", "media_files": []}],
+            "next": None,
+        }
+        mocker.stopall()
+        get = mocker.patch("tv_runner.get_data", side_effect=[first, second, third])
+
+        assert MediaFile.get_all_filenames() == {
+            "legacy.mp4",
+            "hidden-like.mkv",
+            "movie.mp4",
+            "movie.vtt",
+            "old-movie.mp4",
+        }
+        from settings import DOMAIN
+
+        assert get.call_args_list == [
+            call(f"{DOMAIN}/mediaviewer/api/tvmediapath/"),
+            call("tv-page-2"),
+            call(f"{DOMAIN}/mediaviewer/api/moviemediapath/"),
+        ]
+
     def test_unsorted_remote_file_creates_and_uploads_without_local_show_path(
         self, mocker, temp_directory
     ):
@@ -1393,3 +1488,135 @@ class TestTvRunner:
         assert source.exists()
         infer.assert_called_once_with(source.name)
         list_paths.assert_not_called()
+
+
+class TestGlobalFilenameInventory:
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {"results": []},
+            {"next": None},
+            {"next": None, "results": [{"filename": None}]},
+            {"next": None, "results": [{"filename": 42, "media_files": []}]},
+        ],
+        ids=[
+            "missing-next",
+            "missing-results",
+            "missing-media-files",
+            "invalid-filename",
+        ],
+    )
+    def test_malformed_inventory_payload_raises(self, mocker, payload):
+        from tv_runner import MediaFile
+
+        response = mock.Mock()
+        response.json.return_value = payload
+        mocker.patch("tv_runner.get_data", return_value=response)
+
+        with pytest.raises(ValueError):
+            MediaFile.get_all_filenames()
+
+    def test_later_page_failure_raises_instead_of_returning_partial_inventory(
+        self, mocker
+    ):
+        from tv_runner import MediaFile
+
+        first = mock.Mock()
+        first.json.return_value = {
+            "results": [{"filename": "partial.mp4", "media_files": []}],
+            "next": "later-page",
+        }
+        get = mocker.patch(
+            "tv_runner.get_data",
+            side_effect=[first, RuntimeError("page request failed")],
+        )
+
+        with pytest.raises(RuntimeError, match="page request failed"):
+            MediaFile.get_all_filenames()
+
+        assert get.call_count == 2
+
+    def test_cyclic_pagination_raises(self, mocker):
+        from tv_runner import MediaFile
+
+        response = mock.Mock()
+        response.json.return_value = {"results": [], "next": "page-1"}
+        get = mocker.patch("tv_runner.get_data", return_value=response)
+
+        with pytest.raises(ValueError, match="Cyclic MediaPath pagination"):
+            MediaFile.get_all_filenames()
+
+        assert get.call_count == 2
+
+    def test_inventory_failure_prevents_tv_processing_writes(self, mocker, tmp_path):
+        from tv_runner import TvRunner
+
+        mocker.patch("tv_runner.B2_ENABLED", True)
+        mocker.patch(
+            "tv_runner.MediaFile.get_all_filenames",
+            side_effect=RuntimeError("inventory unavailable"),
+        )
+        encode = mocker.patch("tv_runner.makeFileStreamable")
+        create_path = mocker.patch("tv_runner.TvRunner.get_or_create_media_path")
+        upload = mocker.patch("tv_runner.b2.get_b2_client")
+        post_path = mocker.patch("tv_runner.Tv.post_media_path")
+        post_file = mocker.patch("tv_runner.MediaFile.post_media_file")
+
+        with pytest.raises(RuntimeError, match="inventory unavailable"):
+            TvRunner().updateFileRecords(tmp_path, {"episode.mkv"}, set())
+
+        encode.assert_not_called()
+        create_path.assert_not_called()
+        upload.assert_not_called()
+        post_path.assert_not_called()
+        post_file.assert_not_called()
+
+    def test_run_refreshes_global_inventory_each_time(self, mocker):
+        from tv_runner import TvRunner
+
+        mocker.patch("tv_runner.B2_ENABLED", True)
+        inventory = mocker.patch(
+            "tv_runner.MediaFile.get_all_filenames",
+            side_effect=[{"first.mp4"}, {"second.mp4"}],
+        )
+        runner = TvRunner()
+        runner._sort_unsorted_files = mock.Mock()
+        runner.load_paths = mock.Mock(side_effect=lambda: setattr(runner, "paths", {}))
+
+        runner.run()
+        assert runner._published_filenames == {"first.mp4"}
+        runner.run()
+
+        assert runner._published_filenames == {"second.mp4"}
+        assert inventory.call_count == 2
+
+    def test_filename_match_is_case_sensitive(self, mocker, tmp_path):
+        from tv_runner import TvRunner
+
+        mocker.patch("tv_runner.B2_ENABLED", True)
+        mocker.patch(
+            "tv_runner.MediaFile.get_all_filenames", return_value={"Episode.mkv"}
+        )
+        source = tmp_path / "episode.mkv"
+        encoded = tmp_path / "episode.mp4"
+        source.write_bytes(b"source")
+        encoded.write_bytes(b"encoded")
+        mocker.patch("tv_runner.stripUnicode", return_value=source)
+        encode = mocker.patch("tv_runner.makeFileStreamable", return_value=encoded)
+        mocker.patch(
+            "tv_runner.TvRunner.get_or_create_media_path",
+            return_value={
+                "pk": 1,
+                "skip": False,
+                "bucket": "bucket",
+                "b2_upload_prefix": "tv/1/",
+            },
+        )
+        post = mocker.patch("tv_runner.MediaFile.post_media_file")
+        mocker.patch("tv_runner.b2.get_b2_client")
+        mocker.patch("tv_runner.upload_subtitle_files", return_value=[])
+
+        TvRunner().updateFileRecords(tmp_path, {source.name}, set())
+
+        encode.assert_called_once()
+        post.assert_called_once()

@@ -112,6 +112,9 @@ class MovieRunner:
 
         incomplete_paths = {}
         remote_paths = set(Movie.get_all_movies(incomplete_paths).keys())
+        published_filenames = (
+            MediaFile.get_all_filenames() if B2_ENABLED and not dry_run else set()
+        )
 
         for moviepath_str in LOCAL_MOVIE_PATHS:
             moviepath = base_path / moviepath_str
@@ -124,6 +127,16 @@ class MovieRunner:
             for token in tokens:
                 localpath = moviepath / token
                 if localpath not in remote_paths:
+                    if B2_ENABLED and not dry_run:
+                        candidate = self._get_largest_video_file(localpath)
+                        if (
+                            candidate is not None
+                            and candidate.name in published_filenames
+                        ):
+                            log.info(
+                                f"Skipping {localpath}: {candidate.name} already published"
+                            )
+                            continue
                     log.info(f"Found {localpath}")
                     log.info(f"Starting re-encoding of {localpath}...")
                     try:
@@ -149,6 +162,11 @@ class MovieRunner:
                         if video_file is None:
                             self.errors.append(
                                 f"No video file found in {localpath}. Continuing..."
+                            )
+                            continue
+                        if video_file.name in published_filenames:
+                            log.info(
+                                f"Skipping {localpath}: {video_file.name} already published"
                             )
                             continue
                         incomplete_path = incomplete_paths.get(localpath)
@@ -180,6 +198,7 @@ class MovieRunner:
                             subtitle_files=subtitle_files,
                             b2_uuid=b2_uuid,
                         )
+                        published_filenames.add(video_file.name)
                     else:
                         Movie.post_media_path(localpath)
 

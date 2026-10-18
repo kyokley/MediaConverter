@@ -26,6 +26,7 @@ class TestPostMovies:
             "next": "",
         }
         self.mock_get_data.return_value = self.mock_response
+        mocker.patch.object(MediaFile, "get_all_filenames", return_value=set())
 
         mocker.patch("movie_runner.LOCAL_MOVIE_PATHS", [f"{self.tmp_dir}/movies"])
 
@@ -77,6 +78,103 @@ class TestPostMovies:
                 mock.call(Path(f"{self.tmp_dir}/movies/movie2")),
                 mock.call(Path(f"{self.tmp_dir}/movies/movie3")),
             ]
+        )
+
+    def test_global_exact_filename_match_skips_before_conversion(self, mocker):
+        mocker.patch("movie_runner.B2_ENABLED", True)
+        self.mock_getLocalMoviePaths.return_value = ["movie1"]
+        video = Path(f"{self.tmp_dir}/movies/movie1/Already.mp4")
+        mocker.patch.object(
+            MediaFile, "get_all_filenames", return_value={"Already.mp4"}
+        )
+        largest = mocker.patch.object(
+            MovieRunner, "_get_largest_video_file", return_value=video
+        )
+
+        self.movieRunner.postMovies()
+
+        largest.assert_called_once_with(Path(f"{self.tmp_dir}/movies/movie1"))
+        self.mock_promoteSubtitles.assert_not_called()
+        self.mock_reencodeFilesInDirectory.assert_not_called()
+
+    @pytest.mark.parametrize("filename", ["already.mp4", "Already.mv-encoded.mp4"])
+    def test_filename_near_match_is_not_skipped(self, mocker, filename):
+        mocker.patch("movie_runner.B2_ENABLED", True)
+        video = Path(f"{self.tmp_dir}/movies/movie1/{filename}")
+        video.parent.mkdir(parents=True, exist_ok=True)
+        video.write_bytes(b"video")
+        mocker.patch.object(
+            MediaFile, "get_all_filenames", return_value={"Already.mp4"}
+        )
+        mocker.patch.object(MovieRunner, "_get_largest_video_file", return_value=video)
+        mocker.patch(
+            "movie_runner.Movie.post_media_path",
+            return_value={"pk": 1, "bucket": "bucket", "b2_upload_prefix": "p/"},
+        )
+        mocker.patch("movie_runner.b2.get_b2_client")
+        mocker.patch("movie_runner.upload_subtitle_files", return_value=[])
+        record = mocker.patch.object(MediaFile, "post_media_file")
+
+        self.movieRunner.postMovies()
+
+        self.mock_reencodeFilesInDirectory.assert_called()
+        assert self.movieRunner.errors == []
+        record.assert_called_once_with(
+            filename, 1, len(b"video"), subtitle_files=[], b2_uuid=mock.ANY
+        )
+
+    def test_encoded_global_match_skips_before_media_path_post(self, mocker):
+        mocker.patch("movie_runner.B2_ENABLED", True)
+        self.mock_getLocalMoviePaths.return_value = ["movie1"]
+        video = Path(f"{self.tmp_dir}/movies/movie1/Encoded.mp4")
+        mocker.patch.object(
+            MediaFile, "get_all_filenames", return_value={"Encoded.mp4"}
+        )
+        mocker.patch.object(
+            MovieRunner,
+            "_get_largest_video_file",
+            side_effect=[None, video],
+        )
+        post_path = mocker.patch("movie_runner.Movie.post_media_path")
+
+        self.movieRunner.postMovies()
+
+        self.mock_reencodeFilesInDirectory.assert_called_once()
+        post_path.assert_not_called()
+
+    def test_filename_inventory_failure_aborts_before_conversion(self, mocker):
+        mocker.patch("movie_runner.B2_ENABLED", True)
+        mocker.patch.object(
+            MediaFile,
+            "get_all_filenames",
+            side_effect=RuntimeError("inventory unavailable"),
+        )
+
+        with pytest.raises(RuntimeError, match="inventory unavailable"):
+            self.movieRunner.postMovies()
+
+        self.mock_promoteSubtitles.assert_not_called()
+        self.mock_reencodeFilesInDirectory.assert_not_called()
+
+    def test_same_filename_batch_publishes_once(self, mocker):
+        mocker.patch("movie_runner.B2_ENABLED", True)
+        video = Path(f"{self.tmp_dir}/movies/movie1/Shared.mp4")
+        video.parent.mkdir(parents=True, exist_ok=True)
+        video.write_bytes(b"video")
+        mocker.patch.object(MovieRunner, "_get_largest_video_file", return_value=video)
+        mocker.patch(
+            "movie_runner.Movie.post_media_path",
+            return_value={"pk": 1, "bucket": "bucket", "b2_upload_prefix": "p/"},
+        )
+        client = mocker.patch("movie_runner.b2.get_b2_client").return_value
+        mocker.patch("movie_runner.upload_subtitle_files", return_value=[])
+        record = mocker.patch.object(MediaFile, "post_media_file")
+
+        self.movieRunner.postMovies()
+
+        client.upload_file.assert_called_once()
+        record.assert_called_once_with(
+            "Shared.mp4", 1, len(b"video"), subtitle_files=[], b2_uuid=mock.ANY
         )
 
     def test_reencodeErrors(self):
@@ -170,13 +268,17 @@ class TestPostMovies:
             events.append(("subtitles", args, kwargs))
             or ["abcdefab-cdef-abcd-efab-cdefabcdefab.vtt"]
         )
+
+        def candidate_for(localpath):
+            video_path = Path(localpath) / f"{Path(localpath).name.title()}.mp4"
+            video_path.parent.mkdir(parents=True, exist_ok=True)
+            video_path.write_bytes(video_path.name.encode())
+            return video_path
+
         mocker.patch(
             "movie_runner.MovieRunner._get_largest_video_file",
-            return_value=Path(f"{self.tmp_dir}/movies/movie1/Movie1.mp4"),
+            side_effect=candidate_for,
         )
-        video_path = Path(f"{self.tmp_dir}/movies/movie1/Movie1.mp4")
-        video_path.parent.mkdir(parents=True, exist_ok=True)
-        video_path.write_bytes(b"encoded")
         mock_media_file_post = mocker.patch.object(MediaFile, "post_media_file")
         mock_media_file_post.side_effect = lambda *args, **kwargs: events.append(
             ("record", args, kwargs)
@@ -187,63 +289,41 @@ class TestPostMovies:
 
         upload_calls = mock_upload.return_value.upload_file.call_args_list
         assert len(upload_calls) == 3
-        for index, call in enumerate(upload_calls, start=1):
-            assert call.args[:2] == (
-                Path(f"{self.tmp_dir}/movies/movie1/Movie1.mp4"),
-                "bucket",
-            )
-            key = call.args[2]
-            assert key.startswith(f"movies/{index}/") and key.endswith(".mp4")
-            assert "Movie1" not in key
-            assert str(
-                uuid.UUID(key.removeprefix(f"movies/{index}/").removesuffix(".mp4"))
-            ) == key.removeprefix(f"movies/{index}/").removesuffix(".mp4")
-        mock_upload_subtitle_files.assert_has_calls(
-            [
-                mock.call(
-                    Path(f"{self.tmp_dir}/movies/movie1/Movie1.mp4"),
-                    Path(f"{self.tmp_dir}/movies/movie1"),
-                    bucket="bucket",
-                    key_prefix="movies/1/",
-                ),
-                mock.call(
-                    Path(f"{self.tmp_dir}/movies/movie1/Movie1.mp4"),
-                    Path(f"{self.tmp_dir}/movies/movie2"),
-                    bucket="bucket",
-                    key_prefix="movies/2/",
-                ),
-                mock.call(
-                    Path(f"{self.tmp_dir}/movies/movie1/Movie1.mp4"),
-                    Path(f"{self.tmp_dir}/movies/movie3"),
-                    bucket="bucket",
-                    key_prefix="movies/3/",
-                ),
-            ]
-        )
-        mock_post_media_path.assert_has_calls(
-            [
-                mock.call("b2://bucket/prefix/movie1/"),
-                mock.call("b2://bucket/prefix/movie2/"),
-                mock.call("b2://bucket/prefix/movie3/"),
-            ]
-        )
+        assert mock_upload_subtitle_files.call_count == 3
+        assert mock_post_media_path.call_args_list == [
+            mock.call(f"b2://bucket/prefix/movie{index}/") for index in range(1, 4)
+        ]
         assert mock_media_file_post.call_count == 3
-        for index, call in enumerate(mock_media_file_post.call_args_list, start=1):
-            filename, path_id, size = call.args
-            assert filename == "Movie1.mp4"
-            assert path_id == index
-            assert (
-                size == Path(f"{self.tmp_dir}/movies/movie1/Movie1.mp4").stat().st_size
+        for index, (upload_call, subtitle_call, record_call) in enumerate(
+            zip(
+                upload_calls,
+                mock_upload_subtitle_files.call_args_list,
+                mock_media_file_post.call_args_list,
+            ),
+            start=1,
+        ):
+            video_path = Path(f"{self.tmp_dir}/movies/movie{index}/Movie{index}.mp4")
+            assert upload_call.args[:2] == (video_path, "bucket")
+            key = upload_call.args[2]
+            assert key.startswith(f"movies/{index}/") and key.endswith(".mp4")
+            assert "Movie" not in key
+            object_uuid = key.removeprefix(f"movies/{index}/").removesuffix(".mp4")
+            assert str(uuid.UUID(object_uuid)) == object_uuid
+            assert subtitle_call == mock.call(
+                video_path,
+                video_path.parent,
+                bucket="bucket",
+                key_prefix=f"movies/{index}/",
             )
-            assert call.kwargs["subtitle_files"] == [
-                "abcdefab-cdef-abcd-efab-cdefabcdefab.vtt"
-            ]
-            assert str(uuid.UUID(call.kwargs["b2_uuid"])) == call.kwargs["b2_uuid"]
-            assert (
-                upload_calls[index - 1]
-                .args[2]
-                .startswith(f"movies/{index}/{call.kwargs['b2_uuid']}")
+            assert record_call.args == (
+                f"Movie{index}.mp4",
+                index,
+                len(f"Movie{index}.mp4".encode()),
             )
+            assert record_call.kwargs == {
+                "subtitle_files": ["abcdefab-cdef-abcd-efab-cdefabcdefab.vtt"],
+                "b2_uuid": object_uuid,
+            }
         assert [event[0] for event in events] == [
             "path",
             "video",
@@ -578,6 +658,10 @@ class TestPostMovies:
         mocker.patch("utils.B2_BUCKET_NAME", "bucket")
         mocker.patch("utils.B2_NAME_PREFIX", "prefix/")
         mocker.patch("movie_runner.Movie.get_all_movies", return_value={})
+        filename_inventory = set()
+        mocker.patch.object(
+            MediaFile, "get_all_filenames", return_value=filename_inventory
+        )
         mocker.patch(
             "movie_runner.MovieRunner._getLocalMoviePaths", return_value=["Film"]
         )
@@ -618,6 +702,7 @@ class TestPostMovies:
             record.assert_not_called()
         else:
             record.assert_called_once()
+        assert video.name not in filename_inventory
 
 
 class TestRun:
