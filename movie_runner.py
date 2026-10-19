@@ -242,3 +242,10 @@ class MovieRunner:
         self.postMovies(dry_run=dry_run)
         log.info("Done running movies")
         return self.errors
+
+
+if __name__ == "__main__":
+    runner = MovieRunner()
+    errors = runner.run()
+    if errors:
+        print(errors)
