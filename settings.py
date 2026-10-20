@@ -1,7 +1,7 @@
 import os
 import logging
 
-logging.getLogger().setLevel(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 logging.getLogger("faker").setLevel(logging.WARN)
 
 CELERY_VHOST = ""

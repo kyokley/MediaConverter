@@ -282,25 +282,26 @@ def overwriteExistingFile(source, directory, dryRun=False, appendSuffix=True):
 def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal=True):
     log.info(f"Begin processing {filename}")
     if MEDIAVIEWER_SUFFIX in str(filename):
-        raise AlreadyEncoded("File appears to already have been encoded.")
+        raise AlreadyEncoded(f"{filename} appears to already have been encoded.")
 
     orig = Path(filename).resolve()
 
     if not is_valid_media_file(filename) or not orig.exists():
         raise SkipProcessing(f"{filename} is not a valid media file.")
 
-    new = Path("/tmp") / orig.with_suffix(".mp4").name
+    with tempfile.TemporaryDirectory() as tmpdir:
+        new = Path(tmpdir) / orig.with_suffix(".mp4").name
 
-    log.info(f"Begin re-encoding of {orig}...")
-    encode(orig, new, dryRun=dryRun)
-    log.info("Finished encoding")
+        log.info(f"Begin re-encoding of {orig}...")
+        encode(orig, new, dryRun=dryRun)
+        log.info("Finished encoding")
 
-    dest = overwriteExistingFile(
-        new,
-        orig.parent,
-        dryRun=dryRun,
-        appendSuffix=appendSuffix,
-    )
+        dest = overwriteExistingFile(
+            new,
+            orig.parent,
+            dryRun=dryRun,
+            appendSuffix=appendSuffix,
+        )
 
     if not dryRun:
         if removeOriginal and orig.exists():
