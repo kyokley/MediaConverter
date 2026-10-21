@@ -46,8 +46,6 @@ MEDIA_FILE_EXTENSIONS = (
 SUBTITLE_EXTENSIONS = (".srt",)
 SUBTITLE_FILES = ("2_Eng.srt", "English.srt", "2_English.srt")
 
-SERVER_NAME = os.getenv("MC_SERVER_NAME", "127.0.0.1")
-
 SEND_EMAIL = os.getenv("MC_SEND_EMAIL", False)
 GMAIL_USER = os.getenv("MC_GMAIL_USER", "some@user.com")
 GMAIL_PASSWORD = os.getenv("MC_GMAIL_PASSWORD", "some_password")
@@ -61,7 +59,7 @@ VERIFY_REQUESTS = True
 
 MINIMUM_FILE_SIZE = int(os.getenv("MC_MINIMUM_FILE_SIZE", 10000000))
 
-B2_ENABLED = os.getenv("MC_B2_ENABLED", "").lower() in ("1", "true", "yes")
+B2_ENABLED = os.getenv("MC_B2_ENABLED", "true").lower() in ("1", "true", "yes")
 B2_API_URL = os.getenv("MC_B2_API_URL", "https://api.backblazeb2.com")
 B2_APPLICATION_KEY_ID = os.getenv("MC_B2_APPLICATION_KEY_ID", "")
 B2_APPLICATION_KEY = os.getenv("MC_B2_APPLICATION_KEY", "")
