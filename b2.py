@@ -72,6 +72,7 @@ class B2Client:
         return bucket_id
 
     def upload_file(self, local_path, bucket, key, extra_args=None):
+        logger.info("Uploading %s to b2://%s/%s", local_path, bucket, key)
         auth = self._authorize()
         bucket_id = self._bucket_id(bucket)
         size = Path(local_path).stat().st_size

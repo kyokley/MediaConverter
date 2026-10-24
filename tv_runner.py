@@ -4,6 +4,8 @@ import traceback
 import subprocess  # nosec
 import shlex
 import shutil
+import uuid
+from urllib.parse import urlsplit
 
 from pathlib import Path
 import b2
@@ -15,8 +17,6 @@ from settings import (
     DOMAIN,
     LOCAL_TV_SHOWS_PATHS,
     B2_ENABLED,
-    B2_BUCKET_NAME,
-    B2_NAME_PREFIX,
 )
 from convert import makeFileStreamable, SkipProcessing, AlreadyEncoded
 from utils import (
@@ -25,12 +25,14 @@ from utils import (
     MissingPathException,
     send_email,
     get_localpath_by_filename,
+    get_media_path_by_filename,
     post_data,
     get_data,
     put_data,
     get_b2_uri_for_local_path,
     get_local_path_from_media_path,
     upload_subtitle_files,
+    matching_subtitle_files,
 )
 
 import logging
@@ -130,6 +132,16 @@ class Tv(MediaPathMixin):
                         paths[local_path] = val
         return paths
 
+    @classmethod
+    def get_all_media_paths(cls):
+        media_paths = []
+        data = {"next": cls.MEDIAVIEWER_MEDIAPATH_URL}
+        while data["next"]:
+            response = get_data(data["next"])
+            data = response.json()
+            media_paths.extend(data["results"])
+        return media_paths
+
 
 class MediaFile:
     @classmethod
@@ -138,12 +150,56 @@ class MediaFile:
         return f"{DOMAIN}/mediaviewer/api/mediafile/"
 
     @classmethod
+    def get_all_filenames(cls):
+        filenames = set()
+        visited = set()
+        for endpoint in (
+            f"{DOMAIN}/mediaviewer/api/tvmediapath/",
+            f"{DOMAIN}/mediaviewer/api/moviemediapath/",
+        ):
+            url = endpoint
+            while url:
+                if url in visited:
+                    raise ValueError(f"Cyclic MediaPath pagination: {url}")
+                visited.add(url)
+                response = get_data(url)
+                if hasattr(response, "raise_for_status"):
+                    response.raise_for_status()
+                data = response.json()
+                if (
+                    not isinstance(data, dict)
+                    or "next" not in data
+                    or not isinstance(data.get("results"), list)
+                ):
+                    raise ValueError(f"Malformed MediaPath response from {url}")
+                next_url = data.get("next")
+                if next_url is not None and not isinstance(next_url, str):
+                    raise ValueError(f"Malformed pagination link from {url}")
+                for path in data["results"]:
+                    if not isinstance(path, dict):
+                        raise ValueError(f"Malformed MediaPath record from {url}")
+                    media_files = path.get("media_files")
+                    if not isinstance(media_files, list) or any(
+                        not isinstance(name, str) for name in media_files
+                    ):
+                        raise ValueError(f"Malformed media_files in {url}")
+                    filenames.update(media_files)
+                    filename = path.get("filename")
+                    if filename is not None and not isinstance(filename, str):
+                        raise ValueError(f"Malformed filename in {url}")
+                    if filename:
+                        filenames.add(filename)
+                url = next_url
+        return filenames
+
+    @classmethod
     def post_media_file(
         cls,
         filename,
         media_path_id,
         size,
         subtitle_files=None,
+        b2_uuid=None,
     ):
         payload = {
             "filename": filename,
@@ -151,6 +207,8 @@ class MediaFile:
             "size": size,
             "subtitle_files": json.dumps(subtitle_files or []),
         }
+        if b2_uuid is not None:
+            payload["b2_uuid"] = b2_uuid
         resp = post_data(payload, cls.MEDIAVIEWER_MEDIAFILE_URL)
         resp.raise_for_status()
         return resp.json()
@@ -160,6 +218,12 @@ class TvRunner:
     def __init__(self):
         self.paths = dict()
         self.errors = []
+        self._published_filenames = None
+
+    def _get_published_filenames(self):
+        if self._published_filenames is None:
+            self._published_filenames = MediaFile.get_all_filenames()
+        return self._published_filenames
 
     def load_paths(self):
         tv_entries = Tv.get_all_tv()
@@ -169,6 +233,9 @@ class TvRunner:
 
         for path_str in LOCAL_TV_SHOWS_PATHS:
             path = Path(path_str)
+            if not path.exists():
+                log.warning(f"Local TV path {path} does not exist")
+                continue
             for dir in path.iterdir():
                 if "unsorted" in str(dir).lower() or (
                     dir in tv_entries and tv_entries[dir]["finished"]
@@ -187,33 +254,94 @@ class TvRunner:
         return {
             "pk": media_path_data["pk"],
             "skip": media_path_data["skip"],
+            "bucket": media_path_data.get("bucket"),
+            "b2_upload_prefix": media_path_data.get("b2_upload_prefix"),
         }
 
     @staticmethod
     def build_remote_media_file_set(pathIDs):
-        fileSet = set()
+        return {
+            filename
+            for detail in TvRunner.fetch_remote_media_path_details(pathIDs)
+            for filename in detail["media_files"]
+        }
+
+    @staticmethod
+    def fetch_remote_media_path_details(pathIDs):
+        details = []
         for pathid in pathIDs:
             # Skip local paths
             if pathid == -1:
                 continue
-            res = Tv.get_media_path(pathid)
-            fileSet.update(res["media_files"])
-        log.info("Built remote fileSet")
+            detail = Tv.get_media_path(pathid)
+            detail.setdefault("pk", pathid)
+            details.append(detail)
+        return details
 
-        return fileSet
+    @staticmethod
+    def _select_b2_destination(path, media_path_details):
+        destinations = {}
+        for detail in media_path_details or []:
+            uri = detail.get("path", "")
+            if uri.startswith("b2://"):
+                destinations.setdefault(uri, []).append(detail)
+        if not destinations:
+            return None
+        if len(destinations) > 1:
+            configured_uri = get_b2_uri_for_local_path(Path(path))
+            if configured_uri not in destinations:
+                raise ValueError(
+                    f"Ambiguous B2 media paths for {path}: {sorted(destinations)}"
+                )
+            uri = configured_uri
+        else:
+            uri = next(iter(destinations))
+        detail = min(destinations[uri], key=lambda item: item["pk"])
+        parsed = urlsplit(uri)
+        if (
+            parsed.scheme != "b2"
+            or not parsed.netloc
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError(f"Invalid B2 media path: {uri}")
+        return {
+            "pk": detail["pk"],
+            "skip": detail.get("skip", False),
+            "bucket": detail.get("bucket"),
+            "b2_upload_prefix": detail.get("b2_upload_prefix"),
+        }
 
-    def updateFileRecords(self, path, localFileSet, remoteFileSet, dry_run=False):
+    def updateFileRecords(
+        self, path, localFileSet, remoteFileSet, dry_run=False, media_path_details=None
+    ):
+        destination = (
+            self._select_b2_destination(path, media_path_details)
+            if B2_ENABLED
+            else None
+        )
         media_path_id = None
         for localFile in localFileSet.difference(remoteFileSet):
             if not localFile:
                 continue
+
+            published_filenames = None
+            if B2_ENABLED and not dry_run:
+                published_filenames = self._get_published_filenames()
+                if localFile in published_filenames:
+                    log.info(f"Skipping {localFile}; filename already published")
+                    continue
 
             if dry_run:
                 log.debug(f"Would process {localFile}")
                 continue
 
             if not media_path_id:
-                media_path_data = self.get_or_create_media_path(path)
+                media_path_data = destination or self.get_or_create_media_path(
+                    Path(path) if B2_ENABLED else path
+                )
+                if B2_ENABLED:
+                    destination = media_path_data
                 if media_path_data["skip"]:
                     break
 
@@ -232,28 +360,64 @@ class TvRunner:
                     log.error("Attempting to recover and continue")
                     self.errors.append(errorMsg)
                     continue
-                except (AlreadyEncoded, SkipProcessing) as e:
+                except AlreadyEncoded as e:
+                    log.warning(e)
+                    if not fullPath.exists() or fullPath.suffix.lower() != ".mp4":
+                        continue
+                except SkipProcessing as e:
                     log.warning(e)
                     continue
 
                 if fullPath.exists():
-                    if fullPath.name in remoteFileSet:
+                    if fullPath.name in remoteFileSet or (
+                        published_filenames is not None
+                        and fullPath.name in published_filenames
+                    ):
+                        log.info(
+                            f"Skipping {fullPath.name}; filename already published"
+                        )
                         continue
                     subtitle_files = []
                     if B2_ENABLED:
-                        bucket = B2_BUCKET_NAME
-                        key_prefix = f"{B2_NAME_PREFIX}{Path(path).name}/"
-                        key = f"{key_prefix}{fullPath.name}"
+                        bucket = destination["bucket"]
+                        key_prefix = destination["b2_upload_prefix"]
+                        if not key_prefix:
+                            raise ValueError(
+                                "MediaPath response missing b2_upload_prefix"
+                            )
+                        if not bucket:
+                            raise ValueError("MediaPath response missing bucket")
+                        b2_uuid = str(uuid.uuid4())
+                        key = f"{key_prefix}{b2_uuid}{fullPath.suffix}"
                         b2.get_b2_client().upload_file(fullPath, bucket, key)
                         subtitle_files = upload_subtitle_files(
                             fullPath, path, bucket=bucket, key_prefix=key_prefix
                         )
+                    media_file_kwargs = {"subtitle_files": subtitle_files}
+                    if B2_ENABLED:
+                        media_file_kwargs["b2_uuid"] = b2_uuid
                     MediaFile.post_media_file(
                         fullPath.name,
                         media_path_id,
                         fullPath.stat().st_size,
-                        subtitle_files=subtitle_files,
+                        **media_file_kwargs,
                     )
+                    if published_filenames is not None:
+                        published_filenames.add(fullPath.name)
+                    remoteFileSet.add(fullPath.name)
+                    if media_path_details:
+                        selected_detail = next(
+                            (
+                                detail
+                                for detail in media_path_details
+                                if detail.get("pk") == media_path_id
+                            ),
+                            None,
+                        )
+                        if selected_detail is not None:
+                            media_files = selected_detail.setdefault("media_files", [])
+                            if fullPath.name not in media_files:
+                                media_files.append(fullPath.name)
             except Exception as e:
                 errorMsg = (
                     f"Something bad happened attempting to make {fullPath} streamable"
@@ -297,54 +461,74 @@ class TvRunner:
 
     def handleDirs(self, path, dry_run=False):
         if path.exists():
-            paths = []
-            dir_set = set()
-            for root, dirs, files in path.walk():
-                for file in files:
-                    paths.append(root / file)
+            for directory in sorted((p for p in path.iterdir() if p.is_dir())):
+                videos = sorted(
+                    p
+                    for p in directory.rglob("*")
+                    if p.is_file()
+                    and p.suffix.lower() in MEDIA_FILE_EXTENSIONS
+                    and p.stat().st_size > MINIMUM_FILE_SIZE
+                )
+                generic_names = {
+                    "2_eng",
+                    "2_english",
+                    "english",
+                    "eng",
+                    "subtitle",
+                }
+                # Resolve every owner against the unchanged directory inventory.
+                plans = []
+                for video in videos:
+                    sidecars = matching_subtitle_files(video, video_inventory=videos)
+                    if len(videos) == 1:
+                        sidecars.extend(
+                            subtitle
+                            for subtitle in directory.rglob("*")
+                            if subtitle.is_file()
+                            and subtitle.suffix.lower() in (".srt", ".vtt")
+                            and subtitle.stem.casefold() in generic_names
+                            and subtitle not in sidecars
+                        )
+                    moves = [(video, path / video.name)]
+                    for sidecar in sidecars:
+                        name = sidecar.name
+                        if sidecar.stem.casefold() in generic_names:
+                            name = f"{video.stem}.{sidecar.name}"
+                        moves.append((sidecar, path / name))
+                    plans.append(moves)
 
-            for fullpath in paths:
-                dirs = str(fullpath).split(str(path))[1].split(os.path.sep)
-                top, episode, file = path, dirs[1], dirs[-1]
-                file_ext = os.path.splitext(file)[-1].lower()
-
-                dir_path = Path(top) / episode
-                if dir_path.is_dir():
-                    dir_set.add(dir_path)
-
-                    english_subtitle_paths = dir_path.rglob("*Eng*.srt")
-                    count = 0
-                    for srt_path in english_subtitle_paths:
-                        # Move subtitle to show directory and rename
-                        log.info(f"Found subtitle file in {episode}")
-                        new = Path(top) / f"{episode}-{count}.srt"
+                for moves in plans:
+                    sources = {source for source, _ in moves}
+                    targets = [target for _, target in moves]
+                    collision = len(set(targets)) != len(targets) or any(
+                        target.exists() and target not in sources for target in targets
+                    )
+                    if collision:
+                        log.warning(
+                            "Skipping directory move batch due to destination collision"
+                        )
+                        continue
+                    for source, target in moves:
                         if dry_run:
-                            log.debug(f"Would rename {srt_path} to {new}")
+                            log.debug(f"Would rename {source} to {target}")
                         else:
-                            os.rename(srt_path, new)
-                        count += 1
-
-                    if (
-                        file_ext in MEDIA_FILE_EXTENSIONS
-                        and os.path.getsize(fullpath) > MINIMUM_FILE_SIZE
-                    ):
-                        # Move media file to show directory
-                        log.info(f"Found media file in {episode}")
-                        new = os.path.join(top, file)
-
-                        if dry_run:
-                            log.debug(f"Would rename {fullpath} to {new}")
-                        else:
-                            os.rename(fullpath, new)
-
-            for directory in dir_set:
-                log.info(f"Deleting {directory}")
-                if dry_run:
-                    log.debug(f"Would remove {directory}")
-                else:
-                    shutil.rmtree(directory)
+                            shutil.move(str(source), str(target))
+                if not dry_run:
+                    for nested in sorted(directory.rglob("*"), reverse=True):
+                        if nested.is_dir():
+                            try:
+                                nested.rmdir()
+                            except OSError:
+                                pass
+                    try:
+                        directory.rmdir()
+                    except OSError:
+                        pass
 
     def run(self, dry_run=False):
+        self._published_filenames = None
+        if B2_ENABLED and not dry_run:
+            self._get_published_filenames()
         log.info("Attempting to sort unsorted files")
         self._sort_unsorted_files(dry_run=dry_run)
 
@@ -364,10 +548,21 @@ class TvRunner:
                 continue
 
             log.info(f"Attempting to get remote files for {path}")
-            remoteFileSet = self.build_remote_media_file_set(pathIDs)
+            media_path_details = self.fetch_remote_media_path_details(pathIDs)
+            remoteFileSet = {
+                filename
+                for detail in media_path_details
+                for filename in detail["media_files"]
+            }
             log.info(f"Done building remote file set for {path}")
 
-            self.updateFileRecords(path, localFileSet, remoteFileSet, dry_run=dry_run)
+            self.updateFileRecords(
+                path,
+                localFileSet,
+                remoteFileSet,
+                dry_run=dry_run,
+                media_path_details=media_path_details,
+            )
 
         if self.errors:
             log.error("Errors occured in the following files:")
@@ -377,7 +572,12 @@ class TvRunner:
         return self.errors
 
     @staticmethod
-    def _sort_unsorted_files(dry_run=False):
+    def _normalized_media_path(uri):
+        return uri[:-1] if uri.endswith("/") else uri
+
+    def _sort_unsorted_files(self, dry_run=False):
+        media_paths = None
+        details_by_uri = {}
         for unsorted_path_str in UNSORTED_PATHS:
             unsorted_path = Path(unsorted_path_str)
 
@@ -385,7 +585,69 @@ class TvRunner:
                 log.info(f"Unsorted file path {unsorted_path} does not exist")
                 continue
 
-            for src in unsorted_path.iterdir():
+            for src in list(unsorted_path.iterdir()):
+                if B2_ENABLED:
+                    if (
+                        not src.is_file()
+                        or src.suffix.lower() not in MEDIA_FILE_EXTENSIONS
+                        or src.stat().st_size <= MINIMUM_FILE_SIZE
+                    ):
+                        continue
+                    inferred_uri = get_media_path_by_filename(src.name)
+                    if not inferred_uri:
+                        log.warning(f"No media path inferred for {src.name}")
+                        continue
+                    if not inferred_uri.startswith("b2://"):
+                        inferred_uri = get_b2_uri_for_local_path(Path(inferred_uri))
+                    try:
+                        self._select_b2_destination(
+                            src.parent,
+                            [{"pk": 0, "path": inferred_uri, "skip": False}],
+                        )
+                    except ValueError as error:
+                        log.warning(f"Invalid inferred B2 path for {src.name}: {error}")
+                        continue
+
+                    normalized_uri = self._normalized_media_path(inferred_uri)
+                    if normalized_uri not in details_by_uri:
+                        if media_paths is None:
+                            media_paths = Tv.get_all_media_paths()
+                        matching_paths = [
+                            item
+                            for item in media_paths
+                            if item.get("path", "").startswith("b2://")
+                            and self._normalized_media_path(item["path"])
+                            == normalized_uri
+                        ]
+                        if matching_paths:
+                            listed_path = min(
+                                matching_paths, key=lambda item: item["pk"]
+                            )
+                            detail = Tv.get_media_path(listed_path["pk"])
+                            detail.setdefault("pk", listed_path["pk"])
+                            detail.setdefault("path", listed_path["path"])
+                        elif dry_run:
+                            log.info(
+                                f"Would create media path {inferred_uri} for {src.name}"
+                            )
+                            continue
+                        else:
+                            detail = Tv.post_media_path(inferred_uri)
+                            detail.setdefault("path", inferred_uri)
+                            detail.setdefault("media_files", [])
+                        details_by_uri[normalized_uri] = detail
+
+                    detail = details_by_uri[normalized_uri]
+                    remote_files = set(detail.get("media_files", []))
+                    self.updateFileRecords(
+                        src.parent,
+                        {src.name},
+                        remote_files,
+                        dry_run=dry_run,
+                        media_path_details=[detail],
+                    )
+                    continue
+
                 filename = src.name
 
                 localpath = get_localpath_by_filename(filename)
@@ -399,3 +661,10 @@ class TvRunner:
                 else:
                     log.info(f"Moving {src} to {dst}")
                     shutil.move(src, dst)
+
+
+if __name__ == "__main__":
+    runner = TvRunner()
+    errors = runner.run()
+    if errors:
+        print(errors)
