@@ -1,6 +1,7 @@
 import pytest
 import mock
 import shlex
+import tempfile
 from pathlib import Path
 from subprocess import PIPE
 from settings import ENCODER
@@ -302,13 +303,17 @@ class TestMakeFileStreamable(TouchFileMixin):
             appendSuffix=appendSuffixSentinel,
         )
         assert res == "the_final_destination"
+        self.mock_encode.assert_called_once()
+        encode_call = self.mock_encode.call_args
+        destination = encode_call.args[1]
         self.mock_encode.assert_called_once_with(
-            self.temp_directory / "this.is.a.file.mkv",
-            Path("/tmp/this.is.a.file.mp4"),
-            dryRun=dryRunSentinel,
+            orig, destination, dryRun=dryRunSentinel
         )
+        assert destination.name == "this.is.a.file.mp4"
+        assert destination.parent.parent == Path(tempfile.gettempdir())
+        assert destination.parent.name.startswith("tmp")
         self.mock_overwriteExistingFile.assert_called_once_with(
-            Path("/tmp/this.is.a.file.mp4"),
+            destination,
             self.temp_directory,
             dryRun=dryRunSentinel,
             appendSuffix=appendSuffixSentinel,

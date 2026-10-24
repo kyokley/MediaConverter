@@ -14,6 +14,7 @@ def gen_data(num):
 class TestPostMovies:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker, temp_directory):
+        mocker.patch("movie_runner.B2_ENABLED", False)
         self.tmp_dir = temp_directory
         movie_dir = self.tmp_dir / "movies"
         movie_dir.mkdir(parents=True)

@@ -45,6 +45,7 @@ class TestBuildLocalFileSetFunctional:
 class TestSortUnsortedFiles:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker):
+        mocker.patch("tv_runner.B2_ENABLED", False)
         self.temp_dir = tempfile.mkdtemp()
         self.temp_dir_path = Path(self.temp_dir)
 
