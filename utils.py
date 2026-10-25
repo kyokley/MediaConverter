@@ -1,22 +1,28 @@
-import requests
-import os
-import time
-
-from pathlib import Path
-from unidecode import unidecode
-import smtplib
-
 import logging
+import os
+import uuid
+import smtplib
+import time
+from pathlib import Path
 
+import requests
+from unidecode import unidecode
+
+import b2
 from settings import (
-    WAITER_USERNAME,
-    WAITER_PASSWORD,
-    GMAIL_USER,
-    GMAIL_PASSWORD,
-    EMAIL_RECIPIENTS,
-    VERIFY_REQUESTS,
-    MEDIA_FILE_EXTENSIONS,
+    B2_BUCKET_NAME,
+    B2_NAME_PREFIX,
+    BASE_PATH,
     DOMAIN,
+    EMAIL_RECIPIENTS,
+    GMAIL_PASSWORD,
+    GMAIL_USER,
+    MEDIA_FILE_EXTENSIONS,
+    MEDIAVIEWER_SUFFIX,
+    TIMEOUT,
+    VERIFY_REQUESTS,
+    WAITER_PASSWORD,
+    WAITER_USERNAME,
 )
 
 log = logging.getLogger(__name__)
@@ -50,6 +56,7 @@ def post_data(values, url):
                 data={},
                 auth=(WAITER_USERNAME, WAITER_PASSWORD),
                 verify=VERIFY_REQUESTS,
+                timeout=TIMEOUT,
             )
             time.sleep(_external_request_cooldown())
         except Exception as e:
@@ -104,6 +111,7 @@ def _make_request(verb, url, values=None):
             data=values,
             auth=(WAITER_USERNAME, WAITER_PASSWORD),
             verify=VERIFY_REQUESTS,
+            timeout=TIMEOUT,
         )
         request.raise_for_status()
         time.sleep(_external_request_cooldown())
@@ -166,10 +174,17 @@ def is_valid_media_file(path):
 
 
 def get_localpath_by_filename(filename):
+    media_path = get_media_path_by_filename(filename)
+    return Path(media_path) if media_path else None
+
+
+def get_media_path_by_filename(filename):
+    """Return the inferred MediaViewer media path without converting its type."""
     resp = requests.get(
         mediaviewer_infer_scrapers_url(),
         params={"title": filename},
         auth=(WAITER_USERNAME, WAITER_PASSWORD),
+        timeout=TIMEOUT,
     )
 
     try:
@@ -180,4 +195,138 @@ def get_localpath_by_filename(filename):
         return
 
     data = resp.json()
-    return Path(data["path"])
+    return data["path"]
+
+
+def get_b2_uri_for_local_path(local_path):
+    """Build the b2:// URI MediaViewer should store for a local directory."""
+    return f"b2://{B2_BUCKET_NAME}/{B2_NAME_PREFIX}{local_path.name}/"
+
+
+def upload_subtitle_files(video_path, media_path, bucket=None, key_prefix=None):
+    """Upload .vtt subtitle files matching the video to B2.
+
+    Returns the list of uploaded subtitle file names.
+    """
+    subtitle_files = []
+    bucket = bucket or B2_BUCKET_NAME
+    if key_prefix is None:
+        key_prefix = f"{B2_NAME_PREFIX}{Path(media_path).name}/"
+    for subtitle_file in matching_subtitle_files(video_path):
+        if subtitle_file.suffix.lower() == ".srt":
+            from convert import _convertSrtToVtt
+
+            subtitle_file = _convertSrtToVtt(subtitle_file)
+        remote_name = f"{uuid.uuid4()}.vtt"
+        key = f"{key_prefix}{remote_name}"
+        b2.get_b2_client().upload_file(subtitle_file, bucket, key)
+        subtitle_files.append(remote_name)
+    return subtitle_files
+
+
+def matching_subtitle_files(video_path, video_inventory=None):
+    """Return deterministically matched adjacent SRT/VTT sidecars."""
+    video = Path(video_path)
+    base = video.name
+    suffix = f".{MEDIAVIEWER_SUFFIX}"
+    if base.lower().endswith(suffix.lower()):
+        base = base[: -len(suffix)]
+    if Path(base).suffix.lower() in MEDIA_FILE_EXTENSIONS:
+        base = base[: -len(Path(base).suffix)]
+    bases = {base.casefold(), video.stem.casefold()}
+    inventory = (
+        [Path(item) for item in video_inventory]
+        if video_inventory is not None
+        else [
+            path
+            for path in video.parent.iterdir()
+            if path.is_file() and path.suffix.lower() in MEDIA_FILE_EXTENSIONS
+        ]
+    )
+    if video not in inventory:
+        inventory.append(video)
+    candidates = sorted(
+        (
+            p
+            for p in video.parent.iterdir()
+            if p.is_file() and p.suffix.lower() in (".srt", ".vtt")
+        ),
+        key=lambda p: p.name.casefold(),
+    )
+    matches = {}
+    for path in candidates:
+        stem = path.stem.casefold()
+        matched_bases = [
+            owner
+            for owner in bases
+            if (
+                stem.startswith(owner)
+                and (
+                    not stem[len(owner) :]
+                    or stem[len(owner) : len(owner) + 1] in (".", "-")
+                )
+            )
+        ]
+        if matched_bases:
+            longest_match = max(map(len, matched_bases))
+            claimed_by_more_specific_video = False
+            for other in inventory:
+                if other.resolve() == video.resolve():
+                    continue
+                other_name = other.name
+                if other_name.lower().endswith(suffix.lower()):
+                    other_name = other_name[: -len(suffix)]
+                if Path(other_name).suffix.lower() in MEDIA_FILE_EXTENSIONS:
+                    other_name = other_name[: -len(Path(other_name).suffix)]
+                other_base = other_name.casefold()
+                if (
+                    len(other_base) > longest_match
+                    and stem.startswith(other_base)
+                    and (
+                        not stem[len(other_base) :]
+                        or stem[len(other_base) : len(other_base) + 1] in (".", "-")
+                    )
+                ):
+                    claimed_by_more_specific_video = True
+                    break
+            if claimed_by_more_specific_video:
+                continue
+            if stem not in matches or path.suffix.lower() == ".vtt":
+                matches[stem] = path
+
+    generic = {"2_eng", "2_english", "english", "eng", "subtitle"}
+    media_count = (
+        len(inventory)
+        if video_inventory is not None
+        else sum(
+            1
+            for p in video.parent.iterdir()
+            if p.is_file() and p.suffix.lower() in MEDIA_FILE_EXTENSIONS
+        )
+    )
+    if media_count <= 1:
+        for path in candidates:
+            if path.stem.casefold() in generic:
+                if path.stem.casefold() not in matches or path.suffix.lower() == ".vtt":
+                    matches[path.stem.casefold()] = path
+    return sorted(set(matches.values()), key=lambda p: p.name.casefold())
+
+
+def get_local_path_from_media_path(media_path, local_roots):
+    """Map a MediaViewer media_path value back to a local filesystem path.
+
+    Handles local paths (absolute, or relative to BASE_PATH) and b2:// URIs.
+    B2 URIs are matched back to a local directory by name under one of the
+    given local roots; the first root whose candidate exists wins, falling
+    back to the first root.
+    """
+    if media_path.startswith("b2://"):
+        dirname = media_path.rstrip("/").rsplit("/", 1)[-1]
+        for root in local_roots:
+            candidate = Path(BASE_PATH) / root / dirname
+            if candidate.exists():
+                return candidate
+        return Path(BASE_PATH) / local_roots[0] / dirname
+    if BASE_PATH not in media_path:
+        return Path(BASE_PATH) / media_path
+    return Path(media_path)

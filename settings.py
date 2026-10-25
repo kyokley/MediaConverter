@@ -1,7 +1,7 @@
 import os
 import logging
 
-logging.getLogger().setLevel(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 logging.getLogger("faker").setLevel(logging.WARN)
 
 CELERY_VHOST = ""
@@ -27,7 +27,7 @@ UNSORTED_PATHS = (
 BASE_PATH = os.getenv("MC_BASE_PATH", "/home/user")
 
 DOMAIN = os.getenv(
-    "MC_DOMAIN", "https://127.0.0.1:8001"
+    "MC_DOMAIN", "https://127.0.0.1:8000"
 )  # Do not include trailing slash
 
 MEDIAVIEWER_SUFFIX = os.getenv("MC_MEDIAVIEWER_SUFFIX", "mv-encoded.mp4")
@@ -46,8 +46,6 @@ MEDIA_FILE_EXTENSIONS = (
 SUBTITLE_EXTENSIONS = (".srt",)
 SUBTITLE_FILES = ("2_Eng.srt", "English.srt", "2_English.srt")
 
-SERVER_NAME = os.getenv("MC_SERVER_NAME", "127.0.0.1")
-
 SEND_EMAIL = os.getenv("MC_SEND_EMAIL", False)
 GMAIL_USER = os.getenv("MC_GMAIL_USER", "some@user.com")
 GMAIL_PASSWORD = os.getenv("MC_GMAIL_PASSWORD", "some_password")
@@ -60,6 +58,17 @@ EMAIL_RECIPIENTS = (
 VERIFY_REQUESTS = True
 
 MINIMUM_FILE_SIZE = int(os.getenv("MC_MINIMUM_FILE_SIZE", 10000000))
+
+B2_ENABLED = os.getenv("MC_B2_ENABLED", "true").lower() in ("1", "true", "yes")
+B2_API_URL = os.getenv("MC_B2_API_URL", "https://api.backblazeb2.com")
+B2_APPLICATION_KEY_ID = os.getenv("MC_B2_APPLICATION_KEY_ID", "")
+B2_APPLICATION_KEY = os.getenv("MC_B2_APPLICATION_KEY", "")
+B2_BUCKET_NAME = os.getenv("MC_B2_BUCKET_NAME", "")
+B2_NAME_PREFIX = os.getenv("MC_B2_NAME_PREFIX", "")
+
+BROKER = os.getenv("MC_BROKER", "")
+
+TIMEOUT = 5
 
 # DON'T MAKE ANY EDITS BELOW THIS LINE!!!!
 try:

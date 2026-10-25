@@ -1,5 +1,6 @@
 import shutil
 import shlex
+import tempfile
 from pathlib import Path
 from re import search
 from settings import (
@@ -10,6 +11,7 @@ from utils import (
     stripUnicode,
     EncoderException,
     is_valid_media_file,
+    matching_subtitle_files,
 )
 from subprocess import Popen, PIPE
 
@@ -111,34 +113,51 @@ def encode(source, dest, dryRun=False):
 
 def _handleSubtitles(source, dest, sres):
     dirname = Path(source).parent
-    english_subtitle_paths = dirname.glob("*[eE][nN][gG]*.srt")
-
-    file_srt_paths = dirname.glob("*.srt")
-
     count = 0
 
-    for srt_path in english_subtitle_paths:
-        log.info(f"{srt_path.name} found in directory. Attempting to convert.")
-        dest_path = dirname / f"{dest.name}.{MEDIAVIEWER_SUFFIX}-{count}.vtt"
-        vtt_path = _convertSrtToVtt(srt_path)
-        _moveSubtitleFile(vtt_path, dest_path)
-
-        count += 1
-
-    for file_srt_path in file_srt_paths:
-        log.info(f"{file_srt_path} found in directory. Looking for {source.stem}")
-        if source.stem in str(file_srt_path):
-            log.info(f"{file_srt_path} found in directory. Attempting to convert.")
+    def unused_destination():
+        nonlocal count
+        while True:
             dest_path = dirname / f"{dest.name}.{MEDIAVIEWER_SUFFIX}-{count}.vtt"
-            vtt_path = _convertSrtToVtt(file_srt_path)
-            _moveSubtitleFile(vtt_path, dest_path)
             count += 1
+            if not dest_path.exists() and not dest_path.with_suffix(".srt").exists():
+                return dest_path
+
+    subtitle_paths = matching_subtitle_files(source)
+    if Path(source).suffix.lower() == ".srt" and not any(
+        item.is_file() and is_valid_media_file(item) for item in dirname.iterdir()
+    ):
+        subtitle_paths = sorted(dirname.glob("*.srt"))
+    for subtitle_path in subtitle_paths:
+        if subtitle_path.suffix.lower() == ".vtt":
+            continue
+        log.info(f"{subtitle_path.name} found in directory. Attempting to convert.")
+        dest_path = unused_destination()
+        with tempfile.NamedTemporaryFile(
+            suffix=".srt", dir=dirname, prefix=".subtitle-", delete=False
+        ) as temporary:
+            temporary_srt = Path(temporary.name)
+        try:
+            shutil.copy2(subtitle_path, temporary_srt)
+            vtt_path = _convertSrtToVtt(temporary_srt)
+            _moveSubtitleFile(vtt_path, dest_path)
+            if not dest_path.is_file():
+                raise EncoderException(
+                    f"Subtitle conversion did not create destination: {dest_path}"
+                )
+            try:
+                subtitle_path.unlink()
+            except OSError as error:
+                log.warning(error)
+        finally:
+            temporary_srt.unlink(missing_ok=True)
+            temporary_srt.with_suffix(".vtt").unlink(missing_ok=True)
 
     if sres:
         log.info("Found subtitles stream. Attempting to extract")
         sres = sres.groups()
         stream_identifier = f"{sres[0]}:{sres[1]}"
-        dest_path = dirname / f"{dest.name}.{MEDIAVIEWER_SUFFIX}-{count}.vtt"
+        dest_path = unused_destination()
         _extractSubtitles(
             source,
             dest_path,
@@ -261,26 +280,28 @@ def overwriteExistingFile(source, directory, dryRun=False, appendSuffix=True):
 
 
 def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal=True):
+    log.info(f"Begin processing {filename}")
     if MEDIAVIEWER_SUFFIX in str(filename):
-        raise AlreadyEncoded("File appears to already have been encoded.")
+        raise AlreadyEncoded(f"{filename} appears to already have been encoded.")
 
     orig = Path(filename).resolve()
 
     if not is_valid_media_file(filename) or not orig.exists():
         raise SkipProcessing(f"{filename} is not a valid media file.")
 
-    new = Path("/tmp") / orig.with_suffix(".mp4").name
+    with tempfile.TemporaryDirectory() as tmpdir:
+        new = Path(tmpdir) / orig.with_suffix(".mp4").name
 
-    log.info(f"Begin re-encoding of {orig}...")
-    encode(orig, new, dryRun=dryRun)
-    log.info("Finished encoding")
+        log.info(f"Begin re-encoding of {orig}...")
+        encode(orig, new, dryRun=dryRun)
+        log.info("Finished encoding")
 
-    dest = overwriteExistingFile(
-        new,
-        orig.parent,
-        dryRun=dryRun,
-        appendSuffix=appendSuffix,
-    )
+        dest = overwriteExistingFile(
+            new,
+            orig.parent,
+            dryRun=dryRun,
+            appendSuffix=appendSuffix,
+        )
 
     if not dryRun:
         if removeOriginal and orig.exists():

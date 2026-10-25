@@ -1,16 +1,36 @@
 { pkgs, lib, config, inputs, ... }:
 
 {
+  cachix.pull = ["horus"];
   # https://devenv.sh/basics/
-  # env.GREET = "MV";
+  env.GREET = "MV";
 
   # https://devenv.sh/packages/
-  # packages = [
-  #   pkgs.git
-  # ];
+  packages = [
+    pkgs.docker
+  ];
 
   # https://devenv.sh/scripts/
-  # scripts.hello.exec = "echo hello from $GREET";
+  scripts = {
+    hello.exec = "echo hello from $GREET";
+    build.exec = ''
+      ${pkgs.docker}/bin/docker build -t kyokley/mediaconverter --target=prod "$@" .
+    '';
+    build-dev.exec = ''
+      ${pkgs.docker}/bin/docker build -t kyokley/mediaconverter --target=dev "$@" .
+    '';
+    up.exec = ''
+      ${pkgs.docker}/bin/docker compose up "$@"
+    '';
+    down.exec = ''
+      ${pkgs.docker}/bin/docker compose down "$@"
+    '';
+    runtests.exec = ''
+      build-dev
+      up -d
+      ${pkgs.docker}/bin/docker compose exec mediaconverter pytest
+    '';
+  };
 
   # enterShell = ''
   #   # hello

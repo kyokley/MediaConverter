@@ -1,14 +1,24 @@
 import os
+import uuid
 from pathlib import Path
+import b2
 from settings import (
     LOCAL_MOVIE_PATHS,
     SUBTITLE_FILES,
     DOMAIN,
     BASE_PATH,
+    B2_ENABLED,
 )
 from convert import reencodeFilesInDirectory
-from utils import get_data, put_data
-from tv_runner import MediaPathMixin
+from utils import (
+    get_data,
+    put_data,
+    get_b2_uri_for_local_path,
+    get_local_path_from_media_path,
+    is_valid_media_file,
+    upload_subtitle_files,
+)
+from tv_runner import MediaPathMixin, MediaFile
 
 import logging
 
@@ -46,7 +56,7 @@ class Movie(MediaPathMixin):
         return DOMAIN + "/mediaviewer/api/moviemediapath/"
 
     @classmethod
-    def get_all_movies(cls):
+    def get_all_movies(cls, incomplete_paths=None):
         paths = dict()
 
         data = {"next": cls.MEDIAVIEWER_MOVIE_URL}
@@ -59,10 +69,30 @@ class Movie(MediaPathMixin):
                 for result in data["results"]:
                     media_path = result["media_path"]
 
-                    if BASE_PATH not in media_path:
-                        local_path = Path(BASE_PATH) / media_path["path"]
-                    else:
-                        local_path = Path(media_path["path"])
+                    if media_path.get("path", "").startswith(
+                        "b2://"
+                    ) and not media_path.get("filename"):
+                        local_path = get_local_path_from_media_path(
+                            media_path["path"], LOCAL_MOVIE_PATHS
+                        )
+                        if incomplete_paths is not None:
+                            existing = incomplete_paths.get(local_path)
+                            if existing and existing["path"] != media_path["path"]:
+                                raise ValueError(
+                                    "Multiple incomplete B2 MediaPaths map to "
+                                    f"{local_path}: {existing['path']}, "
+                                    f"{media_path['path']}"
+                                )
+                            val = incomplete_paths.setdefault(
+                                local_path,
+                                {"path": media_path["path"], "pks": set()},
+                            )
+                            val["pks"].add(media_path["pk"])
+                        continue
+
+                    local_path = get_local_path_from_media_path(
+                        media_path["path"], LOCAL_MOVIE_PATHS
+                    )
 
                     val = paths.setdefault(
                         local_path, {"pks": set(), "finished": result["finished"]}
@@ -80,7 +110,11 @@ class MovieRunner:
     def postMovies(self, dry_run=False):
         base_path = Path(BASE_PATH)
 
-        remote_paths = set(Movie.get_all_movies().keys())
+        incomplete_paths = {}
+        remote_paths = set(Movie.get_all_movies(incomplete_paths).keys())
+        published_filenames = (
+            MediaFile.get_all_filenames() if B2_ENABLED and not dry_run else set()
+        )
 
         for moviepath_str in LOCAL_MOVIE_PATHS:
             moviepath = base_path / moviepath_str
@@ -93,6 +127,16 @@ class MovieRunner:
             for token in tokens:
                 localpath = moviepath / token
                 if localpath not in remote_paths:
+                    if B2_ENABLED and not dry_run:
+                        candidate = self._get_largest_video_file(localpath)
+                        if (
+                            candidate is not None
+                            and candidate.name in published_filenames
+                        ):
+                            log.info(
+                                f"Skipping {localpath}: {candidate.name} already published"
+                            )
+                            continue
                     log.info(f"Found {localpath}")
                     log.info(f"Starting re-encoding of {localpath}...")
                     try:
@@ -102,7 +146,7 @@ class MovieRunner:
                         else:
                             errors = reencodeFilesInDirectory(localpath)
 
-                        if errors:
+                        if not dry_run and errors:
                             self.errors.extend(errors)
                             continue
                     except Exception as e:
@@ -112,6 +156,49 @@ class MovieRunner:
                     log.info(f"Posting {localpath}")
                     if dry_run:
                         log.debug(f"Would post path for {localpath}")
+                        continue
+                    if B2_ENABLED:
+                        video_file = self._get_largest_video_file(localpath)
+                        if video_file is None:
+                            self.errors.append(
+                                f"No video file found in {localpath}. Continuing..."
+                            )
+                            continue
+                        if video_file.name in published_filenames:
+                            log.info(
+                                f"Skipping {localpath}: {video_file.name} already published"
+                            )
+                            continue
+                        incomplete_path = incomplete_paths.get(localpath)
+                        logical_path = (
+                            incomplete_path["path"]
+                            if incomplete_path
+                            else get_b2_uri_for_local_path(localpath)
+                        )
+                        media_path_data = Movie.post_media_path(logical_path)
+                        key_prefix = media_path_data.get("b2_upload_prefix")
+                        bucket = media_path_data.get("bucket")
+                        if not key_prefix or not bucket:
+                            raise ValueError(
+                                "MediaPath response missing bucket or b2_upload_prefix"
+                            )
+                        b2_uuid = str(uuid.uuid4())
+                        key = f"{key_prefix}{b2_uuid}{video_file.suffix}"
+                        b2.get_b2_client().upload_file(video_file, bucket, key)
+                        subtitle_files = upload_subtitle_files(
+                            video_file,
+                            localpath,
+                            bucket=bucket,
+                            key_prefix=key_prefix,
+                        )
+                        MediaFile.post_media_file(
+                            video_file.name,
+                            media_path_data["pk"],
+                            video_file.stat().st_size,
+                            subtitle_files=subtitle_files,
+                            b2_uuid=b2_uuid,
+                        )
+                        published_filenames.add(video_file.name)
                     else:
                         Movie.post_media_path(localpath)
 
@@ -140,7 +227,25 @@ class MovieRunner:
 
         return set(os.listdir(moviepath))
 
+    @staticmethod
+    def _get_largest_video_file(localpath):
+        video_files = [
+            f
+            for f in Path(localpath).iterdir()
+            if f.is_file() and is_valid_media_file(f)
+        ]
+        if not video_files:
+            return None
+        return max(video_files, key=lambda f: f.stat().st_size)
+
     def run(self, dry_run=False):
         self.postMovies(dry_run=dry_run)
         log.info("Done running movies")
         return self.errors
+
+
+if __name__ == "__main__":
+    runner = MovieRunner()
+    errors = runner.run()
+    if errors:
+        print(errors)
