@@ -151,7 +151,6 @@ class MediaFile:
 
     @classmethod
     def get_all_filenames(cls):
-        import pdb; pdb.set_trace()  # ############################## Breakpoint ##############################
         filenames = set()
         visited = set()
         for endpoint in (
