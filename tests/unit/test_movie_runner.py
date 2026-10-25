@@ -827,8 +827,10 @@ class TestGetLocalMoviePaths:
         self.mock_exists = mocker.patch("movie_runner.os.path.exists")
 
         self.mock_listdir = mocker.patch("movie_runner.os.listdir")
+        self.mock_isdir = mocker.patch("movie_runner.os.path.isdir")
 
         self.mock_exists.return_value = True
+        self.mock_isdir.return_value = True
 
     def test_path_does_not_exist(self):
         self.mock_exists.return_value = False
@@ -847,6 +849,66 @@ class TestGetLocalMoviePaths:
         assert expected == actual
         self.mock_exists.assert_called_once_with("test_path")
         self.mock_listdir.assert_called_once_with("test_path")
+        assert self.mock_isdir.call_count == len(expected)
+
+
+def test_get_local_movie_paths_discovers_only_directories(temp_directory):
+    movie_root = temp_directory / "movies"
+    movie_root.mkdir()
+    (movie_root / "Film").mkdir()
+    (movie_root / "movie.txt").write_text("not a movie directory")
+    (movie_root / "loose.mp4").write_bytes(b"loose video")
+    (movie_root / "linked-film").symlink_to(
+        movie_root / "Film", target_is_directory=True
+    )
+
+    assert MovieRunner._getLocalMoviePaths(movie_root) == {"Film", "linked-film"}
+
+
+def test_get_local_movie_paths_empty_and_missing_roots(temp_directory):
+    empty_root = temp_directory / "empty"
+    empty_root.mkdir()
+
+    assert MovieRunner._getLocalMoviePaths(empty_root) == set()
+    assert MovieRunner._getLocalMoviePaths(temp_directory / "missing") == set()
+
+
+def test_post_movies_processes_directories_only_with_real_discovery(
+    mocker, temp_directory
+):
+    movie_root = temp_directory / "movies"
+    movie_path = movie_root / "Film"
+    movie_path.mkdir(parents=True)
+    (movie_root / "movie.txt").write_text("not a movie directory")
+    (movie_root / "loose.mp4").write_bytes(b"loose video")
+    video = movie_path / "Film.mp4"
+    video.write_bytes(b"video")
+
+    mocker.patch("movie_runner.BASE_PATH", temp_directory)
+    mocker.patch("movie_runner.LOCAL_MOVIE_PATHS", ["movies"])
+    mocker.patch("movie_runner.B2_ENABLED", True)
+    mocker.patch("movie_runner.Movie.get_all_movies", return_value={})
+    mocker.patch.object(MediaFile, "get_all_filenames", return_value=set())
+    promote = mocker.patch.object(MovieRunner, "promoteSubtitles")
+    reencode = mocker.patch("movie_runner.reencodeFilesInDirectory", return_value=None)
+    post_path = mocker.patch(
+        "movie_runner.Movie.post_media_path",
+        return_value={"pk": 1, "bucket": "bucket", "b2_upload_prefix": "p/"},
+    )
+    upload = mocker.patch("movie_runner.b2.get_b2_client").return_value
+    mocker.patch("movie_runner.upload_subtitle_files", return_value=[])
+    post_file = mocker.patch.object(MediaFile, "post_media_file")
+
+    runner = MovieRunner()
+    assert runner.postMovies() is None
+
+    assert runner.errors == []
+    promote.assert_called_once_with(movie_path, dry_run=False)
+    reencode.assert_called_once_with(movie_path)
+    post_path.assert_called_once()
+    upload.upload_file.assert_called_once()
+    assert upload.upload_file.call_args.args[:2] == (video, "bucket")
+    post_file.assert_called_once()
 
 
 class TestGetLargestVideoFile:

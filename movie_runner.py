@@ -225,7 +225,11 @@ class MovieRunner:
         if not os.path.exists(moviepath):
             return set()
 
-        return set(os.listdir(moviepath))
+        return {
+            entry
+            for entry in os.listdir(moviepath)
+            if os.path.isdir(os.path.join(moviepath, entry))
+        }
 
     @staticmethod
     def _get_largest_video_file(localpath):

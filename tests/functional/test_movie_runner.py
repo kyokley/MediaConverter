@@ -1,5 +1,4 @@
 import tempfile
-import os
 import shutil
 import pytest
 
@@ -24,7 +23,11 @@ class TestGetLocalMoviePathsFunctional:
         assert expected == actual
 
     def test_path_exists(self):
-        files = set([tempfile.mkstemp(dir=self.temp_dir)[1] for i in range(3)])
-        expected = set([os.path.basename(x) for x in files])
+        directories = {self.temp_dir / f"movie{i}" for i in range(3)}
+        for directory in directories:
+            directory.mkdir()
+        for i in range(3):
+            (self.temp_dir / f"loose{i}.mp4").write_bytes(b"video")
+        expected = {directory.name for directory in directories}
         actual = self.movieRunner._getLocalMoviePaths(self.temp_dir)
         assert expected == actual
