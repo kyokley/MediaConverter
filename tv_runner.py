@@ -5,6 +5,7 @@ import subprocess  # nosec
 import shlex
 import shutil
 import uuid
+import time
 from urllib.parse import urlsplit
 
 from pathlib import Path
@@ -222,7 +223,12 @@ class TvRunner:
 
     def _get_published_filenames(self):
         if self._published_filenames is None:
+            log.info("Starting global published filename inventory lookup")
             self._published_filenames = MediaFile.get_all_filenames()
+            log.info(
+                "Completed global published filename inventory: filenames=%d",
+                len(self._published_filenames),
+            )
         return self._published_filenames
 
     def load_paths(self):
@@ -315,25 +321,32 @@ class TvRunner:
     def updateFileRecords(
         self, path, localFileSet, remoteFileSet, dry_run=False, media_path_details=None
     ):
+        pending_files = localFileSet.difference(remoteFileSet)
+        total = len(pending_files)
+        initial_remote_count = len(remoteFileSet)
+        published = 0
         destination = (
             self._select_b2_destination(path, media_path_details)
             if B2_ENABLED
             else None
         )
         media_path_id = None
-        for localFile in localFileSet.difference(remoteFileSet):
+        for index, localFile in enumerate(pending_files, start=1):
             if not localFile:
                 continue
+
+            file_started = time.perf_counter()
+            log.info("[%d/%d] Processing TV file %s", index, total, localFile)
 
             published_filenames = None
             if B2_ENABLED and not dry_run:
                 published_filenames = self._get_published_filenames()
                 if localFile in published_filenames:
-                    log.info(f"Skipping {localFile}; filename already published")
+                    log.info("Skipping %s: filename already published", localFile)
                     continue
 
             if dry_run:
-                log.debug(f"Would process {localFile}")
+                log.info("Skipping %s: dry-run would process file", localFile)
                 continue
 
             if not media_path_id:
@@ -343,12 +356,14 @@ class TvRunner:
                 if B2_ENABLED:
                     destination = media_path_data
                 if media_path_data["skip"]:
+                    log.info("Skipping %s: MediaPath is marked skip", localFile)
                     break
 
                 media_path_id = media_path_data["pk"]
 
             try:
                 log.info(f"Attempting to add {localFile}")
+                fullPath = Path(path) / localFile
                 fullPath = stripUnicode(localFile, path=path)
                 try:
                     fullPath = makeFileStreamable(
@@ -356,7 +371,7 @@ class TvRunner:
                     )
                 except EncoderException:
                     errorMsg = f"Got a non-fatal encoding error attempting to make {fullPath} streamable"
-                    log.error(errorMsg)
+                    log.exception("%s", errorMsg)
                     log.error("Attempting to recover and continue")
                     self.errors.append(errorMsg)
                     continue
@@ -374,7 +389,7 @@ class TvRunner:
                         and fullPath.name in published_filenames
                     ):
                         log.info(
-                            f"Skipping {fullPath.name}; filename already published"
+                            "Skipping %s: filename already published", fullPath.name
                         )
                         continue
                     subtitle_files = []
@@ -405,6 +420,12 @@ class TvRunner:
                     if published_filenames is not None:
                         published_filenames.add(fullPath.name)
                     remoteFileSet.add(fullPath.name)
+                    published += 1
+                    log.info(
+                        "Published TV file %s after MediaFile API success (%.2fs)",
+                        fullPath,
+                        time.perf_counter() - file_started,
+                    )
                     if media_path_details:
                         selected_detail = next(
                             (
@@ -419,11 +440,8 @@ class TvRunner:
                             if fullPath.name not in media_files:
                                 media_files.append(fullPath.name)
             except Exception as e:
-                errorMsg = (
-                    f"Something bad happened attempting to make {fullPath} streamable"
-                )
-                log.error(errorMsg)
-                log.error(e)
+                errorMsg = f"Failed processing TV file {fullPath}: {e}"
+                log.exception("%s", errorMsg)
 
                 if SEND_EMAIL:
                     subject = "MC: Got some errors"
@@ -434,6 +452,14 @@ class TvRunner:
                     """
                     send_email(subject, message)
                 raise
+        log.info(
+            "TV directory file pass completed path=%s local=%d remote=%d pending=%d published=%d",
+            path,
+            len(localFileSet),
+            initial_remote_count,
+            total,
+            published,
+        )
 
     @staticmethod
     def buildLocalFileSet(path):
@@ -456,7 +482,7 @@ class TvRunner:
                 if x and os.path.splitext(x)[1] not in IGNORED_FILE_EXTENSIONS
             ]
         )
-        log.info(localFileSet)
+        log.info("Discovered %d local TV files in %s", len(localFileSet), path)
         return localFileSet
 
     def handleDirs(self, path, dry_run=False):
@@ -526,35 +552,48 @@ class TvRunner:
                         pass
 
     def run(self, dry_run=False):
+        run_started = time.perf_counter()
+        log.info("TV run started (dry_run=%s)", dry_run)
         self._published_filenames = None
         if B2_ENABLED and not dry_run:
             self._get_published_filenames()
-        log.info("Attempting to sort unsorted files")
+        log.info("Starting unsorted TV file phase")
         self._sort_unsorted_files(dry_run=dry_run)
+        log.info("Completed unsorted TV file phase")
 
-        log.info("Attempting to get paths")
+        log.info("Starting TV path discovery")
         self.load_paths()
-        log.info("Got paths")
-        for path, pathIDs in self.paths.items():
+        directory_total = len(self.paths)
+        log.info("Discovered %d TV directories", directory_total)
+        processed_directories = 0
+        for index, (path, pathIDs) in enumerate(self.paths.items(), start=1):
+            directory_started = time.perf_counter()
             try:
-                log.info(f"Handling directories in {path}")
+                log.info(
+                    "[%d/%d] Starting TV directory %s", index, directory_total, path
+                )
+                log.info("Preparing TV subtitles and directory contents for %s", path)
                 self.handleDirs(path, dry_run=dry_run)
-                log.info(f"Building local file set for {path}")
+                log.info("Discovering local TV media files in %s", path)
                 localFileSet = self.buildLocalFileSet(path)
-                log.info(f"Done building local file set for {path}")
             except MissingPathException as e:
-                log.warning(e)
-                log.warning("Continuing...")
+                log.warning("Skipping TV directory %s: %s", path, e)
                 continue
 
-            log.info(f"Attempting to get remote files for {path}")
+            log.info("Starting remote TV inventory lookup for %s", path)
             media_path_details = self.fetch_remote_media_path_details(pathIDs)
             remoteFileSet = {
                 filename
                 for detail in media_path_details
                 for filename in detail["media_files"]
             }
-            log.info(f"Done building remote file set for {path}")
+            log.info(
+                "TV directory inventory for %s: local=%d remote=%d pending=%d",
+                path,
+                len(localFileSet),
+                len(remoteFileSet),
+                len(localFileSet.difference(remoteFileSet)),
+            )
 
             self.updateFileRecords(
                 path,
@@ -563,12 +602,26 @@ class TvRunner:
                 dry_run=dry_run,
                 media_path_details=media_path_details,
             )
+            processed_directories += 1
+            log.info(
+                "[%d/%d] Completed TV directory %s in %.2fs",
+                index,
+                directory_total,
+                path,
+                time.perf_counter() - directory_started,
+            )
 
         if self.errors:
             log.error("Errors occured in the following files:")
             for error in self.errors:
                 log.error(error)
-        log.info("Done running tv shows")
+        log.info(
+            "TV run completed: directories=%d/%d errors=%d elapsed=%.2fs",
+            processed_directories,
+            directory_total,
+            len(self.errors),
+            time.perf_counter() - run_started,
+        )
         return self.errors
 
     @staticmethod
@@ -585,7 +638,19 @@ class TvRunner:
                 log.info(f"Unsorted file path {unsorted_path} does not exist")
                 continue
 
-            for src in list(unsorted_path.iterdir()):
+            sources = list(unsorted_path.iterdir())
+            log.info(
+                "Scanning unsorted TV path %s: entries=%d",
+                unsorted_path,
+                len(sources),
+            )
+            for index, src in enumerate(sources, start=1):
+                log.info(
+                    "[%d/%d] Scanning unsorted TV entry %s",
+                    index,
+                    len(sources),
+                    src,
+                )
                 if B2_ENABLED:
                     if (
                         not src.is_file()

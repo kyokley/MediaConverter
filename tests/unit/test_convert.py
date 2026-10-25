@@ -3,7 +3,7 @@ import mock
 import shlex
 import tempfile
 from pathlib import Path
-from subprocess import PIPE
+from subprocess import PIPE, DEVNULL
 from settings import ENCODER
 from utils import EncoderException
 from convert import (
@@ -366,6 +366,7 @@ class TestReencodeVideo:
     def setUp(self, mocker):
         self.mock_Popen = mocker.patch("convert.Popen")
         self.mock_Popen.return_value.returncode = 0
+        self.mock_Popen.return_value.wait.return_value = 0
 
         mocker.patch("convert.ENCODER", "test_encoder")
 
@@ -377,12 +378,12 @@ class TestReencodeVideo:
         self.mock_Popen.assert_called_once_with(
             tuple(
                 shlex.split(
-                    "test_encoder -hide_banner -y -i test_source -c copy -pix_fmt yuv420p -movflags faststart test_dest"
+                    "test_encoder -hide_banner -y -i test_source -c copy -pix_fmt yuv420p -movflags faststart -progress pipe:1 -nostats test_dest"
                 )
             ),
-            stdin=PIPE,
+            stdin=DEVNULL,
             stdout=PIPE,
-            stderr=PIPE,
+            stderr=mock.ANY,
         )
 
     def test_small_vres_no_ares(self):
@@ -394,12 +395,12 @@ class TestReencodeVideo:
             tuple(
                 shlex.split(
                     "test_encoder -hide_banner -y "
-                    "-i test_source -c:v copy -c:a libfdk_aac -pix_fmt yuv420p -movflags faststart test_dest"
+                    "-i test_source -c:v copy -c:a libfdk_aac -pix_fmt yuv420p -movflags faststart -progress pipe:1 -nostats test_dest"
                 )
             ),
-            stdin=PIPE,
+            stdin=DEVNULL,
             stdout=PIPE,
-            stderr=PIPE,
+            stderr=mock.ANY,
         )
 
     def test_small_no_vres_no_ares(self):
@@ -412,12 +413,12 @@ class TestReencodeVideo:
                 shlex.split(
                     "test_encoder -hide_banner -y "
                     "-i test_source -c:v libx264 "
-                    "-c:a libfdk_aac -pix_fmt yuv420p -movflags faststart test_dest"
+                    "-c:a libfdk_aac -pix_fmt yuv420p -movflags faststart -progress pipe:1 -nostats test_dest"
                 )
             ),
-            stdin=PIPE,
+            stdin=DEVNULL,
             stdout=PIPE,
-            stderr=PIPE,
+            stderr=mock.ANY,
         )
 
     def test_large_vres_ares(self):
@@ -429,12 +430,12 @@ class TestReencodeVideo:
             tuple(
                 shlex.split(
                     "test_encoder -hide_banner -y "
-                    "-i test_source -c copy -pix_fmt yuv420p -movflags faststart test_dest"
+                    "-i test_source -c copy -pix_fmt yuv420p -movflags faststart -progress pipe:1 -nostats test_dest"
                 )
             ),
-            stdin=PIPE,
+            stdin=DEVNULL,
             stdout=PIPE,
-            stderr=PIPE,
+            stderr=mock.ANY,
         )
 
     def test_large_vres_no_ares(self):
@@ -447,12 +448,12 @@ class TestReencodeVideo:
                 shlex.split(
                     "test_encoder -hide_banner -y "
                     "-i test_source -c:v copy "
-                    "-c:a libfdk_aac -pix_fmt yuv420p -movflags faststart test_dest"
+                    "-c:a libfdk_aac -pix_fmt yuv420p -movflags faststart -progress pipe:1 -nostats test_dest"
                 )
             ),
-            stdin=PIPE,
+            stdin=DEVNULL,
             stdout=PIPE,
-            stderr=PIPE,
+            stderr=mock.ANY,
         )
 
     def test_large_no_vres_no_ares(self):
@@ -465,12 +466,12 @@ class TestReencodeVideo:
                 shlex.split(
                     "test_encoder -hide_banner -y "
                     "-i test_source "
-                    "-c:v libx264 -c:a libfdk_aac -pix_fmt yuv420p -movflags faststart test_dest"
+                    "-c:v libx264 -c:a libfdk_aac -pix_fmt yuv420p -movflags faststart -progress pipe:1 -nostats test_dest"
                 )
             ),
-            stdin=PIPE,
+            stdin=DEVNULL,
             stdout=PIPE,
-            stderr=PIPE,
+            stderr=mock.ANY,
         )
 
 

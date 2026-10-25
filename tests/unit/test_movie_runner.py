@@ -27,6 +27,7 @@ class TestPostMovies:
             "next": "",
         }
         self.mock_get_data.return_value = self.mock_response
+        mocker.patch("movie_runner.Movie.post_media_path")
         mocker.patch.object(MediaFile, "get_all_filenames", return_value=set())
 
         mocker.patch("movie_runner.LOCAL_MOVIE_PATHS", [f"{self.tmp_dir}/movies"])
@@ -57,12 +58,17 @@ class TestPostMovies:
         assert self.movieRunner.postMovies() is None
         assert not self.movieRunner.errors, []
 
-        self.mock_log.info.assert_has_calls(
-            [
-                mock.call(f"Found {self.tmp_dir}/movies/movie2"),
-                mock.call(f"Starting re-encoding of {self.tmp_dir}/movies/movie2..."),
-                mock.call(f"Posting {self.tmp_dir}/movies/movie2"),
-            ]
+        self.mock_log.info.assert_any_call(
+            "[%d/%d] Starting movie directory %s",
+            mock.ANY,
+            mock.ANY,
+            Path(f"{self.tmp_dir}/movies/movie2"),
+        )
+        self.mock_log.info.assert_any_call(
+            "Starting movie re-encoding for %s", Path(f"{self.tmp_dir}/movies/movie2")
+        )
+        self.mock_log.info.assert_any_call(
+            "Starting movie publication for %s", Path(f"{self.tmp_dir}/movies/movie2")
         )
         assert not self.mock_log.error.called
 
@@ -188,11 +194,8 @@ class TestPostMovies:
         assert self.movieRunner.postMovies() is None
         assert self.movieRunner.errors == ["test_error1", "test_error2"]
 
-        self.mock_log.info.assert_has_calls(
-            [
-                mock.call(f"Found {self.tmp_dir}/movies/movie2"),
-                mock.call(f"Starting re-encoding of {self.tmp_dir}/movies/movie2..."),
-            ]
+        self.mock_log.info.assert_any_call(
+            "Starting movie re-encoding for %s", Path(f"{self.tmp_dir}/movies/movie2")
         )
         assert not self.mock_log.error.called
 
@@ -219,17 +222,12 @@ class TestPostMovies:
         with pytest.raises(Exception):
             self.movieRunner.postMovies()
 
-        self.mock_log.info.assert_has_calls(
-            [
-                mock.call(f"Found {self.tmp_dir}/movies/movie1"),
-                mock.call(f"Starting re-encoding of {self.tmp_dir}/movies/movie1..."),
-            ]
+        self.mock_log.info.assert_any_call(
+            "Starting movie re-encoding for %s", Path(f"{self.tmp_dir}/movies/movie1")
         )
-        self.mock_log.error.assert_has_calls(
-            [
-                mock.call(f"Error processing {self.tmp_dir}/movies/movie1"),
-                mock.call("Oh no! Something bad happened"),
-            ]
+        self.mock_log.exception.assert_called_once_with(
+            "Failed processing movie directory %s",
+            Path(f"{self.tmp_dir}/movies/movie1"),
         )
 
         self.mock_reencodeFilesInDirectory.assert_has_calls(
@@ -738,7 +736,8 @@ class TestRun:
 
         assert expected == actual
         self.mock_postMovies.assert_called_once_with(dry_run=False)
-        self.mock_info.assert_called_once_with("Done running movies")
+        self.mock_info.assert_any_call("Movie run started (dry_run=%s)", False)
+        assert self.mock_info.call_args.args[0] == "Movie run completed in %.2fs"
 
 
 class TestPromoteSubtitles:

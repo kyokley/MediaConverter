@@ -1,5 +1,6 @@
 import os
 import uuid
+import time
 from pathlib import Path
 import b2
 from settings import (
@@ -108,23 +109,45 @@ class MovieRunner:
         self.errors = []
 
     def postMovies(self, dry_run=False):
+        run_started = time.perf_counter()
+        log.info("Starting movie discovery (dry_run=%s)", dry_run)
         base_path = Path(BASE_PATH)
 
         incomplete_paths = {}
         remote_paths = set(Movie.get_all_movies(incomplete_paths).keys())
-        published_filenames = (
-            MediaFile.get_all_filenames() if B2_ENABLED and not dry_run else set()
-        )
+        log.info("Discovered %d remote movie directories", len(remote_paths))
+        published_filenames = set()
+        if B2_ENABLED and not dry_run:
+            log.info("Starting global published filename inventory lookup")
+            published_filenames = MediaFile.get_all_filenames()
+            log.info(
+                "Completed global published filename inventory: filenames=%d",
+                len(published_filenames),
+            )
 
+        discovered_directories = 0
+        pending_directories = 0
+        processed_directories = 0
+        published_files = 0
         for moviepath_str in LOCAL_MOVIE_PATHS:
             moviepath = base_path / moviepath_str
 
             if not moviepath.exists():
-                self.errors.append(f"{moviepath} does not exist. Continuing...")
+                error = f"{moviepath} does not exist. Continuing..."
+                self.errors.append(error)
+                log.warning("Skipping movie root %s: path does not exist", moviepath)
                 continue
 
             tokens = self._getLocalMoviePaths(moviepath)
-            for token in tokens:
+            discovered_directories += len(tokens)
+            pending_directories += sum(
+                moviepath / token not in remote_paths for token in tokens
+            )
+            log.info(
+                "Discovered %d local movie directories in %s", len(tokens), moviepath
+            )
+            for index, token in enumerate(tokens, start=1):
+                directory_started = time.perf_counter()
                 localpath = moviepath / token
                 if localpath not in remote_paths:
                     if B2_ENABLED and not dry_run:
@@ -134,28 +157,40 @@ class MovieRunner:
                             and candidate.name in published_filenames
                         ):
                             log.info(
-                                f"Skipping {localpath}: {candidate.name} already published"
+                                "Skipping %s: %s already published",
+                                localpath,
+                                candidate.name,
                             )
                             continue
-                    log.info(f"Found {localpath}")
-                    log.info(f"Starting re-encoding of {localpath}...")
+                    log.info(
+                        "[%d/%d] Starting movie directory %s",
+                        index,
+                        len(tokens),
+                        localpath,
+                    )
+                    log.info("Preparing movie subtitles for %s", localpath)
                     try:
                         self.promoteSubtitles(localpath, dry_run=dry_run)
                         if dry_run:
-                            log.debug(f"Would re-encode files in {localpath}")
+                            log.info("Skipping re-encoding %s: dry-run", localpath)
                         else:
+                            log.info("Starting movie re-encoding for %s", localpath)
                             errors = reencodeFilesInDirectory(localpath)
 
                         if not dry_run and errors:
                             self.errors.extend(errors)
+                            log.warning(
+                                "Movie re-encoding reported %d errors for %s",
+                                len(errors),
+                                localpath,
+                            )
                             continue
-                    except Exception as e:
-                        log.error(f"Error processing {localpath}")
-                        log.error(str(e))
+                    except Exception:
+                        log.exception("Failed processing movie directory %s", localpath)
                         raise
-                    log.info(f"Posting {localpath}")
+                    log.info("Starting movie publication for %s", localpath)
                     if dry_run:
-                        log.debug(f"Would post path for {localpath}")
+                        log.info("Skipping publication for %s: dry-run", localpath)
                         continue
                     if B2_ENABLED:
                         video_file = self._get_largest_video_file(localpath)
@@ -166,7 +201,9 @@ class MovieRunner:
                             continue
                         if video_file.name in published_filenames:
                             log.info(
-                                f"Skipping {localpath}: {video_file.name} already published"
+                                "Skipping %s: %s already published",
+                                localpath,
+                                video_file.name,
                             )
                             continue
                         incomplete_path = incomplete_paths.get(localpath)
@@ -175,32 +212,67 @@ class MovieRunner:
                             if incomplete_path
                             else get_b2_uri_for_local_path(localpath)
                         )
-                        media_path_data = Movie.post_media_path(logical_path)
-                        key_prefix = media_path_data.get("b2_upload_prefix")
-                        bucket = media_path_data.get("bucket")
-                        if not key_prefix or not bucket:
-                            raise ValueError(
-                                "MediaPath response missing bucket or b2_upload_prefix"
+                        try:
+                            media_path_data = Movie.post_media_path(logical_path)
+                            key_prefix = media_path_data.get("b2_upload_prefix")
+                            bucket = media_path_data.get("bucket")
+                            if not key_prefix or not bucket:
+                                raise ValueError(
+                                    "MediaPath response missing bucket or b2_upload_prefix"
+                                )
+                            b2_uuid = str(uuid.uuid4())
+                            key = f"{key_prefix}{b2_uuid}{video_file.suffix}"
+                            b2.get_b2_client().upload_file(video_file, bucket, key)
+                            subtitle_files = upload_subtitle_files(
+                                video_file,
+                                localpath,
+                                bucket=bucket,
+                                key_prefix=key_prefix,
                             )
-                        b2_uuid = str(uuid.uuid4())
-                        key = f"{key_prefix}{b2_uuid}{video_file.suffix}"
-                        b2.get_b2_client().upload_file(video_file, bucket, key)
-                        subtitle_files = upload_subtitle_files(
-                            video_file,
-                            localpath,
-                            bucket=bucket,
-                            key_prefix=key_prefix,
-                        )
-                        MediaFile.post_media_file(
-                            video_file.name,
-                            media_path_data["pk"],
-                            video_file.stat().st_size,
-                            subtitle_files=subtitle_files,
-                            b2_uuid=b2_uuid,
-                        )
+                            MediaFile.post_media_file(
+                                video_file.name,
+                                media_path_data["pk"],
+                                video_file.stat().st_size,
+                                subtitle_files=subtitle_files,
+                                b2_uuid=b2_uuid,
+                            )
+                        except Exception:
+                            log.exception("Failed publishing movie file %s", video_file)
+                            raise
                         published_filenames.add(video_file.name)
+                        published_files += 1
+                        log.info(
+                            "Published movie file %s after MediaFile API success",
+                            video_file,
+                        )
                     else:
                         Movie.post_media_path(localpath)
+                    processed_directories += 1
+                    log.info(
+                        "[%d/%d] Completed movie directory %s in %.2fs",
+                        index,
+                        len(tokens),
+                        localpath,
+                        time.perf_counter() - directory_started,
+                    )
+                else:
+                    log.info(
+                        "Skipping %s: already represented by a remote MediaPath",
+                        localpath,
+                    )
+
+        log.info(
+            "Movie discovery/processing completed: directories=%d discovered, "
+            "remote=%d pending=%d completed=%d; "
+            "media_files_published=%d errors=%d elapsed=%.2fs",
+            discovered_directories,
+            len(remote_paths),
+            pending_directories,
+            processed_directories,
+            published_files,
+            len(self.errors),
+            time.perf_counter() - run_started,
+        )
 
     @staticmethod
     def promoteSubtitles(localpath, dry_run=False):
@@ -243,8 +315,14 @@ class MovieRunner:
         return max(video_files, key=lambda f: f.stat().st_size)
 
     def run(self, dry_run=False):
-        self.postMovies(dry_run=dry_run)
-        log.info("Done running movies")
+        started = time.perf_counter()
+        log.info("Movie run started (dry_run=%s)", dry_run)
+        try:
+            self.postMovies(dry_run=dry_run)
+        except Exception:
+            log.exception("Movie run failed after %.2fs", time.perf_counter() - started)
+            raise
+        log.info("Movie run completed in %.2fs", time.perf_counter() - started)
         return self.errors
 
 

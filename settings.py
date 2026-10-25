@@ -1,7 +1,11 @@
 import os
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+LOG_LEVEL = os.getenv("MC_LOG_LEVEL", "INFO").upper()
+if LOG_LEVEL not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
+    LOG_LEVEL = "INFO"
+LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s/%(processName)s] %(message)s"
+logging.basicConfig(level=LOG_LEVEL, format=LOG_FORMAT)
 logging.getLogger("faker").setLevel(logging.WARN)
 
 CELERY_VHOST = ""
