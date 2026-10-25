@@ -68,7 +68,7 @@ B2_NAME_PREFIX = os.getenv("MC_B2_NAME_PREFIX", "")
 
 BROKER = os.getenv("MC_BROKER", "")
 
-TIMEOUT = 10
+TIMEOUT = 30
 
 # DON'T MAKE ANY EDITS BELOW THIS LINE!!!!
 try:
