@@ -704,12 +704,18 @@ class TestTvRunner:
     @pytest.mark.parametrize(
         "configured_suffix", ["mv-encoded.mp4", "custom-encode.mp4"]
     )
+    @pytest.mark.parametrize(
+        "prefix",
+        [
+            pytest.param("tv/42/", id="legacy-flat"),
+            pytest.param("001/234/567/", id="nested-v2"),
+        ],
+    )
     def test_lanterns_already_encoded_upload_and_publish_real_subtitle_tracks(
-        self, mocker, temp_directory, configured_suffix
+        self, mocker, temp_directory, configured_suffix, prefix
     ):
         mocker.patch("tv_runner.B2_ENABLED", True)
         mocker.patch("utils.MEDIAVIEWER_SUFFIX", configured_suffix)
-        prefix = "tv/42/"
         stem = "Lanterns.S01E01.1080p.WEBRip.10Bit.DDP5.1.x265-NeoNoir.mp4.ALFRED-ENCODED.mp4"
         video = temp_directory / f"{stem}.{configured_suffix}"
         video.write_bytes(b"video")
@@ -1148,12 +1154,23 @@ class TestTvRunner:
             for record in mock_record.call_args_list
         )
 
-    def test_unsorted_existing_remote_path_uses_detail_pk(self, mocker, temp_directory):
+    @pytest.mark.parametrize(
+        "prefix",
+        [
+            pytest.param("nested/12/", id="legacy-flat"),
+            pytest.param("001/234/567/", id="nested-v2"),
+        ],
+    )
+    def test_unsorted_existing_remote_path_uses_detail_pk(
+        self, mocker, temp_directory, prefix
+    ):
         mocker.patch("tv_runner.B2_ENABLED", True)
         mocker.patch("tv_runner.UNSORTED_PATHS", [str(temp_directory)])
         mocker.patch("tv_runner.MINIMUM_FILE_SIZE", 0)
         uri = "b2://stored-bucket/nested/Show.Name"
-        mocker.patch("tv_runner.get_media_path_by_filename", return_value=f"{uri}/")
+        inferred_uri = mocker.patch(
+            "tv_runner.get_media_path_by_filename", return_value=f"{uri}/"
+        )
         mocker.patch(
             "tv_runner.Tv.get_all_media_paths",
             return_value=[
@@ -1161,7 +1178,7 @@ class TestTvRunner:
                     "pk": 12,
                     "path": uri,
                     "bucket": "stored-bucket",
-                    "b2_upload_prefix": "nested/12/",
+                    "b2_upload_prefix": prefix,
                 }
             ],
         )
@@ -1171,7 +1188,7 @@ class TestTvRunner:
             "skip": False,
             "media_files": [],
             "bucket": "stored-bucket",
-            "b2_upload_prefix": "nested/12/",
+            "b2_upload_prefix": prefix,
         }
         get_detail = mocker.patch("tv_runner.Tv.get_media_path", return_value=detail)
         mocker.patch(
@@ -1197,12 +1214,13 @@ class TestTvRunner:
         self.tvRunner.run()
 
         get_detail.assert_called_once_with(12)
+        inferred_uri.assert_called_once_with(source.name)
         key = mock_upload.return_value.upload_file.call_args.args[2]
-        assert key.startswith("nested/12/") and key.endswith(".mp4")
+        assert key.startswith(prefix) and key.endswith(".mp4")
         assert "Show.Name" not in key
         mock_record.assert_called_once()
         assert mock_record.call_args.kwargs["b2_uuid"] == key.removeprefix(
-            "nested/12/"
+            prefix
         ).removesuffix(".mp4")
         mock_create.assert_not_called()
 

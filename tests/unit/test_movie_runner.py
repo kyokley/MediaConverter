@@ -401,8 +401,15 @@ class TestPostMovies:
             }
         }
 
+    @pytest.mark.parametrize(
+        "prefix",
+        [
+            pytest.param("archive/42/", id="legacy-flat"),
+            pytest.param("001/234/567/", id="nested-v2"),
+        ],
+    )
     def test_incomplete_b2_movie_reuses_stored_uri_and_destination(
-        self, mocker, temp_directory
+        self, mocker, temp_directory, prefix
     ):
         mocker.patch("movie_runner.B2_ENABLED", True)
         mocker.patch("movie_runner.BASE_PATH", temp_directory)
@@ -440,7 +447,7 @@ class TestPostMovies:
             return_value={
                 "pk": 42,
                 "bucket": "custom",
-                "b2_upload_prefix": "archive/42/",
+                "b2_upload_prefix": prefix,
             },
         )
         upload = mocker.patch("movie_runner.b2.get_b2_client")
@@ -456,27 +463,35 @@ class TestPostMovies:
         upload.return_value.upload_file.assert_called_once()
         assert upload.return_value.upload_file.call_args.args[:2] == (video, "custom")
         object_key = upload.return_value.upload_file.call_args.args[2]
-        assert object_key.startswith("archive/42/")
+        assert object_key.startswith(prefix)
         assert "Film" not in object_key
         subtitles.assert_called_once_with(
             video,
             local_path,
             bucket="custom",
-            key_prefix="archive/42/",
+            key_prefix=prefix,
         )
         post_file.assert_called_once_with(
             video.name,
             42,
             len(b"encoded"),
             subtitle_files=["abcdefab-cdef-abcd-efab-cdefabcdefab.vtt"],
-            b2_uuid=object_key.removeprefix("archive/42/").removesuffix(".mp4"),
+            b2_uuid=object_key.removeprefix(prefix).removesuffix(".mp4"),
         )
+        assert post_path.call_args.args == ("b2://custom/archive/Film/",)
 
     @pytest.mark.parametrize(
         "configured_suffix", ["mv-encoded.mp4", "custom-encode.mp4"]
     )
+    @pytest.mark.parametrize(
+        "prefix",
+        [
+            pytest.param("movies/42/", id="legacy-flat"),
+            pytest.param("001/234/567/", id="nested-v2"),
+        ],
+    )
     def test_lanterns_already_encoded_upload_and_publish_real_subtitle_tracks(
-        self, mocker, temp_directory, configured_suffix
+        self, mocker, temp_directory, configured_suffix, prefix
     ):
         mocker.patch("movie_runner.B2_ENABLED", True)
         mocker.patch("movie_runner.BASE_PATH", temp_directory)
@@ -501,7 +516,7 @@ class TestPostMovies:
             return_value={
                 "pk": 42,
                 "bucket": "bucket",
-                "b2_upload_prefix": "movies/42/",
+                "b2_upload_prefix": prefix,
             },
         )
         transfers = []
@@ -520,11 +535,11 @@ class TestPostMovies:
             p.name for p in subtitles
         }
         assert {upload[2] for upload in transfers[1:]} == {
-            f"movies/42/{name}" for name in posted_subtitles
+            f"{prefix}{name}" for name in posted_subtitles
         }
-        assert transfers[0][2] == f"movies/42/{video_uuid}{video.suffix}"
+        assert transfers[0][2] == f"{prefix}{video_uuid}{video.suffix}"
         assert all(
-            upload[1] == "bucket" and upload[2].startswith("movies/42/")
+            upload[1] == "bucket" and upload[2].startswith(prefix)
             for upload in transfers
         )
         assert all("Lanterns" not in upload[2] for upload in transfers)
