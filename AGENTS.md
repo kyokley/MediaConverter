@@ -38,6 +38,7 @@ MediaConverter is a Python service that converts local movie and TV files into H
 - FFmpeg and `srt-vtt` are external executables. Prefer the Docker environment for media-dependent tests; inspect `Dockerfile` when changing codec/tool assumptions.
 - Settings for broker, media roots, MediaViewer, mail, and B2 come from `MC_*` variables in `settings.py`. Do not commit secrets or machine-specific `local_settings.py` values. `settings.py` reads `MC_BROKER`, while the current Compose file sets `BROKER`; account for this mismatch when diagnosing worker connectivity.
 - RabbitMQ 4.3 rejects transient non-exclusive queues by default. `main.py` sets Celery's `control_queue_exclusive` and `event_queue_exclusive` so remote-control and event queues remain nondurable but exclusive; keep worker mingle, gossip, and remote control enabled.
+- Logging defaults to timestamped `INFO` for standalone scripts; `MC_LOG_LEVEL` selects the level. Compose passes this setting to Celery's `--loglevel`; directly launched workers must set `--loglevel` explicitly. `main.py` configures worker/task formats with logger and task context. Keep routine API diagnostics at `DEBUG`, omit payloads/response bodies and URL credentials/query strings, and preserve progress output at `INFO`. Media paths and B2 destinations remain private log content; see `README.md`.
 - Add or update focused unit/functional tests alongside behavior changes. Keep integration tests explicit because they are excluded from normal pytest runs.
 
 ## Keep this file current

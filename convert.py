@@ -13,11 +13,31 @@ from utils import (
     is_valid_media_file,
     matching_subtitle_files,
 )
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, DEVNULL, TimeoutExpired
 
 import logging
+import time
 
 log = logging.getLogger(__name__)
+
+_PROGRESS_INTERVAL = 30
+_STDERR_TAIL_BYTES = 8192
+
+
+def _read_stderr_tail(stderr_file):
+    stderr_file.seek(0, 2)
+    size = stderr_file.tell()
+    stderr_file.seek(max(0, size - _STDERR_TAIL_BYTES))
+    return stderr_file.read().decode("utf-8", errors="replace").strip()
+
+
+def _format_progress(values):
+    fields = [
+        f"{name}={values[name]}"
+        for name in ("out_time", "speed", "frame")
+        if values.get(name)
+    ]
+    return ", ".join(fields)
 
 
 class AlreadyEncoded(Exception):
@@ -105,9 +125,19 @@ def _convertSrtToVtt(srt_path):
 
 
 def encode(source, dest, dryRun=False):
+    log.info("Inspecting media source=%s destination=%s", source, dest)
     vres, ares, sres, surround = checkVideoEncoding(source)
+    log.info(
+        "Codec decision source=%s video=%s audio=%s downmix=%s",
+        source,
+        "copy" if vres else "encode",
+        "copy" if ares and not surround else "encode",
+        bool(surround),
+    )
 
+    log.info("Starting subtitle processing source=%s", source)
     _handleSubtitles(source, dest, sres)
+    log.info("Finished subtitle processing source=%s", source)
     _reencodeVideo(source, dest, vres, ares, surround, dryRun=dryRun)
 
 
@@ -166,6 +196,7 @@ def _handleSubtitles(source, dest, sres):
 
 
 def _reencodeVideo(source, dest, vres, ares, surround, dryRun=False):
+    started = time.monotonic()
     command = [
         ENCODER,
         "-hide_banner",
@@ -224,18 +255,98 @@ def _reencodeVideo(source, dest, vres, ares, surround, dryRun=False):
             command.extend(["-ac", "2"])
 
     command.extend(["-pix_fmt", "yuv420p", "-movflags", "faststart"])
+    command.extend(["-progress", "pipe:1", "-nostats"])
     command.append(str(dest))
     command = tuple(command)
 
-    log.info(command)
-    if not dryRun:
-        process = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE)  # nosec
-        process.communicate()
+    log.info("Starting FFmpeg source=%s destination=%s", source, dest)
+    log.debug("FFmpeg command=%s", command)
+    if dryRun:
+        log.info(
+            "Skipping FFmpeg execution for dry-run source=%s destination=%s",
+            source,
+            dest,
+        )
+        return
 
-        if process.returncode != 0:
+    progress = {}
+    last_logged = started
+    final_progress = ""
+    returncode = None
+    with tempfile.TemporaryFile(mode="w+b") as stderr_file:
+        process = Popen(command, stdin=DEVNULL, stdout=PIPE, stderr=stderr_file)  # nosec
+        try:
+            for raw_line in process.stdout:
+                if isinstance(raw_line, bytes):
+                    line = raw_line.decode("utf-8", errors="replace").strip()
+                else:
+                    line = raw_line.strip()
+                if "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                progress[key] = value
+                if key == "progress":
+                    summary = _format_progress(progress)
+                    if summary:
+                        final_progress = summary
+                        now = time.monotonic()
+                        if value == "end" or now - last_logged >= _PROGRESS_INTERVAL:
+                            log.info(
+                                "FFmpeg progress source=%s destination=%s %s",
+                                source,
+                                dest,
+                                summary,
+                            )
+                            last_logged = now
+                    progress = {}
+            returncode = process.wait()
+        except BaseException:
+            try:
+                process.stdout.close()
+            except BaseException:
+                pass
+            try:
+                process.terminate()
+            except BaseException:
+                pass
+            try:
+                process.wait(timeout=5)
+            except TimeoutExpired:
+                try:
+                    process.kill()
+                except BaseException:
+                    pass
+                try:
+                    process.wait()
+                except BaseException:
+                    pass
+            except BaseException:
+                pass
+            raise
+        finally:
+            process.stdout.close()
+
+        elapsed = time.monotonic() - started
+        if returncode != 0:
+            diagnostic = _read_stderr_tail(stderr_file)
             if dest.exists():
                 dest.unlink()
+            log.error(
+                "FFmpeg failed source=%s destination=%s elapsed=%.1fs diagnostics=%s",
+                source,
+                dest,
+                elapsed,
+                diagnostic or "(no stderr output)",
+            )
             raise EncoderException("Encoding failed")
+
+    log.info(
+        "FFmpeg completed source=%s destination=%s elapsed=%.1fs%s",
+        source,
+        dest,
+        elapsed,
+        f" progress={final_progress}" if final_progress else "",
+    )
 
 
 def _moveSubtitleFile(source, dest, dryRun=False):
@@ -280,6 +391,7 @@ def overwriteExistingFile(source, directory, dryRun=False, appendSuffix=True):
 
 
 def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal=True):
+    started = time.monotonic()
     log.info(f"Begin processing {filename}")
     if MEDIAVIEWER_SUFFIX in str(filename):
         raise AlreadyEncoded(f"{filename} appears to already have been encoded.")
@@ -292,9 +404,8 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
     with tempfile.TemporaryDirectory() as tmpdir:
         new = Path(tmpdir) / orig.with_suffix(".mp4").name
 
-        log.info(f"Begin re-encoding of {orig}...")
+        log.info("Begin re-encoding source=%s destination=%s", orig, new)
         encode(orig, new, dryRun=dryRun)
-        log.info("Finished encoding")
 
         dest = overwriteExistingFile(
             new,
@@ -307,7 +418,23 @@ def makeFileStreamable(filename, dryRun=False, appendSuffix=True, removeOriginal
         if removeOriginal and orig.exists():
             orig.unlink()
 
-    log.info("Done")
+    elapsed = time.monotonic() - started
+    if dryRun:
+        log.info(
+            "Dry-run planned output source=%s destination=%s elapsed=%.1fs",
+            orig,
+            dest,
+            elapsed,
+        )
+    else:
+        output_size = dest.stat().st_size if dest.exists() else None
+        log.info(
+            "Processing completed source=%s destination=%s elapsed=%.1fs output_bytes=%s",
+            orig,
+            dest,
+            elapsed,
+            output_size if output_size is not None else "unknown",
+        )
     return dest
 
 

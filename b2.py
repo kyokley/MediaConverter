@@ -1,6 +1,8 @@
 import hashlib
 import logging
 import mimetypes
+import math
+import time
 from functools import lru_cache
 from pathlib import Path
 from urllib.parse import quote
@@ -72,25 +74,48 @@ class B2Client:
         return bucket_id
 
     def upload_file(self, local_path, bucket, key, extra_args=None):
-        logger.info("Uploading %s to b2://%s/%s", local_path, bucket, key)
+        size = Path(local_path).stat().st_size
+        started = time.perf_counter()
+        destination = f"b2://{bucket}/{key}"
+        logger.info(
+            "B2 upload started: %s to %s (%d bytes)", local_path, destination, size
+        )
         auth = self._authorize()
         bucket_id = self._bucket_id(bucket)
-        size = Path(local_path).stat().st_size
         if size > MAX_SINGLE_UPLOAD_SIZE:
             self._upload_large_file(local_path, bucket_id, key, auth)
         else:
             self._upload_single_file(local_path, bucket_id, key, auth)
-        logger.info("Uploaded %s to b2://%s/%s", local_path, bucket, key)
+        elapsed = time.perf_counter() - started
+        rate = size / elapsed if elapsed else 0
+        logger.info(
+            "B2 upload completed: %s to %s (%d bytes) in %.2f seconds (%.2f bytes/s)",
+            local_path,
+            destination,
+            size,
+            elapsed,
+            rate,
+        )
 
     def _upload_single_file(self, local_path, bucket_id, key, auth):
+        filename = Path(local_path).name
         upload = self._get_upload_url(bucket_id, auth)
+        logger.info("Hashing B2 upload file %s", filename)
+        hash_started = time.perf_counter()
+        file_sha1 = self._file_sha1(local_path)
+        logger.info(
+            "B2 upload file hash ready for %s in %.2f seconds",
+            filename,
+            time.perf_counter() - hash_started,
+        )
         headers = {
             "Authorization": upload["authorizationToken"],
             "X-Bz-File-Name": quote(key, safe="/"),
             "Content-Type": self._content_type(local_path),
             "Content-Length": str(Path(local_path).stat().st_size),
-            "X-Bz-Content-Sha1": self._file_sha1(local_path),
+            "X-Bz-Content-Sha1": file_sha1,
         }
+        logger.info("Uploading B2 file data for %s", filename)
         with open(local_path, "rb") as f:
             resp = requests.post(
                 upload["uploadUrl"], data=f, headers=headers, timeout=UPLOAD_TIMEOUT
@@ -98,6 +123,9 @@ class B2Client:
         resp.raise_for_status()
 
     def _upload_large_file(self, local_path, bucket_id, key, auth):
+        filename = Path(local_path).name
+        size = Path(local_path).stat().st_size
+        total_parts = math.ceil(size / LARGE_FILE_PART_SIZE)
         resp = requests.post(
             f"{auth['apiUrl']}/b2api/{B2_API_VERSION}/b2_start_large_file",
             json={
@@ -142,8 +170,20 @@ class B2Client:
                 )
                 resp.raise_for_status()
                 part_sha1s.append(sha1)
+                confirmed_bytes = min(part_number * LARGE_FILE_PART_SIZE, size)
+                percent = confirmed_bytes * 100 / size if size else 100
+                logger.info(
+                    "Multipart part %d/%d confirmed for %s: %d/%d bytes (%.1f%%)",
+                    part_number,
+                    total_parts,
+                    filename,
+                    confirmed_bytes,
+                    size,
+                    percent,
+                )
                 part_number += 1
 
+        logger.info("Finalizing B2 multipart upload for %s", filename)
         resp = requests.post(
             f"{auth['apiUrl']}/b2api/{B2_API_VERSION}/b2_finish_large_file",
             json={"fileId": file_id, "partSha1Array": part_sha1s},

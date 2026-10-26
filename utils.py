@@ -4,6 +4,7 @@ import uuid
 import smtplib
 import time
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 import requests
 from unidecode import unidecode
@@ -46,56 +47,75 @@ def _external_request_cooldown():
     return EXTERNAL_REQUEST_COOLDOWN
 
 
-def post_data(values, url):
+def _sanitized_endpoint(url):
+    """Return scheme, host, and path without URL credentials or parameters."""
     try:
-        request = _make_request("POST", url, values=values)
+        parsed = urlsplit(url)
+        host = parsed.hostname
+        if host is None:
+            return parsed.path or "<invalid-endpoint>"
+        if ":" in host:
+            host = f"[{host}]"
+        if parsed.port is not None:
+            host = f"{host}:{parsed.port}"
+        return urlunsplit((parsed.scheme, host, parsed.path, "", ""))
+    except (TypeError, ValueError):
+        return "<invalid-endpoint>"
 
-        try:
-            requests.post(
-                mediaviewer_infer_scrapers_url(),
-                data={},
-                auth=(WAITER_USERNAME, WAITER_PASSWORD),
-                verify=VERIFY_REQUESTS,
-                timeout=TIMEOUT,
-            )
-            time.sleep(_external_request_cooldown())
-        except Exception as e:
-            log.error(e)
-            log.warning("Ignoring error generated during scraping")
 
-        return request
-    except Exception as e:
-        log.error(e)
-        raise
+def _response_status(exception):
+    response = getattr(exception, "response", None)
+    return getattr(response, "status_code", None)
+
+
+def post_data(values, url):
+    request = _make_request("POST", url, values=values)
+
+    infer_url = mediaviewer_infer_scrapers_url()
+    endpoint = _sanitized_endpoint(infer_url)
+    started = time.perf_counter()
+    log.debug("API request started: POST %s", endpoint)
+    try:
+        infer_response = requests.post(
+            infer_url,
+            data={},
+            auth=(WAITER_USERNAME, WAITER_PASSWORD),
+            verify=VERIFY_REQUESTS,
+            timeout=TIMEOUT,
+        )
+        log.debug(
+            "API request completed: POST %s status=%s elapsed=%.3fs",
+            endpoint,
+            getattr(infer_response, "status_code", "unknown"),
+            time.perf_counter() - started,
+        )
+        time.sleep(_external_request_cooldown())
+    except Exception as exc:
+        log.warning(
+            "API request failed: POST %s status=%s elapsed=%.3fs",
+            endpoint,
+            _response_status(exc) or "unavailable",
+            time.perf_counter() - started,
+        )
+        log.warning("Ignoring error generated during scraping")
+
+    return request
 
 
 def get_data(url):
-    try:
-        return _make_request("GET", url)
-    except Exception as e:
-        log.error(e)
-        raise
+    return _make_request("GET", url)
 
 
 def put_data(values, url):
-    try:
-        request = _make_request("PUT", url, values=values)
-        return request
-    except Exception as e:
-        log.error(e)
-        raise
+    return _make_request("PUT", url, values=values)
 
 
 def _make_request(verb, url, values=None):
     verb = verb.upper()
-
+    endpoint = _sanitized_endpoint(url)
+    started = time.perf_counter()
+    log.debug("API request started: %s %s", verb, endpoint)
     try:
-        if values:
-            log.info(f"{verb}-ing the following values to {url}:")
-            log.info(values)
-        else:
-            log.info(f"{verb}-ing to {url}")
-
         request_method = None
         if verb == "GET":
             request_method = requests.get
@@ -113,12 +133,26 @@ def _make_request(verb, url, values=None):
             verify=VERIFY_REQUESTS,
             timeout=TIMEOUT,
         )
+        status = request.status_code
         request.raise_for_status()
         time.sleep(_external_request_cooldown())
-
+        log.debug(
+            "API request completed: %s %s status=%s elapsed=%.3fs",
+            verb,
+            endpoint,
+            status,
+            time.perf_counter() - started,
+        )
         return request
-    except Exception as e:
-        log.error(e)
+    except Exception as exc:
+        status = _response_status(exc)
+        log.warning(
+            "API request failed: %s %s status=%s elapsed=%.3fs",
+            verb,
+            endpoint,
+            status if status is not None else "unavailable",
+            time.perf_counter() - started,
+        )
         raise
 
 
@@ -180,19 +214,44 @@ def get_localpath_by_filename(filename):
 
 def get_media_path_by_filename(filename):
     """Return the inferred MediaViewer media path without converting its type."""
-    resp = requests.get(
-        mediaviewer_infer_scrapers_url(),
-        params={"title": filename},
-        auth=(WAITER_USERNAME, WAITER_PASSWORD),
-        timeout=TIMEOUT,
-    )
+    endpoint = _sanitized_endpoint(mediaviewer_infer_scrapers_url())
+    started = time.perf_counter()
+    log.debug("API request started: GET %s", endpoint)
+    try:
+        resp = requests.get(
+            mediaviewer_infer_scrapers_url(),
+            params={"title": filename},
+            auth=(WAITER_USERNAME, WAITER_PASSWORD),
+            timeout=TIMEOUT,
+        )
+    except Exception as exc:
+        log.warning(
+            "API request failed: GET %s type=%s elapsed=%.3fs",
+            endpoint,
+            type(exc).__name__,
+            time.perf_counter() - started,
+        )
+        raise
 
     try:
         resp.raise_for_status()
-    except Exception:
-        log.warning(f"Unable to find path for {filename}")
-        log.warning(resp.text)
+    except Exception as exc:
+        status = getattr(resp, "status_code", None)
+        log.warning(
+            "Unable to find path for %s: GET %s status=%s elapsed=%.3fs",
+            filename,
+            endpoint,
+            status if status is not None else (_response_status(exc) or "unavailable"),
+            time.perf_counter() - started,
+        )
         return
+
+    log.debug(
+        "API request completed: GET %s status=%s elapsed=%.3fs",
+        endpoint,
+        getattr(resp, "status_code", "unknown"),
+        time.perf_counter() - started,
+    )
 
     data = resp.json()
     return data["path"]
@@ -212,15 +271,39 @@ def upload_subtitle_files(video_path, media_path, bucket=None, key_prefix=None):
     bucket = bucket or B2_BUCKET_NAME
     if key_prefix is None:
         key_prefix = f"{B2_NAME_PREFIX}{Path(media_path).name}/"
-    for subtitle_file in matching_subtitle_files(video_path):
+    subtitle_files_to_upload = matching_subtitle_files(video_path)
+    total = len(subtitle_files_to_upload)
+    video_path = Path(video_path)
+    destination = f"b2://{bucket}/{key_prefix}"
+    log.info(
+        "Found %d subtitle file(s) for %s to upload to %s",
+        total,
+        video_path,
+        destination,
+    )
+    for index, subtitle_file in enumerate(subtitle_files_to_upload, start=1):
         if subtitle_file.suffix.lower() == ".srt":
             from convert import _convertSrtToVtt
 
             subtitle_file = _convertSrtToVtt(subtitle_file)
         remote_name = f"{uuid.uuid4()}.vtt"
         key = f"{key_prefix}{remote_name}"
+        log.info(
+            "Uploading subtitle [%d/%d] %s for %s to %s",
+            index,
+            total,
+            subtitle_file,
+            video_path,
+            destination,
+        )
         b2.get_b2_client().upload_file(subtitle_file, bucket, key)
         subtitle_files.append(remote_name)
+    log.info(
+        "Uploaded %d subtitle file(s) for %s to %s",
+        len(subtitle_files),
+        video_path,
+        destination,
+    )
     return subtitle_files
 
 

@@ -15,6 +15,7 @@ services:
     stdin_open: true
     environment:
       - BROKER=amqp://user:password@rabbitmq:5672/
-    command: bash -c "sleep 15 && celery -A main worker --concurrency=1"
+      - MC_LOG_LEVEL=${MC_LOG_LEVEL:-INFO}
+    command: bash -c "sleep 15 && celery -A main worker --concurrency=1 --loglevel=$${MC_LOG_LEVEL:-INFO}"
     volumes:
       - .:/code
