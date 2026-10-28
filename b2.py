@@ -82,10 +82,20 @@ class B2Client:
         )
         auth = self._authorize()
         bucket_id = self._bucket_id(bucket)
-        if size > MAX_SINGLE_UPLOAD_SIZE:
-            self._upload_large_file(local_path, bucket_id, key, auth)
-        else:
-            self._upload_single_file(local_path, bucket_id, key, auth)
+        for attempt in range(3):
+            try:
+                if size > MAX_SINGLE_UPLOAD_SIZE:
+                    self._upload_large_file(local_path, bucket_id, key, auth)
+                else:
+                    self._upload_single_file(local_path, bucket_id, key, auth)
+            except requests.HTTPError:
+                if attempt == 2:
+                    raise
+                logger.warning(
+                    "B2 upload HTTP failure; retrying attempt %d/3", attempt + 2
+                )
+            else:
+                break
         elapsed = time.perf_counter() - started
         rate = size / elapsed if elapsed else 0
         logger.info(
