@@ -616,6 +616,56 @@ class TestTvRunner:
         assert encoded.exists()
         post.assert_not_called()
 
+    @pytest.mark.parametrize("succeed", [True, False])
+    def test_b2_retry_controls_tv_failure_email(self, mocker, temp_directory, succeed):
+        import requests
+        import b2
+
+        mocker.patch("tv_runner.B2_ENABLED", True)
+        mocker.patch("tv_runner.SEND_EMAIL", True)
+        source = temp_directory / "episode.mkv"
+        encoded = temp_directory / "episode.mp4"
+        source.write_bytes(b"source")
+        encoded.write_bytes(b"encoded")
+        mocker.patch("tv_runner.stripUnicode", return_value=source)
+        mocker.patch("tv_runner.makeFileStreamable", return_value=encoded)
+        client = b2.B2Client("id", "key")
+        mocker.patch("tv_runner.b2.get_b2_client", return_value=client)
+        mocker.patch.object(client, "_authorize", return_value={"buckets": {}})
+        mocker.patch.object(client, "_bucket_id", return_value="bucket-id")
+        failures = [requests.HTTPError("upload failed") for _ in range(3)]
+        upload = mocker.patch.object(
+            client,
+            "_upload_single_file",
+            side_effect=failures[:1] + ([None] if succeed else failures[1:]),
+        )
+        email = mocker.patch("tv_runner.send_email")
+        post = mocker.patch("tv_runner.MediaFile.post_media_file")
+
+        details = [
+            {
+                "pk": 1,
+                "path": "b2://bucket/Show/",
+                "skip": False,
+                "bucket": "bucket",
+                "b2_upload_prefix": "tv/42/",
+            }
+        ]
+        if succeed:
+            self.tvRunner.updateFileRecords(
+                temp_directory, {source.name}, set(), media_path_details=details
+            )
+        else:
+            with pytest.raises(requests.HTTPError) as raised:
+                self.tvRunner.updateFileRecords(
+                    temp_directory, {source.name}, set(), media_path_details=details
+                )
+            assert raised.value is failures[-1]
+
+        assert upload.call_count == (2 if succeed else 3)
+        assert email.call_count == (0 if succeed else 1)
+        assert post.called is succeed
+
     def test_api_failure_leaves_encoded_file(self, mocker, temp_directory):
         mocker.patch("tv_runner.B2_ENABLED", False)
         source = temp_directory / "episode.mkv"

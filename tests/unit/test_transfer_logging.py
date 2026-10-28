@@ -128,6 +128,93 @@ def test_public_b2_upload_logs_identity_and_only_success_completion(
         assert "bytes/s" in logs
 
 
+@pytest.mark.parametrize("large", [False, True])
+@pytest.mark.parametrize("success_on", [1, 2, 3])
+def test_b2_upload_retries_http_errors_until_success(
+    mocker, tmp_path, large, success_on
+):
+    path = tmp_path / "upload.bin"
+    path.write_bytes(b"data")
+    client = b2.B2Client("id", "key")
+    mocker.patch.object(client, "_authorize", return_value={"buckets": {}})
+    mocker.patch.object(client, "_bucket_id", return_value="bucket-id")
+    upload = mocker.patch.object(
+        client,
+        "_upload_large_file" if large else "_upload_single_file",
+        side_effect=[
+            *[requests.HTTPError(f"failure {n}") for n in range(success_on - 1)],
+            None,
+        ],
+    )
+    mocker.patch.object(b2, "MAX_SINGLE_UPLOAD_SIZE", 0 if large else 100)
+
+    client.upload_file(path, "bucket", "opaque/key")
+
+    assert upload.call_count == success_on
+    assert all(
+        call.args[:3] == (path, "bucket-id", "opaque/key")
+        for call in upload.call_args_list
+    )
+
+
+@pytest.mark.parametrize("large", [False, True])
+def test_b2_upload_retries_three_times_then_reraises_final_http_error(
+    mocker, tmp_path, large
+):
+    path = tmp_path / "upload.bin"
+    path.write_bytes(b"data")
+    client = b2.B2Client("id", "key")
+    mocker.patch.object(client, "_authorize", return_value={"buckets": {}})
+    mocker.patch.object(client, "_bucket_id", return_value="bucket-id")
+    errors = [requests.HTTPError(f"failure {n}") for n in range(3)]
+    upload = mocker.patch.object(
+        client,
+        "_upload_large_file" if large else "_upload_single_file",
+        side_effect=errors,
+    )
+    mocker.patch.object(b2, "MAX_SINGLE_UPLOAD_SIZE", 0 if large else 100)
+
+    with pytest.raises(requests.HTTPError) as raised:
+        client.upload_file(path, "bucket", "opaque/key")
+
+    assert raised.value is errors[-1]
+    assert upload.call_count == 3
+
+
+def test_single_upload_retry_replays_file_from_start(mocker, tmp_path):
+    path = tmp_path / "upload.bin"
+    path.write_bytes(b"payload")
+    client = b2.B2Client("id", "key")
+    mocker.patch.object(
+        client,
+        "_authorize",
+        return_value={"buckets": {}, "authorizationToken": "token"},
+    )
+    mocker.patch.object(client, "_bucket_id", return_value="bucket-id")
+    mocker.patch.object(
+        client,
+        "_get_upload_url",
+        return_value={
+            "uploadUrl": "https://upload.example/file",
+            "authorizationToken": "token",
+        },
+    )
+    observed = []
+
+    def post(_url, data, **_kwargs):
+        observed.append(data.read())
+        response = mocker.Mock()
+        if len(observed) == 1:
+            response.raise_for_status.side_effect = requests.HTTPError("failed")
+        return response
+
+    mocker.patch.object(b2.requests, "post", side_effect=post)
+
+    client.upload_file(path, "bucket", "key")
+
+    assert observed == [b"payload", b"payload"]
+
+
 def test_inference_transport_failure_propagates(mocker, caplog):
     error = requests.ConnectionError("network unavailable")
     mocker.patch.object(utils.requests, "get", side_effect=error)
