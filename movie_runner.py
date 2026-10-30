@@ -236,6 +236,7 @@ class MovieRunner:
                                 subtitle_files=subtitle_files,
                                 b2_uuid=b2_uuid,
                             )
+                            video_file.unlink()
                         except Exception:
                             log.exception("Failed publishing movie file %s", video_file)
                             raise

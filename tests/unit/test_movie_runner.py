@@ -91,6 +91,8 @@ class TestPostMovies:
         mocker.patch("movie_runner.B2_ENABLED", True)
         self.mock_getLocalMoviePaths.return_value = ["movie1"]
         video = Path(f"{self.tmp_dir}/movies/movie1/Already.mp4")
+        video.parent.mkdir(parents=True, exist_ok=True)
+        video.write_bytes(b"video")
         mocker.patch.object(
             MediaFile, "get_all_filenames", return_value={"Already.mp4"}
         )
@@ -103,6 +105,29 @@ class TestPostMovies:
         largest.assert_called_once_with(Path(f"{self.tmp_dir}/movies/movie1"))
         self.mock_promoteSubtitles.assert_not_called()
         self.mock_reencodeFilesInDirectory.assert_not_called()
+        assert video.stat().st_size == len(b"video")
+
+    def test_dry_run_keeps_movie_video(self, mocker):
+        mocker.patch("movie_runner.B2_ENABLED", True)
+        self.mock_getLocalMoviePaths.return_value = ["movie1"]
+        video = self.tmp_dir / "movies" / "movie1" / "Film.mp4"
+        video.parent.mkdir(parents=True, exist_ok=True)
+        video.write_bytes(b"video")
+
+        self.movieRunner.postMovies(dry_run=True)
+
+        assert video.stat().st_size == len(b"video")
+        self.mock_reencodeFilesInDirectory.assert_not_called()
+
+    def test_non_b2_movie_processing_keeps_video(self):
+        self.mock_getLocalMoviePaths.return_value = ["movie1"]
+        video = self.tmp_dir / "movies" / "movie1" / "Film.mp4"
+        video.parent.mkdir(parents=True, exist_ok=True)
+        video.write_bytes(b"video")
+
+        self.movieRunner.postMovies()
+
+        assert video.stat().st_size == len(b"video")
 
     @pytest.mark.parametrize("filename", ["already.mp4", "Already.mv-encoded.mp4"])
     def test_filename_near_match_is_not_skipped(self, mocker, filename):
@@ -183,6 +208,55 @@ class TestPostMovies:
         record.assert_called_once_with(
             "Shared.mp4", 1, len(b"video"), subtitle_files=[], b2_uuid=mock.ANY
         )
+
+    def test_b2_video_is_removed_only_after_uploads_and_publication(
+        self, mocker, temp_directory
+    ):
+        mocker.patch("movie_runner.B2_ENABLED", True)
+        mocker.patch("movie_runner.BASE_PATH", temp_directory)
+        mocker.patch("movie_runner.LOCAL_MOVIE_PATHS", ["movies"])
+        mocker.patch("movie_runner.Movie.get_all_movies", return_value={})
+        self.mock_getLocalMoviePaths.return_value = ["Film"]
+        folder = temp_directory / "movies" / "Film"
+        folder.mkdir()
+        video = folder / "Film.mp4"
+        video.write_bytes(b"encoded-video")
+
+        def video_exists():
+            try:
+                video.stat()
+                return True
+            except FileNotFoundError:
+                return False
+
+        mocker.patch.object(MovieRunner, "_get_largest_video_file", return_value=video)
+        mocker.patch(
+            "movie_runner.Movie.post_media_path",
+            return_value={"pk": 1, "bucket": "bucket", "b2_upload_prefix": "p/"},
+        )
+        events = []
+        client = mocker.patch("movie_runner.b2.get_b2_client").return_value
+
+        def upload(*args):
+            events.append(("video", video_exists()))
+
+        client.upload_file.side_effect = upload
+
+        def upload_subtitles(*args, **kwargs):
+            events.append(("subtitles", video_exists()))
+            return []
+
+        mocker.patch("movie_runner.upload_subtitle_files", side_effect=upload_subtitles)
+
+        def post_file(*args, **kwargs):
+            events.append(("record", video_exists()))
+
+        mocker.patch.object(MediaFile, "post_media_file", side_effect=post_file)
+
+        MovieRunner().postMovies()
+
+        assert events == [("video", True), ("subtitles", True), ("record", True)]
+        assert not video_exists()
 
     def test_reencodeErrors(self):
         self.mock_reencodeFilesInDirectory.side_effect = [
@@ -580,7 +654,8 @@ class TestPostMovies:
             MovieRunner().postMovies()
 
         record.assert_not_called()
-        assert video.exists() and subtitle.exists()
+        assert video.stat().st_size == len(b"video")
+        assert subtitle.stat().st_size == len(b"subtitle")
 
     def test_multiple_incomplete_b2_paths_for_local_movie_fail(
         self, mocker, temp_directory
@@ -717,6 +792,7 @@ class TestPostMovies:
         else:
             record.assert_called_once()
         assert video.name not in filename_inventory
+        assert video.stat().st_size == len(b"encoded")
 
 
 class TestRun:

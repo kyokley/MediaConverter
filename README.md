@@ -30,3 +30,7 @@ The production image also defaults to `--loglevel=info`. Override its command
 to change the worker log level. Dry runs label planned work rather than reporting
 successful uploads or publications. Encoding progress reports media time, not a
 percentage or ETA; single-request uploads log their start and completion.
+
+With B2 enabled, TV and movie runners remove an uploaded local video only after
+video and subtitle uploads and MediaFile publication succeed. Failed publications
+keep the video for retry; this cleanup does not remove subtitle sidecars.

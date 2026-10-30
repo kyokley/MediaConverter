@@ -291,6 +291,8 @@ class TestTvRunner:
         self, mocker, temp_directory
     ):
         mocker.patch("tv_runner.B2_ENABLED", True)
+        source = temp_directory / "episode.mkv"
+        source.write_bytes(b"source")
         mocker.patch(
             "tv_runner.MediaFile.get_all_filenames", return_value={"episode.mkv"}
         )
@@ -305,6 +307,7 @@ class TestTvRunner:
         create_path.assert_not_called()
         upload.assert_not_called()
         post.assert_not_called()
+        assert source.exists()
 
     def test_global_encoded_filename_match_skips_upload_and_publication(
         self, mocker, temp_directory
@@ -484,6 +487,52 @@ class TestTvRunner:
         assert [event[0] for event in events] == ["video", "subtitles", "record"]
         mock_create.assert_not_called()
 
+    def test_b2_video_is_removed_only_after_uploads_and_publication(
+        self, mocker, temp_directory
+    ):
+        mocker.patch("tv_runner.B2_ENABLED", True)
+        video = temp_directory / "episode.mp4"
+        video.write_bytes(b"encoded-video")
+        mocker.patch("tv_runner.stripUnicode", return_value=video)
+        mocker.patch(
+            "tv_runner.makeFileStreamable", side_effect=AlreadyEncoded("ready")
+        )
+        events = []
+        client = mocker.patch("tv_runner.b2.get_b2_client").return_value
+
+        def upload(*args):
+            events.append(("video", video.exists()))
+
+        client.upload_file.side_effect = upload
+
+        def upload_subtitles(*args, **kwargs):
+            events.append(("subtitles", video.exists()))
+            return []
+
+        mocker.patch("tv_runner.upload_subtitle_files", side_effect=upload_subtitles)
+
+        def post_file(*args, **kwargs):
+            events.append(("record", video.exists()))
+
+        mocker.patch("tv_runner.MediaFile.post_media_file", side_effect=post_file)
+
+        self.tvRunner.updateFileRecords(
+            temp_directory,
+            {video.name},
+            set(),
+            media_path_details=[
+                {
+                    "pk": 1,
+                    "path": "b2://bucket/Show/",
+                    "bucket": "bucket",
+                    "b2_upload_prefix": "tv/42/",
+                }
+            ],
+        )
+
+        assert events == [("video", True), ("subtitles", True), ("record", True)]
+        assert not video.exists()
+
     def test_run_fetches_details_and_uses_existing_b2_destination(
         self, mocker, temp_directory
     ):
@@ -528,6 +577,8 @@ class TestTvRunner:
 
     def test_dry_run_does_not_encode_or_write(self, mocker, temp_directory):
         mocker.patch("tv_runner.B2_ENABLED", True)
+        source = temp_directory / "episode.mkv"
+        source.write_bytes(b"source")
         encode = mocker.patch("tv_runner.makeFileStreamable")
         create = mocker.patch("tv_runner.Tv.post_media_path")
         upload = mocker.patch("tv_runner.b2.get_b2_client")
@@ -553,9 +604,12 @@ class TestTvRunner:
         create.assert_not_called()
         upload.assert_not_called()
         post.assert_not_called()
+        assert source.exists()
 
     def test_selected_skip_path_does_not_write(self, mocker, temp_directory):
         mocker.patch("tv_runner.B2_ENABLED", True)
+        source = temp_directory / "episode.mkv"
+        source.write_bytes(b"source")
         encode = mocker.patch("tv_runner.makeFileStreamable")
         upload = mocker.patch("tv_runner.b2.get_b2_client")
         post = mocker.patch("tv_runner.MediaFile.post_media_file")
@@ -578,8 +632,9 @@ class TestTvRunner:
         encode.assert_not_called()
         upload.assert_not_called()
         post.assert_not_called()
+        assert source.exists()
 
-    @pytest.mark.parametrize("failure", ["video", "subtitle"])
+    @pytest.mark.parametrize("failure", ["video", "subtitle", "api"])
     def test_upload_failures_do_not_post_record(self, mocker, temp_directory, failure):
         mocker.patch("tv_runner.B2_ENABLED", True)
         source = temp_directory / "episode.mkv"
@@ -595,7 +650,10 @@ class TestTvRunner:
         if failure == "video":
             upload.return_value.upload_file.side_effect = error
         else:
-            subtitles.side_effect = error
+            if failure == "subtitle":
+                subtitles.side_effect = error
+            else:
+                post.side_effect = error
 
         with pytest.raises(RuntimeError, match=f"{failure} upload failed"):
             self.tvRunner.updateFileRecords(
@@ -614,7 +672,12 @@ class TestTvRunner:
             )
 
         assert encoded.exists()
-        post.assert_not_called()
+        if failure == "video":
+            post.assert_not_called()
+        elif failure == "subtitle":
+            post.assert_not_called()
+        else:
+            post.assert_called_once()
 
     @pytest.mark.parametrize("succeed", [True, False])
     def test_b2_retry_controls_tv_failure_email(self, mocker, temp_directory, succeed):

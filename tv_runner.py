@@ -417,6 +417,8 @@ class TvRunner:
                         fullPath.stat().st_size,
                         **media_file_kwargs,
                     )
+                    if B2_ENABLED:
+                        fullPath.unlink()
                     if published_filenames is not None:
                         published_filenames.add(fullPath.name)
                     remoteFileSet.add(fullPath.name)
