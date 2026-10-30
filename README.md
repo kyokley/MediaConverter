@@ -1,6 +1,11 @@
 # MediaConverter [![Build Status](https://travis-ci.org/kyokley/MediaConverter.svg)](https://travis-ci.org/kyokley/MediaConverter)
 Convert media files to HTML5 streamable format
 
+TV and movie publication always uses Backblaze B2. Configure credentials with
+`MC_B2_APPLICATION_KEY_ID` and `MC_B2_APPLICATION_KEY`, and set `MC_B2_BUCKET_NAME`
+and optional `MC_B2_NAME_PREFIX` for local-path mapping. There is no local-only
+publication mode.
+
 ## Processing logs
 
 Logs show pipeline steps, directory/file progress, skip reasons, elapsed time,
@@ -31,6 +36,6 @@ to change the worker log level. Dry runs label planned work rather than reportin
 successful uploads or publications. Encoding progress reports media time, not a
 percentage or ETA; single-request uploads log their start and completion.
 
-With B2 enabled, TV and movie runners remove an uploaded local video only after
+TV and movie runners remove an uploaded local video only after
 video and subtitle uploads and MediaFile publication succeed. Failed publications
 keep the video for retry; this cleanup does not remove subtitle sidecars.
