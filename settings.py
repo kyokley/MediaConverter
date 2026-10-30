@@ -63,7 +63,6 @@ VERIFY_REQUESTS = True
 
 MINIMUM_FILE_SIZE = int(os.getenv("MC_MINIMUM_FILE_SIZE", 10000000))
 
-B2_ENABLED = os.getenv("MC_B2_ENABLED", "true").lower() in ("1", "true", "yes")
 B2_API_URL = os.getenv("MC_B2_API_URL", "https://api.backblazeb2.com")
 B2_APPLICATION_KEY_ID = os.getenv("MC_B2_APPLICATION_KEY_ID", "")
 B2_APPLICATION_KEY = os.getenv("MC_B2_APPLICATION_KEY", "")

@@ -8,7 +8,6 @@ from settings import (
     SUBTITLE_FILES,
     DOMAIN,
     BASE_PATH,
-    B2_ENABLED,
 )
 from convert import reencodeFilesInDirectory
 from utils import (
@@ -117,7 +116,7 @@ class MovieRunner:
         remote_paths = set(Movie.get_all_movies(incomplete_paths).keys())
         log.info("Discovered %d remote movie directories", len(remote_paths))
         published_filenames = set()
-        if B2_ENABLED and not dry_run:
+        if not dry_run:
             log.info("Starting global published filename inventory lookup")
             published_filenames = MediaFile.get_all_filenames()
             log.info(
@@ -150,7 +149,7 @@ class MovieRunner:
                 directory_started = time.perf_counter()
                 localpath = moviepath / token
                 if localpath not in remote_paths:
-                    if B2_ENABLED and not dry_run:
+                    if not dry_run:
                         candidate = self._get_largest_video_file(localpath)
                         if (
                             candidate is not None
@@ -192,61 +191,59 @@ class MovieRunner:
                     if dry_run:
                         log.info("Skipping publication for %s: dry-run", localpath)
                         continue
-                    if B2_ENABLED:
-                        video_file = self._get_largest_video_file(localpath)
-                        if video_file is None:
-                            self.errors.append(
-                                f"No video file found in {localpath}. Continuing..."
-                            )
-                            continue
-                        if video_file.name in published_filenames:
-                            log.info(
-                                "Skipping %s: %s already published",
-                                localpath,
-                                video_file.name,
-                            )
-                            continue
-                        incomplete_path = incomplete_paths.get(localpath)
-                        logical_path = (
-                            incomplete_path["path"]
-                            if incomplete_path
-                            else get_b2_uri_for_local_path(localpath)
+                    video_file = self._get_largest_video_file(localpath)
+                    if video_file is None:
+                        self.errors.append(
+                            f"No video file found in {localpath}. Continuing..."
                         )
-                        try:
-                            media_path_data = Movie.post_media_path(logical_path)
-                            key_prefix = media_path_data.get("b2_upload_prefix")
-                            bucket = media_path_data.get("bucket")
-                            if not key_prefix or not bucket:
-                                raise ValueError(
-                                    "MediaPath response missing bucket or b2_upload_prefix"
-                                )
-                            b2_uuid = str(uuid.uuid4())
-                            key = f"{key_prefix}{b2_uuid}{video_file.suffix}"
-                            b2.get_b2_client().upload_file(video_file, bucket, key)
-                            subtitle_files = upload_subtitle_files(
-                                video_file,
-                                localpath,
-                                bucket=bucket,
-                                key_prefix=key_prefix,
-                            )
-                            MediaFile.post_media_file(
-                                video_file.name,
-                                media_path_data["pk"],
-                                video_file.stat().st_size,
-                                subtitle_files=subtitle_files,
-                                b2_uuid=b2_uuid,
-                            )
-                        except Exception:
-                            log.exception("Failed publishing movie file %s", video_file)
-                            raise
-                        published_filenames.add(video_file.name)
-                        published_files += 1
+                        continue
+                    if video_file.name in published_filenames:
                         log.info(
-                            "Published movie file %s after MediaFile API success",
-                            video_file,
+                            "Skipping %s: %s already published",
+                            localpath,
+                            video_file.name,
                         )
-                    else:
-                        Movie.post_media_path(localpath)
+                        continue
+                    incomplete_path = incomplete_paths.get(localpath)
+                    logical_path = (
+                        incomplete_path["path"]
+                        if incomplete_path
+                        else get_b2_uri_for_local_path(localpath)
+                    )
+                    try:
+                        media_path_data = Movie.post_media_path(logical_path)
+                        key_prefix = media_path_data.get("b2_upload_prefix")
+                        bucket = media_path_data.get("bucket")
+                        if not key_prefix or not bucket:
+                            raise ValueError(
+                                "MediaPath response missing bucket or b2_upload_prefix"
+                            )
+                        b2_uuid = str(uuid.uuid4())
+                        key = f"{key_prefix}{b2_uuid}{video_file.suffix}"
+                        b2.get_b2_client().upload_file(video_file, bucket, key)
+                        subtitle_files = upload_subtitle_files(
+                            video_file,
+                            localpath,
+                            bucket=bucket,
+                            key_prefix=key_prefix,
+                        )
+                        MediaFile.post_media_file(
+                            video_file.name,
+                            media_path_data["pk"],
+                            video_file.stat().st_size,
+                            subtitle_files=subtitle_files,
+                            b2_uuid=b2_uuid,
+                        )
+                        video_file.unlink()
+                    except Exception:
+                        log.exception("Failed publishing movie file %s", video_file)
+                        raise
+                    published_filenames.add(video_file.name)
+                    published_files += 1
+                    log.info(
+                        "Published movie file %s after MediaFile API success",
+                        video_file,
+                    )
                     processed_directories += 1
                     log.info(
                         "[%d/%d] Completed movie directory %s in %.2fs",

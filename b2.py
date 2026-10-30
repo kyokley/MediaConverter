@@ -32,6 +32,27 @@ class B2Error(Exception):
     pass
 
 
+def _http_error_details(error):
+    response = error.response
+    status = response.status_code if response is not None else None
+    fields = []
+    if isinstance(status, (str, int, float, bool)):
+        fields.append(f"status={status!r}")
+
+    if response is not None:
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = None
+        if isinstance(payload, dict):
+            for name in ("code", "message"):
+                value = payload.get(name)
+                if isinstance(value, (str, int, float, bool)):
+                    fields.append(f"{name}={value!r}")
+
+    return ", ".join(fields) or "no B2 error details available"
+
+
 class B2Client:
     """Minimal Backblaze B2 native API (v4) client for uploads."""
 
@@ -88,12 +109,21 @@ class B2Client:
                     self._upload_large_file(local_path, bucket_id, key, auth)
                 else:
                     self._upload_single_file(local_path, bucket_id, key, auth)
-            except requests.HTTPError:
+            except requests.HTTPError as error:
+                details = _http_error_details(error)
                 if attempt == 2:
+                    logger.warning(
+                        "B2 upload HTTP failure (%s); exhausted attempt %d/3",
+                        details,
+                        attempt + 1,
+                    )
                     raise
                 logger.warning(
-                    "B2 upload HTTP failure; retrying attempt %d/3", attempt + 2
+                    "B2 upload HTTP failure (%s); retrying attempt %d/3 in 30 seconds",
+                    details,
+                    attempt + 2,
                 )
+                time.sleep(30)
             else:
                 break
         elapsed = time.perf_counter() - started

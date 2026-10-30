@@ -17,7 +17,6 @@ from settings import (
     MINIMUM_FILE_SIZE,
     DOMAIN,
     LOCAL_TV_SHOWS_PATHS,
-    B2_ENABLED,
 )
 from convert import makeFileStreamable, SkipProcessing, AlreadyEncoded
 from utils import (
@@ -25,7 +24,6 @@ from utils import (
     EncoderException,
     MissingPathException,
     send_email,
-    get_localpath_by_filename,
     get_media_path_by_filename,
     post_data,
     get_data,
@@ -252,10 +250,7 @@ class TvRunner:
     @staticmethod
     def get_or_create_media_path(local_path):
         log.info(f"Get or create MediaPath for {local_path}")
-        if B2_ENABLED:
-            media_path = get_b2_uri_for_local_path(local_path)
-        else:
-            media_path = local_path
+        media_path = get_b2_uri_for_local_path(local_path)
         media_path_data = Tv.post_media_path(media_path)
         return {
             "pk": media_path_data["pk"],
@@ -325,11 +320,7 @@ class TvRunner:
         total = len(pending_files)
         initial_remote_count = len(remoteFileSet)
         published = 0
-        destination = (
-            self._select_b2_destination(path, media_path_details)
-            if B2_ENABLED
-            else None
-        )
+        destination = self._select_b2_destination(path, media_path_details)
         media_path_id = None
         for index, localFile in enumerate(pending_files, start=1):
             if not localFile:
@@ -339,7 +330,7 @@ class TvRunner:
             log.info("[%d/%d] Processing TV file %s", index, total, localFile)
 
             published_filenames = None
-            if B2_ENABLED and not dry_run:
+            if not dry_run:
                 published_filenames = self._get_published_filenames()
                 if localFile in published_filenames:
                     log.info("Skipping %s: filename already published", localFile)
@@ -351,10 +342,9 @@ class TvRunner:
 
             if not media_path_id:
                 media_path_data = destination or self.get_or_create_media_path(
-                    Path(path) if B2_ENABLED else path
+                    Path(path)
                 )
-                if B2_ENABLED:
-                    destination = media_path_data
+                destination = media_path_data
                 if media_path_data["skip"]:
                     log.info("Skipping %s: MediaPath is marked skip", localFile)
                     break
@@ -392,31 +382,26 @@ class TvRunner:
                             "Skipping %s: filename already published", fullPath.name
                         )
                         continue
-                    subtitle_files = []
-                    if B2_ENABLED:
-                        bucket = destination["bucket"]
-                        key_prefix = destination["b2_upload_prefix"]
-                        if not key_prefix:
-                            raise ValueError(
-                                "MediaPath response missing b2_upload_prefix"
-                            )
-                        if not bucket:
-                            raise ValueError("MediaPath response missing bucket")
-                        b2_uuid = str(uuid.uuid4())
-                        key = f"{key_prefix}{b2_uuid}{fullPath.suffix}"
-                        b2.get_b2_client().upload_file(fullPath, bucket, key)
-                        subtitle_files = upload_subtitle_files(
-                            fullPath, path, bucket=bucket, key_prefix=key_prefix
-                        )
-                    media_file_kwargs = {"subtitle_files": subtitle_files}
-                    if B2_ENABLED:
-                        media_file_kwargs["b2_uuid"] = b2_uuid
+                    bucket = destination["bucket"]
+                    key_prefix = destination["b2_upload_prefix"]
+                    if not key_prefix:
+                        raise ValueError("MediaPath response missing b2_upload_prefix")
+                    if not bucket:
+                        raise ValueError("MediaPath response missing bucket")
+                    b2_uuid = str(uuid.uuid4())
+                    key = f"{key_prefix}{b2_uuid}{fullPath.suffix}"
+                    b2.get_b2_client().upload_file(fullPath, bucket, key)
+                    subtitle_files = upload_subtitle_files(
+                        fullPath, path, bucket=bucket, key_prefix=key_prefix
+                    )
                     MediaFile.post_media_file(
                         fullPath.name,
                         media_path_id,
                         fullPath.stat().st_size,
-                        **media_file_kwargs,
+                        subtitle_files=subtitle_files,
+                        b2_uuid=b2_uuid,
                     )
+                    fullPath.unlink()
                     if published_filenames is not None:
                         published_filenames.add(fullPath.name)
                     remoteFileSet.add(fullPath.name)
@@ -555,7 +540,7 @@ class TvRunner:
         run_started = time.perf_counter()
         log.info("TV run started (dry_run=%s)", dry_run)
         self._published_filenames = None
-        if B2_ENABLED and not dry_run:
+        if not dry_run:
             self._get_published_filenames()
         log.info("Starting unsorted TV file phase")
         self._sort_unsorted_files(dry_run=dry_run)
@@ -651,81 +636,62 @@ class TvRunner:
                     len(sources),
                     src,
                 )
-                if B2_ENABLED:
-                    if (
-                        not src.is_file()
-                        or src.suffix.lower() not in MEDIA_FILE_EXTENSIONS
-                        or src.stat().st_size <= MINIMUM_FILE_SIZE
-                    ):
-                        continue
-                    inferred_uri = get_media_path_by_filename(src.name)
-                    if not inferred_uri:
-                        log.warning(f"No media path inferred for {src.name}")
-                        continue
-                    if not inferred_uri.startswith("b2://"):
-                        inferred_uri = get_b2_uri_for_local_path(Path(inferred_uri))
-                    try:
-                        self._select_b2_destination(
-                            src.parent,
-                            [{"pk": 0, "path": inferred_uri, "skip": False}],
-                        )
-                    except ValueError as error:
-                        log.warning(f"Invalid inferred B2 path for {src.name}: {error}")
-                        continue
-
-                    normalized_uri = self._normalized_media_path(inferred_uri)
-                    if normalized_uri not in details_by_uri:
-                        if media_paths is None:
-                            media_paths = Tv.get_all_media_paths()
-                        matching_paths = [
-                            item
-                            for item in media_paths
-                            if item.get("path", "").startswith("b2://")
-                            and self._normalized_media_path(item["path"])
-                            == normalized_uri
-                        ]
-                        if matching_paths:
-                            listed_path = min(
-                                matching_paths, key=lambda item: item["pk"]
-                            )
-                            detail = Tv.get_media_path(listed_path["pk"])
-                            detail.setdefault("pk", listed_path["pk"])
-                            detail.setdefault("path", listed_path["path"])
-                        elif dry_run:
-                            log.info(
-                                f"Would create media path {inferred_uri} for {src.name}"
-                            )
-                            continue
-                        else:
-                            detail = Tv.post_media_path(inferred_uri)
-                            detail.setdefault("path", inferred_uri)
-                            detail.setdefault("media_files", [])
-                        details_by_uri[normalized_uri] = detail
-
-                    detail = details_by_uri[normalized_uri]
-                    remote_files = set(detail.get("media_files", []))
-                    self.updateFileRecords(
+                if (
+                    not src.is_file()
+                    or src.suffix.lower() not in MEDIA_FILE_EXTENSIONS
+                    or src.stat().st_size <= MINIMUM_FILE_SIZE
+                ):
+                    continue
+                inferred_uri = get_media_path_by_filename(src.name)
+                if not inferred_uri:
+                    log.warning(f"No media path inferred for {src.name}")
+                    continue
+                if not inferred_uri.startswith("b2://"):
+                    inferred_uri = get_b2_uri_for_local_path(Path(inferred_uri))
+                try:
+                    self._select_b2_destination(
                         src.parent,
-                        {src.name},
-                        remote_files,
-                        dry_run=dry_run,
-                        media_path_details=[detail],
+                        [{"pk": 0, "path": inferred_uri, "skip": False}],
                     )
+                except ValueError as error:
+                    log.warning(f"Invalid inferred B2 path for {src.name}: {error}")
                     continue
 
-                filename = src.name
+                normalized_uri = self._normalized_media_path(inferred_uri)
+                if normalized_uri not in details_by_uri:
+                    if media_paths is None:
+                        media_paths = Tv.get_all_media_paths()
+                    matching_paths = [
+                        item
+                        for item in media_paths
+                        if item.get("path", "").startswith("b2://")
+                        and self._normalized_media_path(item["path"]) == normalized_uri
+                    ]
+                    if matching_paths:
+                        listed_path = min(matching_paths, key=lambda item: item["pk"])
+                        detail = Tv.get_media_path(listed_path["pk"])
+                        detail.setdefault("pk", listed_path["pk"])
+                        detail.setdefault("path", listed_path["path"])
+                    elif dry_run:
+                        log.info(
+                            f"Would create media path {inferred_uri} for {src.name}"
+                        )
+                        continue
+                    else:
+                        detail = Tv.post_media_path(inferred_uri)
+                        detail.setdefault("path", inferred_uri)
+                        detail.setdefault("media_files", [])
+                    details_by_uri[normalized_uri] = detail
 
-                localpath = get_localpath_by_filename(filename)
-                if not localpath or not localpath.exists():
-                    continue
-
-                dst = localpath / filename
-
-                if dry_run:
-                    log.info(f"Would move {src} to {dst}")
-                else:
-                    log.info(f"Moving {src} to {dst}")
-                    shutil.move(src, dst)
+                detail = details_by_uri[normalized_uri]
+                remote_files = set(detail.get("media_files", []))
+                self.updateFileRecords(
+                    src.parent,
+                    {src.name},
+                    remote_files,
+                    dry_run=dry_run,
+                    media_path_details=[detail],
+                )
 
 
 if __name__ == "__main__":

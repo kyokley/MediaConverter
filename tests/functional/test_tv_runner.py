@@ -4,7 +4,6 @@ import tempfile
 import os
 import shutil
 
-from pathlib import Path
 from tv_runner import TvRunner
 from utils import MissingPathException, matching_subtitle_files
 
@@ -40,68 +39,6 @@ class TestBuildLocalFileSetFunctional:
         )
         actual = self.tv_runner.buildLocalFileSet(self.temp_dir)
         assert expected == actual
-
-
-class TestSortUnsortedFiles:
-    @pytest.fixture(autouse=True)
-    def setUp(self, mocker):
-        mocker.patch("tv_runner.B2_ENABLED", False)
-        self.temp_dir = tempfile.mkdtemp()
-        self.temp_dir_path = Path(self.temp_dir)
-
-        self.unsorted_path = self.temp_dir_path / "unsorted"
-        self.unsorted_path.mkdir()
-
-        self.local_path = self.temp_dir_path / "local"
-        self.local_path.mkdir()
-
-        mocker.patch("tv_runner.UNSORTED_PATHS", [str(self.unsorted_path)])
-
-        self.mock_get_localpath_by_filename = mocker.patch(
-            "tv_runner.get_localpath_by_filename"
-        )
-
-        self.tv_runner = TvRunner()
-
-        yield
-        shutil.rmtree(self.temp_dir)
-
-    def test_unsorted_path_does_not_exist(self):
-        self.unsorted_path.rmdir()
-
-        assert self.tv_runner._sort_unsorted_files() is None
-
-    def test_no_localpath_for_filename(self):
-        self.mock_get_localpath_by_filename.return_value = None
-        new_path = self.local_path / "new.show.s02e10"
-
-        unsorted_file_path = self.unsorted_path / "new.show.s02e10"
-        unsorted_file_path.mkdir()
-        assert self.tv_runner._sort_unsorted_files() is None
-        assert unsorted_file_path.exists()
-        assert not new_path.exists()
-
-    def test_localpath_does_not_exist(self):
-        self.local_path.rmdir()
-        self.mock_get_localpath_by_filename.return_value = Path(self.local_path)
-        new_path = self.local_path / "new.show.s02e10"
-
-        unsorted_file_path = self.unsorted_path / "new.show.s02e10"
-        unsorted_file_path.mkdir()
-
-        assert self.tv_runner._sort_unsorted_files() is None
-        assert unsorted_file_path.exists()
-        assert not new_path.exists()
-
-    def test_localpath_for_filename(self):
-        self.mock_get_localpath_by_filename.return_value = Path(self.local_path)
-        new_path = self.local_path / "new.show.s02e10"
-
-        unsorted_file_path = self.unsorted_path / "new.show.s02e10"
-        unsorted_file_path.mkdir()
-        assert self.tv_runner._sort_unsorted_files() is None
-        assert not unsorted_file_path.exists()
-        assert new_path.exists()
 
 
 class TestHandleDirs:
