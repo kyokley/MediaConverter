@@ -92,8 +92,10 @@ class B2Client:
                 if attempt == 2:
                     raise
                 logger.warning(
-                    "B2 upload HTTP failure; retrying attempt %d/3", attempt + 2
+                    "B2 upload HTTP failure; retrying attempt %d/3 in 30 seconds",
+                    attempt + 2,
                 )
+                time.sleep(30)
             else:
                 break
         elapsed = time.perf_counter() - started

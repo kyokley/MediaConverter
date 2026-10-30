@@ -2,6 +2,7 @@ import logging
 
 import pytest
 import requests
+from mock import call
 
 import b2
 import utils
@@ -101,6 +102,7 @@ def test_public_b2_upload_logs_identity_and_only_success_completion(
     local_path = tmp_path / "movie.mp4"
     local_path.write_bytes(b"1234567")
     client = b2.B2Client("id", "key")
+    sleep = mocker.patch.object(b2.time, "sleep")
     mocker.patch.object(client, "_authorize", return_value={"buckets": {}})
     mocker.patch.object(client, "_bucket_id", return_value="bucket-id")
     if fail_upload:
@@ -123,6 +125,7 @@ def test_public_b2_upload_logs_identity_and_only_success_completion(
     assert "7 bytes" in logs
     assert "B2 upload started" in logs
     assert ("B2 upload completed" in logs) is (not fail_upload)
+    sleep.assert_not_called()
     if not fail_upload:
         assert "seconds" in logs
         assert "bytes/s" in logs
@@ -138,19 +141,35 @@ def test_b2_upload_retries_http_errors_until_success(
     client = b2.B2Client("id", "key")
     mocker.patch.object(client, "_authorize", return_value={"buckets": {}})
     mocker.patch.object(client, "_bucket_id", return_value="bucket-id")
+    events = []
+    attempts = 0
+
+    def upload_once(*args):
+        nonlocal attempts
+        attempts += 1
+        events.append("upload")
+        if attempts < success_on:
+            raise requests.HTTPError("temporary failure")
+
+    sleep = mocker.patch.object(
+        b2.time,
+        "sleep",
+        side_effect=lambda duration: events.append(("sleep", duration)),
+    )
     upload = mocker.patch.object(
         client,
         "_upload_large_file" if large else "_upload_single_file",
-        side_effect=[
-            *[requests.HTTPError(f"failure {n}") for n in range(success_on - 1)],
-            None,
-        ],
+        side_effect=upload_once,
     )
     mocker.patch.object(b2, "MAX_SINGLE_UPLOAD_SIZE", 0 if large else 100)
 
     client.upload_file(path, "bucket", "opaque/key")
 
     assert upload.call_count == success_on
+    assert sleep.call_args_list == [call(30)] * (success_on - 1)
+    assert events == [
+        event for _ in range(success_on - 1) for event in ("upload", ("sleep", 30))
+    ] + ["upload"]
     assert all(
         call.args[:3] == (path, "bucket-id", "opaque/key")
         for call in upload.call_args_list
@@ -167,10 +186,25 @@ def test_b2_upload_retries_three_times_then_reraises_final_http_error(
     mocker.patch.object(client, "_authorize", return_value={"buckets": {}})
     mocker.patch.object(client, "_bucket_id", return_value="bucket-id")
     errors = [requests.HTTPError(f"failure {n}") for n in range(3)]
+    events = []
+    attempts = 0
+
+    def upload_once(*args):
+        nonlocal attempts
+        error = errors[attempts]
+        attempts += 1
+        events.append("upload")
+        raise error
+
+    sleep = mocker.patch.object(
+        b2.time,
+        "sleep",
+        side_effect=lambda duration: events.append(("sleep", duration)),
+    )
     upload = mocker.patch.object(
         client,
         "_upload_large_file" if large else "_upload_single_file",
-        side_effect=errors,
+        side_effect=upload_once,
     )
     mocker.patch.object(b2, "MAX_SINGLE_UPLOAD_SIZE", 0 if large else 100)
 
@@ -179,6 +213,30 @@ def test_b2_upload_retries_three_times_then_reraises_final_http_error(
 
     assert raised.value is errors[-1]
     assert upload.call_count == 3
+    assert sleep.call_args_list == [call(30), call(30)]
+    assert events == ["upload", ("sleep", 30), "upload", ("sleep", 30), "upload"]
+
+
+@pytest.mark.parametrize("large", [False, True])
+def test_b2_upload_does_not_retry_non_http_errors(mocker, tmp_path, large):
+    path = tmp_path / "upload.bin"
+    path.write_bytes(b"data")
+    client = b2.B2Client("id", "key")
+    mocker.patch.object(client, "_authorize", return_value={"buckets": {}})
+    mocker.patch.object(client, "_bucket_id", return_value="bucket-id")
+    upload = mocker.patch.object(
+        client,
+        "_upload_large_file" if large else "_upload_single_file",
+        side_effect=RuntimeError("stop immediately"),
+    )
+    mocker.patch.object(b2, "MAX_SINGLE_UPLOAD_SIZE", 0 if large else 100)
+    sleep = mocker.patch.object(b2.time, "sleep")
+
+    with pytest.raises(RuntimeError, match="stop immediately"):
+        client.upload_file(path, "bucket", "opaque/key")
+
+    upload.assert_called_once()
+    sleep.assert_not_called()
 
 
 def test_single_upload_retry_replays_file_from_start(mocker, tmp_path):
@@ -200,9 +258,16 @@ def test_single_upload_retry_replays_file_from_start(mocker, tmp_path):
         },
     )
     observed = []
+    events = []
+    sleep = mocker.patch.object(
+        b2.time,
+        "sleep",
+        side_effect=lambda duration: events.append(("sleep", duration)),
+    )
 
     def post(_url, data, **_kwargs):
         observed.append(data.read())
+        events.append("upload")
         response = mocker.Mock()
         if len(observed) == 1:
             response.raise_for_status.side_effect = requests.HTTPError("failed")
@@ -213,6 +278,8 @@ def test_single_upload_retry_replays_file_from_start(mocker, tmp_path):
     client.upload_file(path, "bucket", "key")
 
     assert observed == [b"payload", b"payload"]
+    assert sleep.call_args_list == [call(30)]
+    assert events == ["upload", ("sleep", 30), "upload"]
 
 
 def test_inference_transport_failure_propagates(mocker, caplog):

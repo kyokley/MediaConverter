@@ -620,12 +620,30 @@ class TestTvRunner:
         mocker.patch.object(client, "_authorize", return_value={"buckets": {}})
         mocker.patch.object(client, "_bucket_id", return_value="bucket-id")
         failures = [requests.HTTPError("upload failed") for _ in range(3)]
+        events = []
+        attempts = 0
+
+        def upload_once(*args):
+            nonlocal attempts
+            error = failures[attempts]
+            attempts += 1
+            events.append("upload")
+            if attempts < (2 if succeed else 4):
+                raise error
+
         upload = mocker.patch.object(
             client,
             "_upload_single_file",
-            side_effect=failures[:1] + ([None] if succeed else failures[1:]),
+            side_effect=upload_once,
         )
-        email = mocker.patch("tv_runner.send_email")
+        sleep = mocker.patch.object(
+            b2.time,
+            "sleep",
+            side_effect=lambda duration: events.append(("sleep", duration)),
+        )
+        email = mocker.patch(
+            "tv_runner.send_email", side_effect=lambda *args: events.append("email")
+        )
         post = mocker.patch("tv_runner.MediaFile.post_media_file")
 
         details = [
@@ -649,8 +667,14 @@ class TestTvRunner:
             assert raised.value is failures[-1]
 
         assert upload.call_count == (2 if succeed else 3)
+        assert sleep.call_args_list == [call(30)] * (1 if succeed else 2)
         assert email.call_count == (0 if succeed else 1)
         assert post.called is succeed
+        assert events == (
+            ["upload", ("sleep", 30), "upload"]
+            if succeed
+            else ["upload", ("sleep", 30), "upload", ("sleep", 30), "upload", "email"]
+        )
 
     def test_missing_server_b2_contract_fails_without_filename_fallback(
         self, mocker, temp_directory
