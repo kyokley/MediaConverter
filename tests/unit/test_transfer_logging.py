@@ -503,6 +503,184 @@ def test_single_upload_retries_http_error_getting_upload_url(mocker, tmp_path, c
         assert secret not in logs
 
 
+@pytest.mark.parametrize("large", [False, True])
+def test_b2_upload_reauthorizes_each_attempt_and_uses_fresh_auth(
+    mocker, tmp_path, large
+):
+    path = tmp_path / "upload.bin"
+    path.write_bytes(b"payload")
+    client = b2.B2Client("id", "key")
+    client._auth = {
+        "authorizationToken": "stale-token",
+        "apiUrl": "https://stale.example",
+        "buckets": {"bucket": "stale-bucket"},
+    }
+    mocker.patch.object(b2, "MAX_SINGLE_UPLOAD_SIZE", 0 if large else 100)
+    mocker.patch.object(b2, "LARGE_FILE_PART_SIZE", 100)
+    mocker.patch.object(b2.time, "sleep")
+    auth_calls = []
+    get_calls = []
+    post_calls = []
+    attempt = 0
+
+    def response(payload=None, error=None):
+        result = mocker.Mock()
+        result.json.return_value = payload
+        result.raise_for_status.side_effect = error
+        return result
+
+    def get(url, **kwargs):
+        nonlocal attempt
+        if url.endswith("b2_authorize_account"):
+            attempt += 1
+            token = f"account-token-{attempt}"
+            api_url = f"https://api-{attempt}.example"
+            auth_calls.append((url, token))
+            return response(
+                {
+                    "authorizationToken": token,
+                    "apiInfo": {
+                        "storageApi": {
+                            "apiUrl": api_url,
+                            "downloadUrl": f"https://download-{attempt}.example",
+                            "allowed": {
+                                "buckets": [
+                                    {"name": "bucket", "id": f"bucket-{attempt}"}
+                                ]
+                            },
+                        }
+                    },
+                }
+            )
+        get_calls.append((url, kwargs))
+        if large:
+            return response(
+                {
+                    "uploadUrl": f"https://part-{attempt}.example",
+                    "authorizationToken": f"part-token-{attempt}",
+                }
+            )
+        return response(
+            {
+                "uploadUrl": f"https://file-{attempt}.example",
+                "authorizationToken": f"file-token-{attempt}",
+            }
+        )
+
+    def post(url, **kwargs):
+        post_calls.append((url, kwargs))
+        if large and url.endswith("b2_start_large_file"):
+            return response({"fileId": f"file-id-{attempt}"})
+        if large and url.endswith("b2_finish_large_file"):
+            return response({})
+        if (
+            url.startswith(("https://file-", "https://part-"))
+            and len(
+                [
+                    item
+                    for item in post_calls
+                    if item[0].startswith(("https://file-", "https://part-"))
+                ]
+            )
+            == 1
+        ):
+            return response(error=requests.HTTPError("temporary upload failure"))
+        return response({})
+
+    mocker.patch.object(b2.requests, "get", side_effect=get)
+    mocker.patch.object(b2.requests, "post", side_effect=post)
+
+    client.upload_file(path, "bucket", "opaque/key")
+
+    assert len(auth_calls) == 2
+    assert auth_calls == [
+        (
+            "https://api.backblazeb2.com/b2api/v4/b2_authorize_account",
+            "account-token-1",
+        ),
+        (
+            "https://api.backblazeb2.com/b2api/v4/b2_authorize_account",
+            "account-token-2",
+        ),
+    ]
+    assert all("stale" not in repr(call) for call in get_calls + post_calls)
+    if large:
+        assert [url for url, _ in get_calls] == [
+            "https://api-1.example/b2api/v4/b2_get_upload_part_url",
+            "https://api-2.example/b2api/v4/b2_get_upload_part_url",
+        ]
+        assert [
+            kwargs["headers"]["Authorization"]
+            for url, kwargs in post_calls
+            if "b2_start" in url
+        ] == ["account-token-1", "account-token-2"]
+        assert [url for url, _ in post_calls if url.startswith("https://part-")] == [
+            "https://part-1.example",
+            "https://part-2.example",
+        ]
+        assert [
+            kwargs["headers"]["Authorization"]
+            for url, kwargs in post_calls
+            if url.startswith("https://part-")
+        ] == ["part-token-1", "part-token-2"]
+    else:
+        assert [url for url, kwargs in get_calls] == [
+            "https://api-1.example/b2api/v4/b2_get_upload_url",
+            "https://api-2.example/b2api/v4/b2_get_upload_url",
+        ]
+        assert [kwargs["headers"]["Authorization"] for url, kwargs in get_calls] == [
+            "account-token-1",
+            "account-token-2",
+        ]
+        assert [url for url, _ in post_calls] == [
+            "https://file-1.example",
+            "https://file-2.example",
+        ]
+        assert [kwargs["headers"]["Authorization"] for _, kwargs in post_calls] == [
+            "file-token-1",
+            "file-token-2",
+        ]
+
+
+def test_b2_upload_retries_http_error_during_account_authorization(mocker, tmp_path):
+    path = tmp_path / "upload.bin"
+    path.write_bytes(b"payload")
+    client = b2.B2Client("id", "key")
+    mocker.patch.object(b2.time, "sleep")
+    auth_response = mocker.Mock()
+    auth_response.raise_for_status.side_effect = [
+        requests.HTTPError("authorization failed"),
+        None,
+    ]
+    auth_response.json.return_value = {
+        "authorizationToken": "fresh-token",
+        "apiInfo": {
+            "storageApi": {
+                "apiUrl": "https://api.example",
+                "downloadUrl": "https://download.example",
+                "allowed": {"buckets": [{"name": "bucket", "id": "bucket-id"}]},
+            }
+        },
+    }
+    authorize = mocker.patch.object(b2.requests, "get", return_value=auth_response)
+    upload = mocker.patch.object(client, "_upload_single_file")
+
+    client.upload_file(path, "bucket", "key")
+
+    assert authorize.call_count == 2
+    upload.assert_called_once_with(
+        path,
+        "bucket-id",
+        "key",
+        {
+            "authorizationToken": "fresh-token",
+            "apiUrl": "https://api.example",
+            "downloadUrl": "https://download.example",
+            "buckets": {"bucket": "bucket-id"},
+        },
+    )
+
+
 def test_inference_transport_failure_propagates(mocker, caplog):
     error = requests.ConnectionError("network unavailable")
     mocker.patch.object(utils.requests, "get", side_effect=error)

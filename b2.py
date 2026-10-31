@@ -101,10 +101,11 @@ class B2Client:
         logger.info(
             "B2 upload started: %s to %s (%d bytes)", local_path, destination, size
         )
-        auth = self._authorize()
-        bucket_id = self._bucket_id(bucket)
         for attempt in range(3):
             try:
+                self._auth = None
+                auth = self._authorize()
+                bucket_id = self._bucket_id(bucket)
                 if size > MAX_SINGLE_UPLOAD_SIZE:
                     self._upload_large_file(local_path, bucket_id, key, auth)
                 else:
