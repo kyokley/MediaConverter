@@ -416,7 +416,7 @@ class TestTvRunner:
         assert [event[0] for event in events] == ["video", "subtitles", "record"]
         mock_create.assert_not_called()
 
-    def test_b2_video_is_removed_only_after_uploads_and_publication(
+    def test_b2_video_is_retained_after_uploads_and_publication(
         self, mocker, temp_directory
     ):
         video = temp_directory / "episode.mp4"
@@ -459,7 +459,7 @@ class TestTvRunner:
         )
 
         assert events == [("video", True), ("subtitles", True), ("record", True)]
-        assert not video.exists()
+        assert video.read_bytes() == b"encoded-video"
 
     def test_run_fetches_details_and_uses_existing_b2_destination(
         self, mocker, temp_directory
@@ -595,7 +595,7 @@ class TestTvRunner:
                 ],
             )
 
-        assert encoded.exists()
+        assert encoded.read_bytes() == b"encoded"
         if failure == "video":
             post.assert_not_called()
         elif failure == "subtitle":
