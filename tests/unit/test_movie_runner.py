@@ -125,7 +125,7 @@ class TestPostMovies:
         assert video.stat().st_size == len(b"video")
         self.mock_reencodeFilesInDirectory.assert_not_called()
 
-    def test_movie_processing_uploads_and_removes_video_after_publication(self, mocker):
+    def test_movie_processing_uploads_and_retains_video_after_publication(self, mocker):
         self.mock_getLocalMoviePaths.return_value = ["movie1"]
         video = self.tmp_dir / "movies" / "movie1" / "Film.mp4"
         video.parent.mkdir(parents=True, exist_ok=True)
@@ -134,8 +134,7 @@ class TestPostMovies:
 
         self.movieRunner.postMovies()
 
-        with pytest.raises(FileNotFoundError):
-            video.stat()
+        assert video.read_bytes() == b"video"
 
     @pytest.mark.parametrize("filename", ["already.mp4", "Already.mv-encoded.mp4"])
     def test_filename_near_match_is_not_skipped(self, mocker, filename):
@@ -213,7 +212,7 @@ class TestPostMovies:
             "Shared.mp4", 1, len(b"video"), subtitle_files=[], b2_uuid=mock.ANY
         )
 
-    def test_b2_video_is_removed_only_after_uploads_and_publication(
+    def test_b2_video_is_retained_after_uploads_and_publication(
         self, mocker, temp_directory
     ):
         mocker.patch("movie_runner.BASE_PATH", temp_directory)
@@ -259,7 +258,7 @@ class TestPostMovies:
         MovieRunner().postMovies()
 
         assert events == [("video", True), ("subtitles", True), ("record", True)]
-        assert not video_exists()
+        assert video.read_bytes() == b"encoded-video"
 
     def test_reencodeErrors(self):
         self.mock_reencodeFilesInDirectory.side_effect = [
@@ -789,7 +788,7 @@ class TestPostMovies:
         else:
             record.assert_called_once()
         assert video.name not in filename_inventory
-        assert video.stat().st_size == len(b"encoded")
+        assert video.read_bytes() == b"encoded"
 
 
 class TestRun:

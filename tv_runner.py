@@ -401,7 +401,6 @@ class TvRunner:
                         subtitle_files=subtitle_files,
                         b2_uuid=b2_uuid,
                     )
-                    fullPath.unlink()
                     if published_filenames is not None:
                         published_filenames.add(fullPath.name)
                     remoteFileSet.add(fullPath.name)
