@@ -6,6 +6,7 @@ import shlex
 import shutil
 import uuid
 import time
+import argparse
 from urllib.parse import urlsplit
 
 from pathlib import Path
@@ -314,7 +315,13 @@ class TvRunner:
         }
 
     def updateFileRecords(
-        self, path, localFileSet, remoteFileSet, dry_run=False, media_path_details=None
+        self,
+        path,
+        localFileSet,
+        remoteFileSet,
+        dry_run=False,
+        media_path_details=None,
+        skip_upload=False,
     ):
         pending_files = localFileSet.difference(remoteFileSet)
         total = len(pending_files)
@@ -340,7 +347,11 @@ class TvRunner:
                 log.info("Skipping %s: dry-run would process file", localFile)
                 continue
 
-            if not media_path_id:
+            if skip_upload and destination and destination.get("skip"):
+                log.info("Skipping %s: MediaPath is marked skip", localFile)
+                break
+
+            if not skip_upload and not media_path_id:
                 media_path_data = destination or self.get_or_create_media_path(
                     Path(path)
                 )
@@ -381,6 +392,9 @@ class TvRunner:
                         log.info(
                             "Skipping %s: filename already published", fullPath.name
                         )
+                        continue
+                    if skip_upload:
+                        log.info("Converted TV file %s without uploading", fullPath)
                         continue
                     bucket = destination["bucket"]
                     key_prefix = destination["b2_upload_prefix"]
@@ -535,14 +549,14 @@ class TvRunner:
                     except OSError:
                         pass
 
-    def run(self, dry_run=False):
+    def run(self, dry_run=False, skip_upload=False):
         run_started = time.perf_counter()
-        log.info("TV run started (dry_run=%s)", dry_run)
+        log.info("TV run started (dry_run=%s, skip_upload=%s)", dry_run, skip_upload)
         self._published_filenames = None
         if not dry_run:
             self._get_published_filenames()
         log.info("Starting unsorted TV file phase")
-        self._sort_unsorted_files(dry_run=dry_run)
+        self._sort_unsorted_files(dry_run=dry_run, skip_upload=skip_upload)
         log.info("Completed unsorted TV file phase")
 
         log.info("Starting TV path discovery")
@@ -585,6 +599,7 @@ class TvRunner:
                 remoteFileSet,
                 dry_run=dry_run,
                 media_path_details=media_path_details,
+                skip_upload=skip_upload,
             )
             processed_directories += 1
             log.info(
@@ -612,7 +627,7 @@ class TvRunner:
     def _normalized_media_path(uri):
         return uri[:-1] if uri.endswith("/") else uri
 
-    def _sort_unsorted_files(self, dry_run=False):
+    def _sort_unsorted_files(self, dry_run=False, skip_upload=False):
         media_paths = None
         details_by_uri = {}
         for unsorted_path_str in UNSORTED_PATHS:
@@ -676,6 +691,13 @@ class TvRunner:
                             f"Would create media path {inferred_uri} for {src.name}"
                         )
                         continue
+                    elif skip_upload:
+                        detail = {
+                            "pk": None,
+                            "path": inferred_uri,
+                            "skip": False,
+                            "media_files": [],
+                        }
                     else:
                         detail = Tv.post_media_path(inferred_uri)
                         detail.setdefault("path", inferred_uri)
@@ -690,11 +712,19 @@ class TvRunner:
                     remote_files,
                     dry_run=dry_run,
                     media_path_details=[detail],
+                    skip_upload=skip_upload,
                 )
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--skip-upload",
+        action="store_true",
+        help="Process local files without B2 uploads or MediaViewer writes.",
+    )
+    args = parser.parse_args()
     runner = TvRunner()
-    errors = runner.run()
+    errors = runner.run(skip_upload=args.skip_upload)
     if errors:
         print(errors)

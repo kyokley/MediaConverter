@@ -125,6 +125,45 @@ class TestPostMovies:
         assert video.stat().st_size == len(b"video")
         self.mock_reencodeFilesInDirectory.assert_not_called()
 
+    def test_skip_upload_still_prepares_movie_without_publication(self, mocker):
+        self.mock_getLocalMoviePaths.return_value = ["movie1"]
+        video = self.tmp_dir / "movies" / "movie1" / "Film.mp4"
+        video.parent.mkdir(parents=True, exist_ok=True)
+        video.write_bytes(b"video")
+        mocker.patch.object(MovieRunner, "_get_largest_video_file", return_value=video)
+        post_path = mocker.patch("movie_runner.Movie.post_media_path")
+        client = mocker.patch("movie_runner.b2.get_b2_client")
+        subtitles = mocker.patch("movie_runner.upload_subtitle_files")
+        post_file = mocker.patch.object(MediaFile, "post_media_file")
+
+        self.movieRunner.postMovies(skip_upload=True)
+
+        self.mock_promoteSubtitles.assert_called_once_with(video.parent, dry_run=False)
+        self.mock_reencodeFilesInDirectory.assert_called_once_with(video.parent)
+        post_path.assert_not_called()
+        client.assert_not_called()
+        subtitles.assert_not_called()
+        post_file.assert_not_called()
+
+    def test_skip_upload_dry_run_does_not_prepare_or_encode(self):
+        self.mock_getLocalMoviePaths.return_value = ["movie1"]
+
+        self.movieRunner.postMovies(dry_run=True, skip_upload=True)
+
+        self.mock_promoteSubtitles.assert_called_once_with(
+            Path(f"{self.tmp_dir}/movies/movie1"), dry_run=True
+        )
+        self.mock_reencodeFilesInDirectory.assert_not_called()
+        assert (
+            self.mock_log.info.call_args_list.count(
+                mock.call(
+                    "Skipping publication for %s: dry-run",
+                    Path(f"{self.tmp_dir}/movies/movie1"),
+                )
+            )
+            == 1
+        )
+
     def test_movie_processing_uploads_and_retains_video_after_publication(self, mocker):
         self.mock_getLocalMoviePaths.return_value = ["movie1"]
         video = self.tmp_dir / "movies" / "movie1" / "Film.mp4"
@@ -807,9 +846,14 @@ class TestRun:
         actual = self.movieRunner.run()
 
         assert expected == actual
-        self.mock_postMovies.assert_called_once_with(dry_run=False)
+        self.mock_postMovies.assert_called_once_with(dry_run=False, skip_upload=False)
         self.mock_info.assert_any_call("Movie run started (dry_run=%s)", False)
         assert self.mock_info.call_args.args[0] == "Movie run completed in %.2fs"
+
+    def test_run_propagates_skip_upload(self):
+        self.movieRunner.run(skip_upload=True)
+
+        self.mock_postMovies.assert_called_once_with(dry_run=False, skip_upload=True)
 
 
 class TestPromoteSubtitles:

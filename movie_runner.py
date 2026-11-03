@@ -1,6 +1,7 @@
 import os
 import uuid
 import time
+import argparse
 from pathlib import Path
 import b2
 from settings import (
@@ -107,9 +108,13 @@ class MovieRunner:
         self.movies = set()
         self.errors = []
 
-    def postMovies(self, dry_run=False):
+    def postMovies(self, dry_run=False, skip_upload=False):
         run_started = time.perf_counter()
-        log.info("Starting movie discovery (dry_run=%s)", dry_run)
+        log.info(
+            "Starting movie discovery (dry_run=%s, skip_upload=%s)",
+            dry_run,
+            skip_upload,
+        )
         base_path = Path(BASE_PATH)
 
         incomplete_paths = {}
@@ -190,6 +195,11 @@ class MovieRunner:
                     log.info("Starting movie publication for %s", localpath)
                     if dry_run:
                         log.info("Skipping publication for %s: dry-run", localpath)
+                        continue
+                    if skip_upload:
+                        log.info(
+                            "Skipping publication for %s: --skip-upload", localpath
+                        )
                         continue
                     video_file = self._get_largest_video_file(localpath)
                     if video_file is None:
@@ -310,11 +320,11 @@ class MovieRunner:
             return None
         return max(video_files, key=lambda f: f.stat().st_size)
 
-    def run(self, dry_run=False):
+    def run(self, dry_run=False, skip_upload=False):
         started = time.perf_counter()
         log.info("Movie run started (dry_run=%s)", dry_run)
         try:
-            self.postMovies(dry_run=dry_run)
+            self.postMovies(dry_run=dry_run, skip_upload=skip_upload)
         except Exception:
             log.exception("Movie run failed after %.2fs", time.perf_counter() - started)
             raise
@@ -323,7 +333,14 @@ class MovieRunner:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--skip-upload",
+        action="store_true",
+        help="Process local files without B2 uploads or MediaViewer writes.",
+    )
+    args = parser.parse_args()
     runner = MovieRunner()
-    errors = runner.run()
+    errors = runner.run(skip_upload=args.skip_upload)
     if errors:
         print(errors)

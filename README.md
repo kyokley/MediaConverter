@@ -6,6 +6,23 @@ TV and movie publication always uses Backblaze B2. Configure credentials with
 and optional `MC_B2_NAME_PREFIX` for local-path mapping. There is no local-only
 publication mode.
 
+## Conversion without publication
+
+Run either standalone runner with `--skip-upload` to keep local processing enabled
+without uploading videos or subtitles to B2 or creating/updating MediaViewer records:
+
+```bash
+python tv_runner.py --skip-upload
+python movie_runner.py --skip-upload
+```
+
+Python callers can use `TvRunner().run(skip_upload=True)` or
+`MovieRunner().run(skip_upload=True)`. MediaViewer reads and existing discovery,
+skip, and duplicate checks still apply; this is not an offline mode. Local sorting,
+renaming, subtitle preparation, and encoding still run, including normal source
+replacement. Unlike `dry_run=True`, this flag changes local files. Omitting the
+flag preserves normal publication; the Celery task is unchanged.
+
 ## Processing logs
 
 Logs show pipeline steps, directory/file progress, skip reasons, elapsed time,

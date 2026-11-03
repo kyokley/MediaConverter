@@ -2,7 +2,7 @@
 
 ## What this project does
 
-MediaConverter is a Python service that converts local movie and TV files into HTML5-streamable MP4 media. A Celery task in `main.py` runs the TV pipeline, then the movie pipeline. The runners discover media, coordinate MediaViewer API records and Backblaze B2 uploads, and call the FFmpeg conversion pipeline. B2 storage is required; there is no local-only publication mode. This repository is a worker, not a web application.
+MediaConverter is a Python service that converts local movie and TV files into HTML5-streamable MP4 media. A Celery task in `main.py` runs the TV pipeline, then the movie pipeline. The runners discover media, coordinate MediaViewer API records and Backblaze B2 uploads, and call the FFmpeg conversion pipeline. Publication requires B2 storage; standalone runners can process locally without publication using `--skip-upload`. This repository is a worker, not a web application.
 
 ## Where to work
 
@@ -28,6 +28,7 @@ MediaConverter is a Python service that converts local movie and TV files into H
 
 - Before version-control operations, check whether Jujutsu is available with `command -v jj`. Use `jj` when available; use `git` otherwise.
 - `makeFileStreamable` in `convert.py` writes a temporary MP4 under `/tmp`, moves the result into the source directory, and removes the original by default. Preserve file safety and test changes to naming, subtitles, and cleanup with fixtures before processing real media.
+- `python tv_runner.py --skip-upload` and `python movie_runner.py --skip-upload` (or `run(skip_upload=True)`) retain local processing but skip all B2 video/subtitle uploads and MediaViewer writes, including MediaPath creation. MediaViewer reads and existing skip/deduplication checks still apply; this is not offline mode. Local files may still be sorted, renamed, or replaced by encoding. `dry_run=True` still suppresses local changes; default publication and the Celery task are unchanged.
 - Movie discovery expects one directory per movie under each configured movie root. It ignores loose files, including video files; directory symlinks remain eligible.
 - B2 upload keys use MediaViewer's returned `bucket` and versioned, server-owned opaque `b2_upload_prefix`, followed by a generated UUID filename. Consume the prefix unchanged; never derive a B2 key directory from a MediaPath PK, real filename, or URI basename. Legacy prefixes may be flat (for example, `archive/42/`); v2 prefixes use exactly three zero-padded 3-digit MediaPath PK components (IDs `1`–`999999999`, with at most 1,000 child ID directories per generated level), such as `001/234/567/` for PK `1234567`. Keep the logical MediaPath URI unchanged for mapping and identity.
 - B2 movie MediaPaths are created before upload without a filename. MediaFile publication supplies the original converted filename and UUID only after video and subtitles upload successfully; incomplete B2 movie paths remain retryable.
